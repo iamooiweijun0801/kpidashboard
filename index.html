@@ -4,31 +4,60 @@
 <meta charset="UTF-8">
 <title>KPI Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.6.2/fuse.min.js"></script>
 <style>
-body { font-family: Arial; margin:0; padding:0; background:#f5f5f5; }
-header { text-align:center; padding:16px; font-size:28px; font-weight:bold; }
-.tabs { display:flex; justify-content:center; margin-bottom:16px; }
-.tab { padding:8px 16px; cursor:pointer; border:1px solid #ccc; border-bottom:none; margin-right:4px; border-radius:8px 8px 0 0; background:#eee; }
-.tab.active { background:#2F80ED; color:white; }
-.controls { display:flex; justify-content:center; gap:12px; margin-bottom:16px; flex-wrap:wrap; position:relative; }
-#siteFilter { padding:6px; width:250px; }
-#dropdown { position:absolute; background:white; border:1px solid #ccc; max-height:150px; overflow-y:auto; display:none; z-index:10; width:250px; top:38px; left:0; }
-#dropdown div { padding:4px 8px; cursor:pointer; }
-#dropdown div:hover { background:#2F80ED; color:white; }
-button { padding:8px 16px; cursor:pointer; border:none; background:#2F80ED; color:white; border-radius:6px; font-weight:bold; }
-button:hover { background:#1f5ab5; }
-.chart-grid { 
-  display:grid; 
-  grid-template-columns:repeat(auto-fit,minmax(350px,1fr)); 
-  gap:16px; 
-  padding:0 16px; 
-  max-height:80vh;  /* limit vertical height */
-  overflow-y:auto;   /* add scroll if too many charts */
-}
-canvas { background:white; border-radius:12px; padding:16px; width:100% !important; height:250px !important; }
-.chart-card { padding:8px; border-radius:12px; background:white; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
-.chart-title { text-align:center; font-weight:bold; margin-bottom:8px; }
+  body { font-family: Arial; margin:0; padding:0; background:#f5f5f5; }
+  header { text-align:center; padding:16px; font-size:28px; font-weight:bold; }
+  
+  .tabs { display:flex; justify-content:center; margin-bottom:16px; }
+  .tab { padding:8px 16px; cursor:pointer; border:1px solid #ccc; border-bottom:none; margin-right:4px; border-radius:8px 8px 0 0; background:#eee; }
+  .tab.active { background:#2F80ED; color:white; }
+  
+  .controls { display:flex; justify-content:center; gap:12px; margin-bottom:16px; align-items: center; }
+  
+  /* Dropdown Styling */
+  select {
+    padding: 8px;
+    width: 250px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 16px;
+  }
+
+  button { padding:8px 16px; cursor:pointer; border:none; background:#2F80ED; color:white; border-radius:6px; font-weight:bold; }
+  button:hover { background:#1f5ab5; }
+  
+  /* --- LAYOUT CHANGE: 2 Graphs Per Row --- */
+  .chart-grid { 
+    display:grid; 
+    grid-template-columns: 1fr 1fr; /* Exactly 2 columns */
+    gap:16px; 
+    padding:0 16px; 
+    max-width: 1400px; /* Optional: prevents it from getting too wide on huge screens */
+    margin: 0 auto;
+  }
+  
+  /* Responsive: Stack to 1 column on mobile phones */
+  @media (max-width: 768px) {
+    .chart-grid { grid-template-columns: 1fr; }
+  }
+
+  .chart-card { 
+    padding:8px; 
+    border-radius:12px; 
+    background:white; 
+    box-shadow:0 2px 8px rgba(0,0,0,0.1); 
+    display: flex;       
+    flex-direction: column; 
+  }
+  
+  /* Stability Fix: Fixed height container */
+  .chart-container {
+    position: relative;
+    height: 300px; 
+    width: 100%;
+  }
+
+  .chart-title { text-align:center; font-weight:bold; margin-bottom:8px; }
 </style>
 </head>
 <body>
@@ -41,8 +70,9 @@ canvas { background:white; border-radius:12px; padding:16px; width:100% !importa
 </div>
 
 <div class="controls">
-  <input type="text" id="siteFilter" placeholder="Search eNodeB Name">
-  <div id="dropdown"></div>
+  <select id="siteSelect">
+    <option value="">All Sites (Aggregate)</option>
+  </select>
   <button id="refreshBtn">Refresh Data</button>
 </div>
 
@@ -51,9 +81,9 @@ canvas { background:white; border-radius:12px; padding:16px; width:100% !importa
 <script>
 let allData = [];
 let charts = [];
-let fuse = null;
 let currentTab = "acceptance";
 
+// KPI groups
 const acceptanceKpis = [
   "LTE RRC Setup Success Rate","ERAB Setup Success Rate","LTE Call Setup Success Rate","E-RAB Call Drop Rate",
   "CSFB Access Success Rate","LTE Intra Freq HO Success Rate","Intra-eNB HO Success Rate","Inter-eNBX2HO Success Rate",
@@ -68,17 +98,21 @@ const monitoringKpis = [
   "VoLTE Traffic Erlang","VoLTE Traffic DL (MB)","VoLTE Traffic UL (MB)","DL BLER QCI1","UL BLER QCI1"
 ];
 
+// Fetch CSV from Google Sheet
 async function fetchData(){
   try{
     const res = await fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?output=csv");
     const text = await res.text();
     parseCSV(text);
+    populateDropdown(); // Fill the dropdown after data is loaded
     drawCharts();
   }catch(err){
     console.error(err);
+    alert("Failed to load data");
   }
 }
 
+// Parse CSV
 function parseCSV(str){
   const rows = str.trim().split('\n').map(r=>r.split(','));
   const headers = rows.shift().map(h=>h.trim());
@@ -90,42 +124,81 @@ function parseCSV(str){
     });
     return obj;
   });
-  fuse = new Fuse(allData, { keys:['eNodeB Name'], threshold:0.4 });
 }
 
+// Populate the Dropdown with Unique Sites
+function populateDropdown(){
+  const select = document.getElementById("siteSelect");
+  // Keep the first "All Sites" option, remove others
+  select.innerHTML = '<option value="">All Sites (Aggregate)</option>';
+  
+  // Get unique sites, filter out empties, and sort
+  const uniqueSites = [...new Set(allData.map(d => d["eNodeB Name"]))]
+    .filter(s => s && s.trim() !== "")
+    .sort();
+
+  uniqueSites.forEach(site => {
+    const option = document.createElement("option");
+    option.value = site;
+    option.textContent = site;
+    select.appendChild(option);
+  });
+}
+
+// Draw charts
 function drawCharts(){
   const container = document.getElementById("chartContainer");
   container.innerHTML = "";
   charts = [];
-  const siteName = document.getElementById("siteFilter").value.trim();
+  
+  const selectedSite = document.getElementById("siteSelect").value;
   let filteredData = allData;
 
-  if(siteName && fuse){
-    const result = fuse.search(siteName).slice(0,5).map(r=>r.item);
-    filteredData = result.length? result : [];
+  // Filter data based on dropdown selection
+  if(selectedSite){
+    filteredData = allData.filter(d => d["eNodeB Name"] === selectedSite);
   }
-  if(filteredData.length===0) return;
+
+  if(filteredData.length===0) {
+    container.innerHTML = "<p style='grid-column: 1 / -1; text-align:center;'>No data available for this selection.</p>";
+    return;
+  }
 
   const kpis = currentTab==="acceptance"?acceptanceKpis:monitoringKpis;
 
   kpis.forEach(kpi=>{
+    // Create Card
     const card = document.createElement("div");
     card.className = "chart-card";
+
+    // Create Title
     const title = document.createElement("div");
     title.className = "chart-title";
-    title.textContent = `${kpi} - ${siteName||"All Sites"}`;
+    title.textContent = `${kpi} - ${selectedSite||"All Sites"}`;
+
+    // Create Wrapper Div (Stability Fix)
+    const chartWrapper = document.createElement("div");
+    chartWrapper.className = "chart-container";
+    
+    // Create Canvas
     const canvas = document.createElement("canvas");
+    chartWrapper.appendChild(canvas);
     card.appendChild(title);
-    card.appendChild(canvas);
+    card.appendChild(chartWrapper);
     container.appendChild(card);
 
+    // Calculate Data Logic (Same as before)
     const timeline = [...new Set(filteredData.map(d=>d["Date"]))].sort();
     const dataPoints = timeline.map(date=>{
       const values = filteredData.filter(d=>d["Date"]===date).map(d=>d[kpi]||0);
+      
+      // If no data for this date, return null (breaks the line) or 0
+      if(values.length === 0) return 0;
+
       if(kpi.toLowerCase().includes("%") || kpi.toLowerCase().includes("rate") || kpi.toLowerCase().includes("ratio")){
-        return values.reduce((a,b)=>a+b,0)/values.length;
+        return values.reduce((a,b)=>a+b,0)/values.length; // Average
       }else{
-        return values.reduce((a,b)=>a+b,0);
+        return values.reduce((a,b)=>a+b,0); // Sum
       }
     });
 
@@ -135,47 +208,34 @@ function drawCharts(){
       data:{
         labels:timeline,
         datasets:[{
-          label:siteName||"All Sites",
-          data:dataPoints,
-          borderColor:'#'+Math.floor(Math.random()*16777215).toString(16),
-          fill:false
+          label: selectedSite || "All Sites", 
+          data: dataPoints, 
+          borderColor: '#2F80ED', // Use a standard blue, or keep random
+          backgroundColor: 'rgba(47, 128, 237, 0.1)',
+          fill: true,
+          tension: 0.3
         }]
       },
       options:{
-        responsive:true,
-        maintainAspectRatio:false,
+        responsive:true, 
+        maintainAspectRatio:false, 
         scales:{
-          x:{ display:true },
-          y:{
-            beginAtZero:true,
-            ticks:{ maxTicksLimit:6 } // limit vertical tick marks
-          }
-        },
-        plugins:{ legend:{ position:'top' } }
+          x:{display:true},
+          y:{beginAtZero:true}
+        }, 
+        plugins:{
+          legend:{position:'top'},
+          tooltip:{mode:'index', intersect:false}
+        }
       }
     }));
   });
 }
 
-// Fuzzy search
-const siteInput = document.getElementById("siteFilter");
-const dropdown = document.getElementById("dropdown");
-siteInput.addEventListener("input", ()=>{
-  const val = siteInput.value.trim();
-  if(!val || !fuse){ dropdown.style.display="none"; return; }
-  const results = fuse.search(val).slice(0,5).map(r=>r.item["eNodeB Name"]);
-  dropdown.innerHTML = "";
-  results.forEach(r=>{
-    const div = document.createElement("div");
-    div.textContent = r;
-    div.onclick = ()=>{ siteInput.value=r; dropdown.style.display="none"; drawCharts(); };
-    dropdown.appendChild(div);
-  });
-  dropdown.style.display = results.length? "block":"none";
-});
-document.addEventListener("click", e=>{ if(e.target!==siteInput) dropdown.style.display="none"; });
+// Event Listeners
+document.getElementById("siteSelect").addEventListener("change", drawCharts);
+document.getElementById("refreshBtn").addEventListener("click", fetchData);
 
-// Tabs
 document.querySelectorAll(".tab").forEach(tab=>{
   tab.addEventListener("click",()=>{
     document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
@@ -185,9 +245,7 @@ document.querySelectorAll(".tab").forEach(tab=>{
   });
 });
 
-// Refresh
-document.getElementById("refreshBtn").addEventListener("click", fetchData);
-
+// Initial fetch
 fetchData();
 </script>
 
