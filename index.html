@@ -79,7 +79,7 @@ const monitoringKpis = [
 // Fetch KPI data from Google Sheet JSON
 async function fetchData(){
   try{
-    const res = await fetch("YOUR_GOOGLE_SHEET_JSON_URL"); // replace with your sheet JSON
+    const res = await fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?output=csv"); // replace with your sheet JSON
     const json = await res.json();
     allData = json.kpis || [];
     fuse = new Fuse(allData, { keys:['eNodeB Name'], threshold:0.4 });
