@@ -122,7 +122,7 @@ const monitoringKpis = [
 ];
 
 async function fetchData(){
-  const res = await fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?output=csv");
+  const res = await fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=0&single=true&output=csv");
   const text = await res.text();
   const rows = text.trim().split('\n').map(r=>r.split(','));
   const headers = rows.shift().map(h=>h.trim());
