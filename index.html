@@ -94,13 +94,12 @@ function parseCSV(str){
   allData = rows.map(r=>{
     const obj = {};
     headers.forEach((h,i)=>{
-      const val = r[i]?r[i].trim():"0"; // empty cells as 0
+      const val = r[i]?r[i].trim():"0";
       obj[h] = isNaN(val)?val:parseFloat(val);
     });
     return obj;
   });
   fuse = new Fuse(allData, { keys:['eNodeB Name'], threshold:0.4 });
-
   allSites = [...new Set(allData.map(d=>d["eNodeB Name"]))].sort();
 }
 
@@ -127,7 +126,6 @@ function drawCharts(){
   const selectedSite = siteNameSearch || siteNameSelect;
 
   let filteredData = selectedSite ? allData.filter(d=>d["eNodeB Name"]===selectedSite) : allData;
-
   if(filteredData.length===0) return;
 
   const kpis = currentTab==="acceptance"?acceptanceKpis:monitoringKpis;
@@ -156,7 +154,7 @@ function drawCharts(){
         const v = d[kpi];
         return (v === "" || v === null || isNaN(v)) ? 0 : v;
       });
-      if(values.length===0) return 0; 
+      if(values.length===0) return 0;
       if(kpi.toLowerCase().includes("%") || kpi.toLowerCase().includes("rate") || kpi.toLowerCase().includes("ratio")){
         return values.reduce((a,b)=>a+b,0)/values.length;
       }else{
@@ -174,14 +172,23 @@ function drawCharts(){
           data:dataPoints,
           borderColor:'#'+Math.floor(Math.random()*16777215).toString(16),
           fill:false,
-          tension:0.3, // smooth lines
+          tension:0.3,
           pointRadius:3,
         }]
       },
       options:{
         responsive:true,
         maintainAspectRatio:false,
-        animation: { duration:1000, easing:'easeOutQuart' }, // line animation
+        animation: {
+          x: { 
+            type: 'number', 
+            easing: 'linear', 
+            duration: 1500, 
+            from: NaN, 
+            delay(ctx) { return ctx.index * 50; }
+          },
+          y: { duration:0 } 
+        },
         scales:{
           x:{ display:true },
           y:{ beginAtZero:true, ticks:{ maxTicksLimit:6 } }
