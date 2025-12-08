@@ -6,22 +6,43 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.6.2/fuse.min.js"></script>
 <style>
-body { font-family: Arial; margin:0; padding:0; background:#f5f5f5; }
-header { text-align:center; padding:16px; font-size:28px; font-weight:bold; }
-.tabs { display:flex; justify-content:center; margin-bottom:16px; }
-.tab { padding:8px 16px; cursor:pointer; border:1px solid #ccc; border-bottom:none; margin-right:4px; border-radius:8px 8px 0 0; background:#eee; }
-.tab.active { background:#2F80ED; color:white; }
-.controls { display:flex; justify-content:center; gap:12px; margin-bottom:16px; flex-wrap:wrap; position:relative; }
-#siteFilter { padding:6px; width:250px; }
-#dropdown { position:absolute; background:white; border:1px solid #ccc; max-height:150px; overflow-y:auto; display:none; z-index:10; width:250px; top:38px; left:0; }
-#dropdown div { padding:4px 8px; cursor:pointer; }
-#dropdown div:hover { background:#2F80ED; color:white; }
-button { padding:8px 16px; cursor:pointer; border:none; background:#2F80ED; color:white; border-radius:6px; font-weight:bold; }
-button:hover { background:#1f5ab5; }
-.chart-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(350px,1fr)); gap:16px; padding:0 16px; }
-canvas { background:white; border-radius:12px; padding:16px; }
-.chart-card { padding:8px; border-radius:12px; background:white; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
-.chart-title { text-align:center; font-weight:bold; margin-bottom:8px; }
+  body { font-family: Arial; margin:0; padding:0; background:#f5f5f5; }
+  header { text-align:center; padding:16px; font-size:28px; font-weight:bold; }
+  
+  .tabs { display:flex; justify-content:center; margin-bottom:16px; }
+  .tab { padding:8px 16px; cursor:pointer; border:1px solid #ccc; border-bottom:none; margin-right:4px; border-radius:8px 8px 0 0; background:#eee; }
+  .tab.active { background:#2F80ED; color:white; }
+  
+  .controls { display:flex; justify-content:center; gap:12px; margin-bottom:16px; flex-wrap:wrap; position:relative; }
+  #siteFilter { padding:6px; width:250px; }
+  #dropdown { position:absolute; background:white; border:1px solid #ccc; max-height:150px; overflow-y:auto; display:none; z-index:10; width:250px; top:38px; left:0; }
+  #dropdown div { padding:4px 8px; cursor:pointer; }
+  #dropdown div:hover { background:#2F80ED; color:white; }
+  
+  button { padding:8px 16px; cursor:pointer; border:none; background:#2F80ED; color:white; border-radius:6px; font-weight:bold; }
+  button:hover { background:#1f5ab5; }
+  
+  .chart-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(350px,1fr)); gap:16px; padding:0 16px; }
+  
+  /* --- FIX START: Styles for Chart Stability --- */
+  .chart-card { 
+    padding:8px; 
+    border-radius:12px; 
+    background:white; 
+    box-shadow:0 2px 8px rgba(0,0,0,0.1); 
+    display: flex;       
+    flex-direction: column; 
+  }
+  
+  /* We wrap the canvas in this container to stop it from growing infinitely */
+  .chart-container {
+    position: relative;
+    height: 300px; /* Set a fixed height for the graph area */
+    width: 100%;
+  }
+  /* --- FIX END --- */
+
+  .chart-title { text-align:center; font-weight:bold; margin-bottom:8px; }
 </style>
 </head>
 <body>
@@ -106,18 +127,29 @@ function drawCharts(){
   const kpis = currentTab==="acceptance"?acceptanceKpis:monitoringKpis;
 
   kpis.forEach(kpi=>{
+    // Create Card
     const card = document.createElement("div");
     card.className = "chart-card";
+
+    // Create Title
     const title = document.createElement("div");
     title.className = "chart-title";
     title.textContent = `${kpi} - ${siteName||"All Sites"}`;
-    const canvas = document.createElement("canvas");
-    canvas.width = 400; canvas.height = 250;
-    card.appendChild(title);
-    card.appendChild(canvas);
-    container.appendChild(card);
 
-    // Timeline
+    // --- FIX START: Create Wrapper Div ---
+    const chartWrapper = document.createElement("div");
+    chartWrapper.className = "chart-container"; // Matches the new CSS class with fixed height
+    
+    // Create Canvas
+    const canvas = document.createElement("canvas");
+    // Append canvas to wrapper, then wrapper to card
+    chartWrapper.appendChild(canvas);
+    card.appendChild(title);
+    card.appendChild(chartWrapper);
+    container.appendChild(card);
+    // --- FIX END ---
+
+    // Timeline Data Logic
     const timeline = [...new Set(filteredData.map(d=>d["Date"]))].sort();
     const dataPoints = timeline.map(date=>{
       const values = filteredData.filter(d=>d["Date"]===date).map(d=>d[kpi]||0);
@@ -131,8 +163,25 @@ function drawCharts(){
     const ctx = canvas.getContext("2d");
     charts.push(new Chart(ctx,{
       type:'line',
-      data:{labels:timeline,datasets:[{label:siteName||"All Sites", data:dataPoints, borderColor:'#'+Math.floor(Math.random()*16777215).toString(16), fill:false}]},
-      options:{responsive:true, maintainAspectRatio:false, scales:{x:{display:true},y:{beginAtZero:true}}, plugins:{legend:{position:'top'}}}
+      data:{
+        labels:timeline,
+        datasets:[{
+          label:siteName||"All Sites", 
+          data:dataPoints, 
+          borderColor:'#'+Math.floor(Math.random()*16777215).toString(16), 
+          fill:false,
+          tension: 0.1 // Added slight curve for better visuals
+        }]
+      },
+      options:{
+        responsive:true, 
+        maintainAspectRatio:false, // This now works because parent (.chart-container) has fixed height
+        scales:{
+          x:{display:true},
+          y:{beginAtZero:true}
+        }, 
+        plugins:{legend:{position:'top'}}
+      }
     }));
   });
 }
