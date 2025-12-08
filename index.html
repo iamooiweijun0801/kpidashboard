@@ -290,8 +290,8 @@ document.querySelectorAll(".tab").forEach(tab=>{
     document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
     tab.classList.add("active");
     currentTab = tab.dataset.tab;
-    populateKpiDrawer(); // refresh drawer options for new tab
-    drawCharts(); // immediately update charts
+    populateKpiDrawer(); // refresh drawer options
+    drawCharts(); // redraw charts immediately
   });
 });
 
