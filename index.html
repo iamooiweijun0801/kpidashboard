@@ -5,11 +5,12 @@
 <title>KPI Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.6.2/fuse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <style>
 body { font-family: Arial; margin:0; padding:0; background:#f5f5f5; }
-header { text-align:center; padding:16px; font-size:28px; font-weight:bold; }
+header { text-align:center; padding:20px; font-size:28px; font-weight:bold; }
 .controls { display:flex; justify-content:center; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
-#siteFilter { padding:6px; width:250px; }
+#siteFilter, #viewSelect, #tabSelect { padding:6px; width:250px; }
 button { padding:8px 16px; cursor:pointer; border:none; background:#2F80ED; color:white; border-radius:6px; font-weight:bold; }
 button:hover { background:#1f5ab5; }
 .chart-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(350px,1fr)); gap:16px; padding:0 16px; }
@@ -24,11 +25,19 @@ canvas { background:white; border-radius:12px; padding:16px; }
 
 <div class="controls">
   <input type="text" id="siteFilter" placeholder="Search eNodeB Name">
+  <select id="tabSelect">
+    <option value="Acceptance">Acceptance KPIs</option>
+    <option value="Monitoring">Monitoring KPIs</option>
+  </select>
+  <select id="viewSelect">
+    <option value="trend">Trend</option>
+    <option value="prepost">Pre vs Post Week</option>
+  </select>
   <button id="refreshBtn">Refresh Data</button>
 </div>
 
 <div class="chart-grid" id="chartContainer">
-  <!-- Charts will be inserted here -->
+  <!-- Charts inserted here -->
 </div>
 
 <script>
@@ -36,53 +45,43 @@ let allData = [];
 let charts = [];
 let fuse = null;
 
-// Define KPI groups
+// Define KPIs
 const acceptanceKpis = [
-  "LTE RRC Setup Success Rate",
-  "ERAB Setup Success Rate",
-  "LTE Call Setup Success Rate",
-  "E-RAB Call Drop Rate",
-  "CSFB Access Success Rate",
-  "LTE Intra Freq HO Success Rate",
-  "Intra-eNB HO Success Rate",
-  "Inter-eNBX2HO Success Rate",
-  "Inter-eNBS1HO Success Rate",
-  "Max RRC Connected Ue",
-  "DL Data Total Volume (Gbyte)",
-  "UL Data Total Volume (Gbyte)",
-  "E-RAB Setup Success Rate (VoIP)",
-  "Call Drop Rate (VoIP)",
-  "Intra-frequency Handover Out Success Rate(VoIP)",
-  "Inter-frequency Handover Out Success Rate(VoIP)",
-  "SRVCC Success Rate (L2W)",
-  "SRVCC Success Rate (L2G)"
+  "LTE RRC Setup Success Rate","ERAB Setup Success Rate","LTE Call Setup Success Rate","E-RAB Call Drop Rate",
+  "CSFB Access Success Rate","LTE Intra Freq HO Success Rate","Intra-eNB HO Success Rate",
+  "Inter-eNBX2HO Success Rate","Inter-eNBS1HO Success Rate","Max RRC Connected Ue",
+  "DL Data Total Volume (Gbyte)","UL Data Total Volume (Gbyte)","E-RAB Setup Success Rate (VoIP)",
+  "Call Drop Rate (VoIP)","Intra-frequency Handover Out Success Rate(VoIP)",
+  "Inter-frequency Handover Out Success Rate(VoIP)","SRVCC Success Rate (L2W)","SRVCC Success Rate (L2G)"
 ];
-
 const monitoringKpis = [
-  "Cell Availability Ratio",
-  "Average Latency Downlink (msecs)",
-  "DL PRB Utilization (%)",
-  "UL PRB Utilization (%)",
-  "LTE DL - Cell Average Throughput (Mbit/s)",
-  "LTE UL - Cell Average Thoughput (Mbit/s)",
-  "LTE DL -USER Average Throughput (Mbit/s)",
-  "LTE UL -USER Average Throughput (Mbit/s)",
-  "Downlink Packet Loss Rate (VoIP)",
-  "Uplink Packet Loss Rate (VoIP)",
-  "VoLTE Traffic Erlang",
-  "VoLTE Traffic DL (MB)",
-  "VoLTE Traffic UL (MB)",
-  "DL BLER QCI1",
-  "UL BLER QCI1"
+  "Cell Availability Ratio","Average Latency Downlink (msecs)","DL PRB Utilization (%)","UL PRB Utilization (%)",
+  "LTE DL - Cell Average Throughput (Mbit/s)","LTE UL - Cell Average Thoughput (Mbit/s)",
+  "LTE DL -USER Average Throughput (Mbit/s)","LTE UL -USER Average Throughput (Mbit/s)",
+  "Downlink Packet Loss Rate (VoIP)","Uplink Packet Loss Rate (VoIP)","VoLTE Traffic Erlang",
+  "VoLTE Traffic DL (MB)","VoLTE Traffic UL (MB)","DL BLER QCI1","UL BLER QCI1"
 ];
 
-// Fetch KPI data from Google Sheet JSON
+// Pre/Post week dates
+const preStart = new Date("2025-11-16");
+const preEnd = new Date("2025-12-01");
+
+// Fetch CSV from Google Sheets
 async function fetchData(){
   try{
-    const res = await fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?output=csv"); // replace with your sheet JSON
-    const json = await res.json();
-    allData = json.kpis || [];
-    fuse = new Fuse(allData, { keys:['eNodeB Name'], threshold:0.4 });
+    const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?output=csv";
+    const res = await fetch(url);
+    const csvText = await res.text();
+    const parsed = Papa.parse(csvText, {header:true, skipEmptyLines:true});
+    allData = parsed.data.map(r=>{
+      // Convert numeric fields
+      Object.keys(r).forEach(k=>{
+        if(!isNaN(r[k])) r[k] = parseFloat(r[k]);
+      });
+      r.DateObj = new Date(r.Date);
+      return r;
+    });
+    fuse = new Fuse(allData, {keys:['eNodeB Name'], threshold:0.4});
     drawCharts();
   }catch(err){
     console.error(err);
@@ -93,67 +92,81 @@ function drawCharts(){
   const container = document.getElementById("chartContainer");
   container.innerHTML = "";
   charts = [];
-  
-  const siteName = document.getElementById("siteFilter").value.trim().toLowerCase();
+
+  const siteFilter = document.getElementById("siteFilter").value.trim().toLowerCase();
+  const selectedTab = document.getElementById("tabSelect").value;
+  const viewMode = document.getElementById("viewSelect").value;
+
   let filteredData = allData;
 
-  if(siteName && fuse){
-    const result = fuse.search(siteName);
-    if(result.length) filteredData = [result[0].item];
-    else filteredData = [];
+  if(siteFilter && fuse){
+    const result = fuse.search(siteFilter);
+    filteredData = result.length ? [result[0].item] : [];
   }
 
-  if(filteredData.length === 0) return;
+  if(filteredData.length===0) return;
 
-  const kpiGroups = [
-    {title:'Acceptance KPIs', list:acceptanceKpis},
-    {title:'Monitoring KPIs', list:monitoringKpis}
-  ];
+  const kpis = selectedTab==="Acceptance" ? acceptanceKpis : monitoringKpis;
 
-  kpiGroups.forEach(group=>{
-    group.list.forEach(kpi=>{
-      const card = document.createElement("div");
-      card.className = "chart-card";
-      const title = document.createElement("div");
-      title.className = "chart-title";
-      title.textContent = kpi;
-      const canvas = document.createElement("canvas");
-      canvas.id = `chart-${kpi.replace(/\s+/g,'-')}`;
-      card.appendChild(title);
-      card.appendChild(canvas);
-      container.appendChild(card);
+  kpis.forEach(kpi=>{
+    const card = document.createElement("div");
+    card.className = "chart-card";
+    const title = document.createElement("div");
+    title.className="chart-title";
+    title.textContent = `${kpi}`;
+    const canvas = document.createElement("canvas");
+    card.appendChild(title);
+    card.appendChild(canvas);
+    container.appendChild(card);
 
-      const datasets = filteredData.map(r=>({
-        label:r["eNodeB Name"],
-        data:[r[kpi]||0],
-        borderColor:'#'+Math.floor(Math.random()*16777215).toString(16),
-        fill:false
-      }));
-
-      const ctx = canvas.getContext("2d");
-      charts.push(new Chart(ctx,{
-        type:'line',
-        data:{labels:["Current"], datasets},
-        options:{
-          responsive:true,
-          maintainAspectRatio:false,
-          plugins:{legend:{position:'top'}},
-          scales:{y:{beginAtZero:true}}
-        }
-      }));
+    const datasets = filteredData.map(r=>{
+      if(viewMode==="trend"){
+        return {
+          label:r["eNodeB Name"],
+          data:[r[kpi]||0],
+          borderColor:'#'+Math.floor(Math.random()*16777215).toString(16),
+          fill:false
+        };
+      } else {
+        // pre/post week comparison
+        const preData = allData.filter(d=>d["eNodeB Name"]===r["eNodeB Name"] && d.DateObj>=preStart && d.DateObj<=preEnd).map(d=>d[kpi]||0);
+        const postData = allData.filter(d=>d["eNodeB Name"]===r["eNodeB Name"] && d.DateObj>preEnd).map(d=>d[kpi]||0);
+        return {
+          label:`${r["eNodeB Name"]} Pre`,
+          data:preData.length?preData:[0],
+          borderColor:'#'+Math.floor(Math.random()*16777215).toString(16),
+          fill:false
+        };
+      }
     });
+
+    const ctx = canvas.getContext("2d");
+    charts.push(new Chart(ctx,{
+      type:'line',
+      data:{
+        labels:filteredData.map(d=>d.Date),
+        datasets
+      },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{legend:{position:'top'}},
+        scales:{y:{beginAtZero:true}}
+      }
+    }));
   });
 }
 
-// Fuzzy search input
+// Event listeners
 document.getElementById("siteFilter").addEventListener("input", drawCharts);
-
-// Manual refresh
+document.getElementById("tabSelect").addEventListener("change", drawCharts);
+document.getElementById("viewSelect").addEventListener("change", drawCharts);
 document.getElementById("refreshBtn").addEventListener("click", fetchData);
 
-// Initial fetch
+// Initial load
 fetchData();
 
 </script>
+
 </body>
 </html>
