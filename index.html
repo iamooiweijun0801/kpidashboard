@@ -29,23 +29,45 @@ canvas { background:white; border-radius:12px; padding:16px; width:100% !importa
 .chart-card:hover { transform:translateY(-4px); box-shadow:0 6px 20px rgba(0,0,0,0.15); }
 .chart-title { text-align:center; font-weight:bold; margin-bottom:10px; color:#333; }
 
-/* Drawer */
+/* Drawer (fully hidden + animated slide out) */
 .kpiDrawer { 
-  position:fixed; top:0; right:0; width:320px; height:100%; background:white; 
-  box-shadow:-4px 0 12px rgba(0,0,0,0.15); transition:0.3s; z-index:20; padding:20px; 
-  overflow-y:auto; display:none; 
+  position:fixed;
+  top:0;
+  right:-320px; /* Start completely off-screen */
+  width:320px;
+  height:100%;
+  background:white;
+  box-shadow:-4px 0 12px rgba(0,0,0,0.15);
+  transition:right 0.35s ease;
+  z-index:20;
+  padding:20px;
+  overflow-y:auto;
+  display:none; /* Fully hidden until clicked */
 }
-.kpiDrawer.open { display:block; }
-.kpiDrawer h3 { margin-top:0; margin-bottom:12px; color:#2F80ED; }
-.kpiOption { margin-bottom:6px; }
-#applyAcceptanceBtn, #applyMonitoringBtn { margin-top:10px; width:100%; }
 
-/* Minimal blue toggle button */
-.kpiDrawerToggle { position:fixed; top:20px; right:0; width:30px; height:80px; background:#2F80ED; border-radius:6px 0 0 6px; cursor:pointer; z-index:25; }
-.kpiDrawerToggle:hover { background:#1f5ab5; }
-</style>
-</head>
-<body>
+/* When opened, slide into view */
+.kpiDrawer.open {
+  right:0;
+  display:block;
+}
+
+/* Toggle button now moves with drawer */
+.kpiDrawerToggle {
+  position:fixed;
+  top:20px;
+  right:0;
+  width:30px;
+  height:80px;
+  background:#2F80ED;
+  border-radius:6px 0 0 6px;
+  cursor:pointer;
+  z-index:25;
+  transition:right 0.35s ease; /* Make button slide too */
+}
+.kpiDrawer.open + .kpiDrawerToggle {
+  right:320px; /* Move the button with the drawer */
+}
+
 
 <header>KPI Dashboard</header>
 
@@ -225,17 +247,25 @@ function populateKpiDrawers(){
   monitoringKpisList = renderDrawer(monitoringKpis,"monitoringDrawer","monitoringKpiOptions","selectAllMonitoring");
 }
 
-// Drawer toggle
-document.getElementById("drawerToggle").addEventListener("click", ()=>{
-  const drawer = document.getElementById(currentTab+"Drawer");
-  if(drawer.style.display==="block"){
+document.getElementById("drawerToggle").addEventListener("click", () => {
+  const drawer = document.getElementById(currentTab + "Drawer");
+  const toggleBtn = document.getElementById("drawerToggle");
+
+  if (drawer.classList.contains("open")) {
+    // CLOSE
     drawer.classList.remove("open");
-    setTimeout(()=>drawer.style.display="none",300);
+    toggleBtn.style.right = "0px";
+    setTimeout(() => {
+      drawer.style.display = "none";
+    }, 350);
   } else {
-    drawer.style.display="block";
-    setTimeout(()=>drawer.classList.add("open"),10);
+    // OPEN
+    drawer.style.display = "block";
+    setTimeout(() => drawer.classList.add("open"), 10);
+    toggleBtn.style.right = "320px";
   }
 });
+
 
 // Apply buttons
 document.getElementById("applyAcceptanceBtn").addEventListener("click",()=>{
