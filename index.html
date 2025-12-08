@@ -327,45 +327,12 @@ function drawCharts(kpis,containerId){
     });
 
     new Chart(canvas.getContext("2d"),{
-  type:'line',
-  data:{
-    labels: timelineLabels,
-    datasets:[{
-      label: labelText,
-      data: dataPoints,
-      borderColor:'#'+Math.floor(Math.random()*16777215).toString(16),
-      fill:false,
-      tension:0.3,
-      pointRadius:3
-    }]
-  },
-  options:{
-    responsive:true,
-    maintainAspectRatio:false,
-    animation:{
-      x:{ type:'number', easing:'linear', duration:animationDuration, from:NaN, delay(ctx){ return ctx.index*10; } },
-      y:{duration:0}
-    },
-    scales:{ x:{display:true}, y:{beginAtZero:true,ticks:{maxTicksLimit:6}} },
-    plugins:{
-      legend:{position:'top'},
-      tooltip: {
-        enabled: true,
-        callbacks: {
-          // Customize tooltip label
-          label: function(context) {
-            const kpiName = kpi; // the KPI
-            const siteName = labelText; // site(s)
-            const value = context.raw; // value at this point
-            const date = context.label; // corresponding date label
-            return `${kpiName} (${siteName}) on ${date}: ${value}`;
-          }
-        }
-      }
-    }
-  }
-});
-
+      type:'line',
+      data:{ labels:timelineLabels,datasets:[{label:labelText,data:dataPoints,borderColor:'#'+Math.floor(Math.random()*16777215).toString(16),fill:false,tension:0.3,pointRadius:3}] },
+      options:{ responsive:true, maintainAspectRatio:false, animation:{ x:{ type:'number', easing:'linear', duration:animationDuration, from:NaN, delay(ctx){ return ctx.index*10; } }, y:{duration:0} }, scales:{x:{display:true},y:{beginAtZero:true,ticks:{maxTicksLimit:6}}}, plugins:{legend:{position:'top'}} }
+    });
+  });
+}
 
 // Fuzzy search
 const siteInput=document.getElementById("siteFilter");
