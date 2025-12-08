@@ -18,7 +18,7 @@ button:hover { background:#1f5ab5; }
 .chart-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; padding:0 16px; }
 .chart-card { padding:8px; border-radius:12px; background:white; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
 .chart-title { text-align:center; font-weight:bold; margin-bottom:8px; }
-canvas { border-radius:12px; background:white; }
+canvas { border-radius:12px; background:white; width:100%; height:400px; }
 </style>
 </head>
 <body>
@@ -35,9 +35,7 @@ canvas { border-radius:12px; background:white; }
   <div class="tab" data-tab="monitoring">Monitoring KPIs</div>
 </div>
 
-<div class="chart-grid" id="chartContainer">
-  <!-- Charts will be inserted here -->
-</div>
+<div class="chart-grid" id="chartContainer"></div>
 
 <script>
 let allData = [];
@@ -45,7 +43,7 @@ let charts = [];
 let fuse = null;
 let currentTab = "acceptance";
 
-// KPI Groups
+// KPI groups
 const acceptanceKpis = [
   "LTE RRC Setup Success Rate","ERAB Setup Success Rate","LTE Call Setup Success Rate",
   "E-RAB Call Drop Rate","CSFB Access Success Rate","LTE Intra Freq HO Success Rate",
@@ -65,7 +63,7 @@ const monitoringKpis = [
   "DL BLER QCI1","UL BLER QCI1"
 ];
 
-// Helper to fetch CSV from Google Sheet
+// fetch CSV
 async function fetchData(){
   try{
     const res = await fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?output=csv");
@@ -76,7 +74,7 @@ async function fetchData(){
   }catch(err){ console.error(err); }
 }
 
-// Parse CSV into array of objects
+// parse CSV
 function parseCSV(csv){
   const lines = csv.split("\n").filter(l=>l.trim());
   const headers = lines[0].split(",").map(h=>h.trim());
@@ -92,7 +90,7 @@ function parseCSV(csv){
   });
 }
 
-// Draw charts
+// draw charts
 function drawCharts(){
   const container = document.getElementById("chartContainer");
   container.innerHTML = "";
@@ -103,7 +101,7 @@ function drawCharts(){
 
   if(input && fuse){
     const result = fuse.search(input);
-    filteredData = result.slice(0,5).map(r=>r.item); // top 5 matches
+    filteredData = result.slice(0,5).map(r=>r.item);
   }
 
   if(filteredData.length === 0) return;
@@ -115,17 +113,17 @@ function drawCharts(){
     card.className = "chart-card";
     const title = document.createElement("div");
     title.className = "chart-title";
-    title.textContent = `${kpi} (${filteredData.length} site${filteredData.length>1?'s':''})`;
+    title.textContent = `${kpi} (${filteredData.length===allData.length?"All Sites":filteredData[0]["eNodeB Name"]})`;
     const canvas = document.createElement("canvas");
     canvas.height = 400;
     card.appendChild(title);
     card.appendChild(canvas);
     container.appendChild(card);
 
-    // Aggregate by date
     const labels = [...new Set(filteredData.map(d=>d.Date))].sort();
+
     const datasets = [{
-      label: filteredData.map(d=>d["eNodeB Name"]).join(", "),
+      label: filteredData.length===allData.length?"All Sites":filteredData[0]["eNodeB Name"],
       data: labels.map(date=>{
         const vals = filteredData.filter(f=>f.Date===date).map(f=>f[kpi]).filter(v=>typeof v==="number");
         if(kpi.includes("%") || kpi.includes("Rate") || kpi.includes("Ratio") || kpi.includes("Success")) return vals.length? (vals.reduce((a,b)=>a+b,0)/vals.length) : 0;
@@ -139,12 +137,17 @@ function drawCharts(){
     charts.push(new Chart(ctx,{
       type:'line',
       data:{labels,datasets},
-      options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales:{x:{title:{display:true,text:'Date'}},y:{beginAtZero:true}}}
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{legend:{position:'top'}},
+        scales:{x:{title:{display:true,text:'Date'}},y:{beginAtZero:true}}
+      }
     }));
   });
 }
 
-// Tabs
+// tabs
 document.querySelectorAll(".tab").forEach(tab=>{
   tab.addEventListener("click",()=>{
     document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
@@ -154,17 +157,16 @@ document.querySelectorAll(".tab").forEach(tab=>{
   });
 });
 
-// Fuzzy search & dropdown selection
+// search enter
 document.getElementById("siteFilter").addEventListener("keypress", e=>{
   if(e.key==="Enter") drawCharts();
 });
 
-// Refresh button
+// refresh
 document.getElementById("refreshBtn").addEventListener("click", fetchData);
 
-// Initial load
+// initial fetch
 fetchData();
 </script>
-
 </body>
 </html>
