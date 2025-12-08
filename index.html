@@ -4,35 +4,38 @@
 <meta charset="UTF-8">
 <title>KPI Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/papaparse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.6.2/fuse.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <style>
 body { font-family: Arial; margin:0; padding:0; background:#f5f5f5; }
-header { text-align:center; padding:20px; font-size:28px; font-weight:bold; }
+header { text-align:center; padding:16px; font-size:28px; font-weight:bold; background:#2F80ED; color:white; }
+.tabs { display:flex; justify-content:center; gap:12px; margin:16px 0; }
+.tab { padding:8px 16px; cursor:pointer; border-radius:8px; border:1px solid #ccc; background:#eee; font-weight:bold; }
+.tab.active { background:#2F80ED; color:white; }
 .controls { display:flex; justify-content:center; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
-#siteFilter, #tabSelect, #viewSelect { padding:6px; width:250px; }
+#siteFilter { padding:6px; width:250px; }
+select { padding:6px; }
 button { padding:8px 16px; cursor:pointer; border:none; background:#2F80ED; color:white; border-radius:6px; font-weight:bold; }
 button:hover { background:#1f5ab5; }
-.chart-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(600px,1fr)); gap:16px; padding:0 16px; }
+.chart-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(450px,1fr)); gap:16px; padding:0 16px; }
 canvas { background:white; border-radius:12px; padding:16px; }
 .chart-card { padding:8px; border-radius:12px; background:white; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
 .chart-title { text-align:center; font-weight:bold; margin-bottom:8px; }
+.site-title { text-align:center; font-size:16px; font-weight:bold; margin-bottom:4px; }
 </style>
 </head>
 <body>
 
 <header>KPI Dashboard</header>
 
+<div class="tabs">
+  <div class="tab active" data-tab="acceptance">Acceptance KPIs</div>
+  <div class="tab" data-tab="monitoring">Monitoring KPIs</div>
+</div>
+
 <div class="controls">
   <input type="text" id="siteFilter" placeholder="Search eNodeB Name">
-  <select id="tabSelect">
-    <option value="Acceptance">Acceptance KPIs</option>
-    <option value="Monitoring">Monitoring KPIs</option>
-  </select>
-  <select id="viewSelect">
-    <option value="trend">Trend</option>
-    <option value="prepost">Pre vs Post Week</option>
-  </select>
+  <select id="siteSelect"><option value="">All Sites</option></select>
   <button id="refreshBtn">Refresh Data</button>
 </div>
 
@@ -42,135 +45,149 @@ canvas { background:white; border-radius:12px; padding:16px; }
 let allData = [];
 let charts = [];
 let fuse = null;
+let currentTab = "acceptance";
 
-// KPI groups
+// Define KPI groups
 const acceptanceKpis = [
   "LTE RRC Setup Success Rate","ERAB Setup Success Rate","LTE Call Setup Success Rate","E-RAB Call Drop Rate",
-  "CSFB Access Success Rate","LTE Intra Freq HO Success Rate","Intra-eNB HO Success Rate",
-  "Inter-eNBX2HO Success Rate","Inter-eNBS1HO Success Rate","Max RRC Connected Ue",
-  "DL Data Total Volume (Gbyte)","UL Data Total Volume (Gbyte)","E-RAB Setup Success Rate (VoIP)",
-  "Call Drop Rate (VoIP)","Intra-frequency Handover Out Success Rate(VoIP)",
+  "CSFB Access Success Rate","LTE Intra Freq HO Success Rate","Intra-eNB HO Success Rate","Inter-eNBX2HO Success Rate",
+  "Inter-eNBS1HO Success Rate","Max RRC Connected Ue","DL Data Total Volume (Gbyte)","UL Data Total Volume (Gbyte)",
+  "E-RAB Setup Success Rate (VoIP)","Call Drop Rate (VoIP)","Intra-frequency Handover Out Success Rate(VoIP)",
   "Inter-frequency Handover Out Success Rate(VoIP)","SRVCC Success Rate (L2W)","SRVCC Success Rate (L2G)"
 ];
+
 const monitoringKpis = [
   "Cell Availability Ratio","Average Latency Downlink (msecs)","DL PRB Utilization (%)","UL PRB Utilization (%)",
   "LTE DL - Cell Average Throughput (Mbit/s)","LTE UL - Cell Average Thoughput (Mbit/s)",
   "LTE DL -USER Average Throughput (Mbit/s)","LTE UL -USER Average Throughput (Mbit/s)",
-  "Downlink Packet Loss Rate (VoIP)","Uplink Packet Loss Rate (VoIP)","VoLTE Traffic Erlang",
-  "VoLTE Traffic DL (MB)","VoLTE Traffic UL (MB)","DL BLER QCI1","UL BLER QCI1"
+  "Downlink Packet Loss Rate (VoIP)","Uplink Packet Loss Rate (VoIP)","VoLTE Traffic Erlang","VoLTE Traffic DL (MB)",
+  "VoLTE Traffic UL (MB)","DL BLER QCI1","UL BLER QCI1"
 ];
 
-// Pre/Post week
-const preStart = new Date("2025-11-16");
-const preEnd = new Date("2025-12-01");
+// Check if a KPI is percentage/rate/ratio
+function isPercentageKPI(kpi){ 
+  const lower = kpi.toLowerCase();
+  return lower.includes('rate') || lower.includes('%') || lower.includes('ratio');
+}
 
-// Check if KPI is percentage/rate (average) or absolute (sum)
-function isPercentage(kpi){ return kpi.toLowerCase().includes("rate") || kpi.toLowerCase().includes("%") || kpi.toLowerCase().includes("ratio"); }
-
-// Fetch Google Sheet CSV
+// Fetch and parse CSV from Google Sheets
 async function fetchData(){
-  try{
-    const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?output=csv";
-    const res = await fetch(url);
-    const csvText = await res.text();
-    const parsed = Papa.parse(csvText, {header:true, skipEmptyLines:true});
-    allData = parsed.data.map(r=>{
-      Object.keys(r).forEach(k=>{
-        if(!isNaN(r[k])) r[k] = parseFloat(r[k]);
-      });
-      r.DateObj = new Date(r.Date);
-      return r;
-    });
-    fuse = new Fuse(allData, {keys:['eNodeB Name'], threshold:0.4});
-    drawCharts();
-  }catch(err){
-    console.error(err);
-  }
-}
-
-// Aggregate function
-function aggregateData(filteredSites, kpi){
-  // Group by Date
-  const grouped = {};
-  filteredSites.forEach(d=>{
-    const date = d.Date;
-    if(!grouped[date]) grouped[date] = [];
-    grouped[date].push(d[kpi]||0);
-  });
-  const dates = Object.keys(grouped).sort((a,b)=>new Date(a)-new Date(b));
-  const values = dates.map(date=>{
-    const arr = grouped[date];
-    return isPercentage(kpi) ? arr.reduce((a,b)=>a+b,0)/arr.length : arr.reduce((a,b)=>a+b,0);
-  });
-  return {dates, values};
-}
-
-function drawCharts(){
-  const container = document.getElementById("chartContainer");
-  container.innerHTML = "";
-  charts = [];
-
-  const siteFilter = document.getElementById("siteFilter").value.trim().toLowerCase();
-  const selectedTab = document.getElementById("tabSelect").value;
-  const viewMode = document.getElementById("viewSelect").value;
-
-  let filteredData = allData;
-  if(siteFilter && fuse){
-    const result = fuse.search(siteFilter);
-    filteredData = result.length ? result.map(r=>r.item) : [];
-  }
-
-  if(filteredData.length===0) filteredData = allData; // default to all sites
-
-  const kpis = selectedTab==="Acceptance"?acceptanceKpis:monitoringKpis;
-
-  kpis.forEach(kpi=>{
-    const card = document.createElement("div");
-    card.className="chart-card";
-    const title = document.createElement("div");
-    title.className="chart-title";
-    title.textContent=kpi;
-    const canvas=document.createElement("canvas");
-    card.appendChild(title);
-    card.appendChild(canvas);
-    container.appendChild(card);
-
-    // Trend mode
-    if(viewMode==="trend"){
-      const {dates, values} = aggregateData(filteredData, kpi);
-      const ctx = canvas.getContext("2d");
-      charts.push(new Chart(ctx,{
-        type:'line',
-        data:{labels:dates, datasets:[{label:"All Sites", data:values, borderColor:'#2F80ED', fill:false}]},
-        options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales:{y:{beginAtZero:true}}}
-      }));
-    } else {
-      // Pre/Post week
-      const preData = filteredData.filter(d=>d.DateObj>=preStart && d.DateObj<=preEnd);
-      const postData = filteredData.filter(d=>d.DateObj>preEnd);
-      const preAgg = aggregateData(preData, kpi);
-      const postAgg = aggregateData(postData, kpi);
-      const ctx = canvas.getContext("2d");
-      charts.push(new Chart(ctx,{
-        type:'line',
-        data:{labels:preAgg.dates.concat(postAgg.dates), datasets:[
-          {label:"Pre Week", data:preAgg.values.concat(Array(postAgg.values.length).fill(null)), borderColor:'#2F80ED', fill:false},
-          {label:"Post Week", data:Array(preAgg.values.length).fill(null).concat(postAgg.values), borderColor:'#F2994A', fill:false}
-        ]},
-        options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales:{y:{beginAtZero:true}}}
-      }));
+  const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?output=csv";
+  Papa.parse(url, {
+    download:true,
+    header:true,
+    dynamicTyping:true,
+    complete: function(results){
+      allData = results.data.filter(r=>r['Date']); // remove empty rows
+      const siteNames = [...new Set(allData.map(r=>r['eNodeB Name']).filter(Boolean))].sort();
+      const select = document.getElementById('siteSelect');
+      select.innerHTML = '<option value="">All Sites</option>';
+      siteNames.forEach(name=>select.innerHTML+=`<option value="${name}">${name}</option>`);
+      fuse = new Fuse(siteNames.map(n=>({name:n})), { keys:['name'], threshold:0.4 });
+      drawCharts();
     }
   });
 }
 
-// Events
-document.getElementById("siteFilter").addEventListener("input", drawCharts);
-document.getElementById("tabSelect").addEventListener("change", drawCharts);
-document.getElementById("viewSelect").addEventListener("change", drawCharts);
+// Aggregate KPI per date
+function aggregateData(filteredData, kpis){
+  const grouped = {};
+  filteredData.forEach(r=>{
+    const date = r['Date'];
+    if(!grouped[date]) grouped[date]={};
+    kpis.forEach(k=>{
+      if(isPercentageKPI(k)){
+        if(!grouped[date][k]) grouped[date][k]=[];
+        grouped[date][k].push(parseFloat(r[k])||0);
+      } else {
+        if(!grouped[date][k]) grouped[date][k]=0;
+        grouped[date][k]+=(parseFloat(r[k])||0);
+      }
+    });
+  });
+  // Convert arrays to averages
+  Object.keys(grouped).forEach(date=>{
+    Object.keys(grouped[date]).forEach(k=>{
+      if(Array.isArray(grouped[date][k])) grouped[date][k]=grouped[date][k].reduce((a,b)=>a+b,0)/grouped[date][k].length;
+    });
+  });
+  return grouped;
+}
+
+// Draw charts
+function drawCharts(){
+  const container = document.getElementById("chartContainer");
+  container.innerHTML = "";
+  charts = [];
+  const siteName = document.getElementById("siteFilter").value.trim();
+  const selectSite = document.getElementById("siteSelect").value;
+  let filteredData = allData;
+
+  if(siteName && fuse){
+    const res = fuse.search(siteName);
+    if(res.length) filteredData = allData.filter(r=>r['eNodeB Name']===res[0].item.name);
+    else filteredData = [];
+  } else if(selectSite) {
+    filteredData = allData.filter(r=>r['eNodeB Name']===selectSite);
+  }
+
+  if(filteredData.length===0) return;
+
+  const kpis = currentTab==='acceptance'?acceptanceKpis:monitoringKpis;
+  const agg = aggregateData(filteredData,kpis);
+  const labels = Object.keys(agg).sort((a,b)=>new Date(a)-new Date(b));
+
+  kpis.forEach(kpi=>{
+    const card = document.createElement('div');
+    card.className='chart-card';
+    const title = document.createElement('div');
+    title.className='chart-title';
+    title.textContent = kpi;
+    const siteTitle = document.createElement('div');
+    siteTitle.className='site-title';
+    siteTitle.textContent = selectSite||'All Sites';
+    const canvas = document.createElement('canvas');
+    canvas.height=300; canvas.width=450;
+    card.appendChild(title);
+    card.appendChild(siteTitle);
+    card.appendChild(canvas);
+    container.appendChild(card);
+
+    const data = labels.map(d=>agg[d][kpi]||0);
+    const ctx = canvas.getContext('2d');
+    charts.push(new Chart(ctx,{
+      type:'line',
+      data:{labels,dataSets:[{label:kpi,data, borderColor:'#'+Math.floor(Math.random()*16777215).toString(16), fill:false}]},
+      options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales:{y:{beginAtZero:true}}}
+    }));
+  });
+}
+
+// Tabs switching
+document.querySelectorAll(".tab").forEach(tab=>{
+  tab.addEventListener("click", ()=>{
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+    tab.classList.add("active");
+    currentTab = tab.dataset.tab;
+    drawCharts();
+  });
+});
+
+// Trigger chart on Enter
+document.getElementById("siteFilter").addEventListener("keypress", e=>{
+  if(e.key==='Enter') drawCharts();
+});
+
+// Trigger chart on dropdown change
+document.getElementById("siteSelect").addEventListener("change", drawCharts);
+
+// Refresh button
 document.getElementById("refreshBtn").addEventListener("click", fetchData);
 
 // Initial fetch
 fetchData();
+
 </script>
+
 </body>
 </html>
