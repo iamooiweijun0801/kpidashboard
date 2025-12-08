@@ -8,6 +8,9 @@
 <style>
 body { font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin:0; padding:0; background:#f0f2f5; overflow-x:hidden; }
 header { text-align:center; padding:20px 0; font-size:32px; font-weight:bold; color:#2F80ED; background:white; box-shadow:0 2px 6px rgba(0,0,0,0.1); margin-bottom:16px; }
+.navbar { display:flex; justify-content:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+.navbar button { padding:8px 16px; cursor:pointer; border:none; background:#2F80ED; color:white; border-radius:6px; font-weight:bold; transition:0.2s; }
+.navbar button:hover { background:#1f5ab5; }
 .tabs { display:flex; justify-content:center; margin-bottom:16px; flex-wrap:wrap; gap:8px; }
 .tab { padding:10px 20px; cursor:pointer; border:1px solid #ccc; border-radius:8px; background:#eee; font-weight:bold; transition:0.3s; }
 .tab.active { background:#2F80ED; color:white; }
@@ -48,6 +51,13 @@ canvas { background:white; border-radius:12px; padding:16px; width:100% !importa
 <body>
 
 <header>GSM KPI Dashboard</header>
+
+<!-- Navigation Buttons -->
+<div class="navbar">
+  <button onclick="window.location.href='index.html'">LTE</button>
+  <button onclick="window.location.href='gsm.html'">GSM</button>
+  <button onclick="window.location.href='nr.html'">NR</button>
+</div>
 
 <div class="tabs">
   <div class="tab active" data-tab="acceptance">Acceptance KPIs</div>
