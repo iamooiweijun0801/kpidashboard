@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>KPI Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body { font-family: Arial; margin:0; padding:0; background:#f5f5f5; }
+header { text-align:center; padding:16px; font-size:24px; font-weight:bold; background:#2F80ED; color:white; }
+.tabs { display:flex; justify-content:center; margin-bottom:16px; }
+.tab { padding:8px 16px; cursor:pointer; border:1px solid #ccc; border-bottom:none; margin-right:4px; border-radius:8px 8px 0 0; background:#eee; }
+.tab.active { background:#2F80ED; color:white; }
+#siteFilter { margin:0 16px 16px 16px; padding:6px; width:220px; }
+#modeToggle { margin:0 16px 16px 16px; padding:6px; cursor:pointer; }
+.chart-container { width:95%; max-width:1200px; margin:0 auto 24px auto; background:white; border-radius:12px; padding:16px; }
+canvas { width:100%; height:300px; }
+</style>
+</head>
+<body>
+
+<header>KPI Dashboard</header>
+
+<div class="tabs">
+  <div class="tab active" data-tab="acceptance">Acceptance KPIs</div>
+  <div class="tab" data-tab="monitoring">Monitoring KPIs</div>
+</div>
+
+<div style="text-align:center;">
+  <input type="text" id="siteFilter" placeholder="Search eNodeB Name">
+  <button id="modeToggle">Switch to Pre/Post Mode</button>
+</div>
+
+<div id="charts"></div>
+
+<script>
+let currentTab = "acceptance";
+let allData = [];
+let mode = "trend"; // trend or prepost
+let charts = {};
+
+// Define KPIs
+const acceptanceKpis = [
+  "LTE RRC Setup Success Rate",
+  "ERAB Setup Success Rate",
+  "LTE Call Setup Success Rate",
+  "E-RAB Call Drop Rate",
+  "CSFB Access Success Rate",
+  "LTE Intra Freq HO Success Rate",
+  "Intra-eNB HO Success Rate",
+  "Inter-eNBX2HO Success Rate",
+  "Inter-eNBS1HO Success Rate",
+  "Max RRC Connected Ue",
+  "DL Data Total Volume (Gbyte)",
+  "UL Data Total Volume (Gbyte)",
+  "E-RAB Setup Success Rate (VoIP)",
+  "Call Drop Rate (VoIP)",
+  "Intra-frequency Handover Out Success Rate(VoIP)",
+  "Inter-frequency Handover Out Success Rate(VoIP)",
+  "SRVCC Success Rate (L2W)",
+  "SRVCC Success Rate (L2G)"
+];
+const monitoringKpis = [
+  "Cell Availability Ratio",
+  "Average Latency Downlink (msecs)",
+  "DL PRB Utilization (%)",
+  "UL PRB Utilization (%)",
+  "LTE DL - Cell Average Throughput (Mbit/s)",
+  "LTE UL - Cell Average Thoughput (Mbit/s)",
+  "LTE DL -USER Average Throughput (Mbit/s)",
+  "LTE UL -USER Average Throughput (Mbit/s)",
+  "Downlink Packet Loss Rate (VoIP)",
+  "Uplink Packet Loss Rate (VoIP)",
+  "VoLTE Traffic Erlang",
+  "VoLTE Traffic DL (MB)",
+  "VoLTE Traffic UL (MB)",
+  "DL BLER QCI1",
+  "UL BLER QCI1"
+];
+
+// Example: replace with your Google Sheet CSV JSON link (public)
+const SHEET_JSON_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?output=csv";
+
+// Fetch data
+async function fetchData(){
+  try{
+    const res = await fetch(SHEET_JSON_URL);
+    const text = await res.text();
+    allData = csvToJson(text);
+    drawCharts();
+  }catch(err){console.error(err);}
+}
+
+// CSV to JSON
+function csvToJson(csv){
+  const lines = csv.split('\n');
+  const headers = lines[0].split(',');
+  return lines.slice(1).map(line=>{
+    const obj = {};
+    line.split(',').forEach((val,i)=>{ obj[headers[i].trim()] = val.trim(); });
+    return obj;
+  });
+}
+
+function drawCharts(){
+  const kpis = currentTab === 'acceptance' ? acceptanceKpis : monitoringKpis;
+  const filter = document.getElementById('siteFilter').value.trim().toLowerCase();
+  document.getElementById('charts').innerHTML = '';
+  charts = {};
+
+  kpis.forEach(kpi=>{
+    const container = document.createElement('div');
+    container.className = 'chart-container';
+    const canvas = document.createElement('canvas');
+    container.appendChild(canvas);
+    document.getElementById('charts').appendChild(container);
+
+    const filteredData = allData.filter(r=>!filter || r['eNodeB Name'].toLowerCase().includes(filter));
+    if(filteredData.length === 0) return;
+
+    let labels = [];
+    let datasets = [];
+
+    if(mode === 'trend'){
+      labels = filteredData[0]['Time'].split(';'); // adjust according to your time column
+      datasets = filteredData.map(r=>({
+        label: r['eNodeB Name'],
+        data: filteredData.map(d=>parseFloat(d[kpi]||0)),
+        borderColor: '#' + Math.floor(Math.random()*16777215).toString(16),
+        fill: false
+      }));
+    } else {
+      // Pre/Post mode
+      const prePeriod = ['16/11/2025','17/11/2025','18/11/2025','19/11/2025','20/11/2025','23/11/2025','24/11/2025','25/11/2025','26/11/2025','27/11/2025','30/11/2025','01/12/2025'];
+      const postPeriod = filteredData.map(d=>d['Time']); // adjust to recent week
+      labels = prePeriod;
+      datasets = filteredData.map(r=>({
+        label: r['eNodeB Name'] + ' Pre',
+        data: prePeriod.map(date=>parseFloat(r[kpi]||0)),
+        borderColor: '#2F80ED', fill:false
+      })).concat(filteredData.map(r=>({
+        label: r['eNodeB Name'] + ' Post',
+        data: postPeriod.map(date=>parseFloat(r[kpi]||0)),
+        borderColor: '#FF0000', fill:false
+      })));
+    }
+
+    const ctx = canvas.getContext('2d');
+    charts[kpi] = new Chart(ctx,{ type:'line', data:{labels, datasets}, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'top' } } } });
+  });
+}
+
+// Tabs
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    currentTab = tab.dataset.tab;
+    drawCharts();
+  });
+});
+
+// Search
+document.getElementById('siteFilter').addEventListener('input', drawCharts);
+
+// Mode toggle
+document.getElementById('modeToggle').addEventListener('click',()=>{
+  mode = (mode==='trend')?'prepost':'trend';
+  document.getElementById('modeToggle').textContent = mode==='trend'?'Switch to Pre/Post Mode':'Switch to Trend Mode';
+  drawCharts();
+});
+
+fetchData();
+setInterval(fetchData, 60000);
+</script>
+
+</body>
+</html>
