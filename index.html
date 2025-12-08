@@ -10,10 +10,10 @@
 body { font-family: Arial; margin:0; padding:0; background:#f5f5f5; }
 header { text-align:center; padding:20px; font-size:28px; font-weight:bold; }
 .controls { display:flex; justify-content:center; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
-#siteFilter, #viewSelect, #tabSelect { padding:6px; width:250px; }
+#siteFilter, #tabSelect, #viewSelect { padding:6px; width:250px; }
 button { padding:8px 16px; cursor:pointer; border:none; background:#2F80ED; color:white; border-radius:6px; font-weight:bold; }
 button:hover { background:#1f5ab5; }
-.chart-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(350px,1fr)); gap:16px; padding:0 16px; }
+.chart-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(600px,1fr)); gap:16px; padding:0 16px; }
 canvas { background:white; border-radius:12px; padding:16px; }
 .chart-card { padding:8px; border-radius:12px; background:white; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
 .chart-title { text-align:center; font-weight:bold; margin-bottom:8px; }
@@ -36,16 +36,14 @@ canvas { background:white; border-radius:12px; padding:16px; }
   <button id="refreshBtn">Refresh Data</button>
 </div>
 
-<div class="chart-grid" id="chartContainer">
-  <!-- Charts inserted here -->
-</div>
+<div class="chart-grid" id="chartContainer"></div>
 
 <script>
 let allData = [];
 let charts = [];
 let fuse = null;
 
-// Define KPIs
+// KPI groups
 const acceptanceKpis = [
   "LTE RRC Setup Success Rate","ERAB Setup Success Rate","LTE Call Setup Success Rate","E-RAB Call Drop Rate",
   "CSFB Access Success Rate","LTE Intra Freq HO Success Rate","Intra-eNB HO Success Rate",
@@ -62,11 +60,14 @@ const monitoringKpis = [
   "VoLTE Traffic DL (MB)","VoLTE Traffic UL (MB)","DL BLER QCI1","UL BLER QCI1"
 ];
 
-// Pre/Post week dates
+// Pre/Post week
 const preStart = new Date("2025-11-16");
 const preEnd = new Date("2025-12-01");
 
-// Fetch CSV from Google Sheets
+// Check if KPI is percentage/rate (average) or absolute (sum)
+function isPercentage(kpi){ return kpi.toLowerCase().includes("rate") || kpi.toLowerCase().includes("%") || kpi.toLowerCase().includes("ratio"); }
+
+// Fetch Google Sheet CSV
 async function fetchData(){
   try{
     const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?output=csv";
@@ -74,7 +75,6 @@ async function fetchData(){
     const csvText = await res.text();
     const parsed = Papa.parse(csvText, {header:true, skipEmptyLines:true});
     allData = parsed.data.map(r=>{
-      // Convert numeric fields
       Object.keys(r).forEach(k=>{
         if(!isNaN(r[k])) r[k] = parseFloat(r[k]);
       });
@@ -88,6 +88,23 @@ async function fetchData(){
   }
 }
 
+// Aggregate function
+function aggregateData(filteredSites, kpi){
+  // Group by Date
+  const grouped = {};
+  filteredSites.forEach(d=>{
+    const date = d.Date;
+    if(!grouped[date]) grouped[date] = [];
+    grouped[date].push(d[kpi]||0);
+  });
+  const dates = Object.keys(grouped).sort((a,b)=>new Date(a)-new Date(b));
+  const values = dates.map(date=>{
+    const arr = grouped[date];
+    return isPercentage(kpi) ? arr.reduce((a,b)=>a+b,0)/arr.length : arr.reduce((a,b)=>a+b,0);
+  });
+  return {dates, values};
+}
+
 function drawCharts(){
   const container = document.getElementById("chartContainer");
   container.innerHTML = "";
@@ -98,75 +115,62 @@ function drawCharts(){
   const viewMode = document.getElementById("viewSelect").value;
 
   let filteredData = allData;
-
   if(siteFilter && fuse){
     const result = fuse.search(siteFilter);
-    filteredData = result.length ? [result[0].item] : [];
+    filteredData = result.length ? result.map(r=>r.item) : [];
   }
 
-  if(filteredData.length===0) return;
+  if(filteredData.length===0) filteredData = allData; // default to all sites
 
-  const kpis = selectedTab==="Acceptance" ? acceptanceKpis : monitoringKpis;
+  const kpis = selectedTab==="Acceptance"?acceptanceKpis:monitoringKpis;
 
   kpis.forEach(kpi=>{
     const card = document.createElement("div");
-    card.className = "chart-card";
+    card.className="chart-card";
     const title = document.createElement("div");
     title.className="chart-title";
-    title.textContent = `${kpi}`;
-    const canvas = document.createElement("canvas");
+    title.textContent=kpi;
+    const canvas=document.createElement("canvas");
     card.appendChild(title);
     card.appendChild(canvas);
     container.appendChild(card);
 
-    const datasets = filteredData.map(r=>{
-      if(viewMode==="trend"){
-        return {
-          label:r["eNodeB Name"],
-          data:[r[kpi]||0],
-          borderColor:'#'+Math.floor(Math.random()*16777215).toString(16),
-          fill:false
-        };
-      } else {
-        // pre/post week comparison
-        const preData = allData.filter(d=>d["eNodeB Name"]===r["eNodeB Name"] && d.DateObj>=preStart && d.DateObj<=preEnd).map(d=>d[kpi]||0);
-        const postData = allData.filter(d=>d["eNodeB Name"]===r["eNodeB Name"] && d.DateObj>preEnd).map(d=>d[kpi]||0);
-        return {
-          label:`${r["eNodeB Name"]} Pre`,
-          data:preData.length?preData:[0],
-          borderColor:'#'+Math.floor(Math.random()*16777215).toString(16),
-          fill:false
-        };
-      }
-    });
-
-    const ctx = canvas.getContext("2d");
-    charts.push(new Chart(ctx,{
-      type:'line',
-      data:{
-        labels:filteredData.map(d=>d.Date),
-        datasets
-      },
-      options:{
-        responsive:true,
-        maintainAspectRatio:false,
-        plugins:{legend:{position:'top'}},
-        scales:{y:{beginAtZero:true}}
-      }
-    }));
+    // Trend mode
+    if(viewMode==="trend"){
+      const {dates, values} = aggregateData(filteredData, kpi);
+      const ctx = canvas.getContext("2d");
+      charts.push(new Chart(ctx,{
+        type:'line',
+        data:{labels:dates, datasets:[{label:"All Sites", data:values, borderColor:'#2F80ED', fill:false}]},
+        options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales:{y:{beginAtZero:true}}}
+      }));
+    } else {
+      // Pre/Post week
+      const preData = filteredData.filter(d=>d.DateObj>=preStart && d.DateObj<=preEnd);
+      const postData = filteredData.filter(d=>d.DateObj>preEnd);
+      const preAgg = aggregateData(preData, kpi);
+      const postAgg = aggregateData(postData, kpi);
+      const ctx = canvas.getContext("2d");
+      charts.push(new Chart(ctx,{
+        type:'line',
+        data:{labels:preAgg.dates.concat(postAgg.dates), datasets:[
+          {label:"Pre Week", data:preAgg.values.concat(Array(postAgg.values.length).fill(null)), borderColor:'#2F80ED', fill:false},
+          {label:"Post Week", data:Array(preAgg.values.length).fill(null).concat(postAgg.values), borderColor:'#F2994A', fill:false}
+        ]},
+        options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales:{y:{beginAtZero:true}}}
+      }));
+    }
   });
 }
 
-// Event listeners
+// Events
 document.getElementById("siteFilter").addEventListener("input", drawCharts);
 document.getElementById("tabSelect").addEventListener("change", drawCharts);
 document.getElementById("viewSelect").addEventListener("change", drawCharts);
 document.getElementById("refreshBtn").addEventListener("click", fetchData);
 
-// Initial load
+// Initial fetch
 fetchData();
-
 </script>
-
 </body>
 </html>
