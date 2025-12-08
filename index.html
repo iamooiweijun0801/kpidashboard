@@ -4,41 +4,39 @@
 <meta charset="UTF-8">
 <title>KPI Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.6.2/fuse.min.js"></script>
 <style>
 body { font-family: Arial; margin:0; padding:0; background:#f5f5f5; }
-header { text-align:center; padding:16px; font-size:24px; font-weight:bold; background:#2F80ED; color:white; }
-.tabs { display:flex; justify-content:center; margin-bottom:16px; }
-.tab { padding:8px 16px; cursor:pointer; border:1px solid #ccc; border-bottom:none; margin-right:4px; border-radius:8px 8px 0 0; background:#eee; }
-.tab.active { background:#2F80ED; color:white; }
-#siteFilter { margin:0 16px 16px 16px; padding:6px; width:220px; }
-#modeToggle { margin:0 16px 16px 16px; padding:6px; cursor:pointer; }
-.chart-container { width:95%; max-width:1200px; margin:0 auto 24px auto; background:white; border-radius:12px; padding:16px; }
-canvas { width:100%; height:300px; }
+header { text-align:center; padding:16px; font-size:28px; font-weight:bold; }
+.controls { display:flex; justify-content:center; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+#siteFilter { padding:6px; width:250px; }
+button { padding:8px 16px; cursor:pointer; border:none; background:#2F80ED; color:white; border-radius:6px; font-weight:bold; }
+button:hover { background:#1f5ab5; }
+.chart-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(350px,1fr)); gap:16px; padding:0 16px; }
+canvas { background:white; border-radius:12px; padding:16px; }
+.chart-card { padding:8px; border-radius:12px; background:white; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+.chart-title { text-align:center; font-weight:bold; margin-bottom:8px; }
 </style>
 </head>
 <body>
 
 <header>KPI Dashboard</header>
 
-<div class="tabs">
-  <div class="tab active" data-tab="acceptance">Acceptance KPIs</div>
-  <div class="tab" data-tab="monitoring">Monitoring KPIs</div>
-</div>
-
-<div style="text-align:center;">
+<div class="controls">
   <input type="text" id="siteFilter" placeholder="Search eNodeB Name">
-  <button id="modeToggle">Switch to Pre/Post Mode</button>
+  <button id="refreshBtn">Refresh Data</button>
 </div>
 
-<div id="charts"></div>
+<div class="chart-grid" id="chartContainer">
+  <!-- Charts will be inserted here -->
+</div>
 
 <script>
-let currentTab = "acceptance";
 let allData = [];
-let mode = "trend"; // trend or prepost
-let charts = {};
+let charts = [];
+let fuse = null;
 
-// Define KPIs
+// Define KPI groups
 const acceptanceKpis = [
   "LTE RRC Setup Success Rate",
   "ERAB Setup Success Rate",
@@ -59,6 +57,7 @@ const acceptanceKpis = [
   "SRVCC Success Rate (L2W)",
   "SRVCC Success Rate (L2G)"
 ];
+
 const monitoringKpis = [
   "Cell Availability Ratio",
   "Average Latency Downlink (msecs)",
@@ -77,101 +76,84 @@ const monitoringKpis = [
   "UL BLER QCI1"
 ];
 
-// Example: replace with your Google Sheet CSV JSON link (public)
-const SHEET_JSON_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?output=csv";
-
-// Fetch data
+// Fetch KPI data from Google Sheet JSON
 async function fetchData(){
   try{
-    const res = await fetch(SHEET_JSON_URL);
-    const text = await res.text();
-    allData = csvToJson(text);
+    const res = await fetch("YOUR_GOOGLE_SHEET_JSON_URL"); // replace with your sheet JSON
+    const json = await res.json();
+    allData = json.kpis || [];
+    fuse = new Fuse(allData, { keys:['eNodeB Name'], threshold:0.4 });
     drawCharts();
-  }catch(err){console.error(err);}
-}
-
-// CSV to JSON
-function csvToJson(csv){
-  const lines = csv.split('\n');
-  const headers = lines[0].split(',');
-  return lines.slice(1).map(line=>{
-    const obj = {};
-    line.split(',').forEach((val,i)=>{ obj[headers[i].trim()] = val.trim(); });
-    return obj;
-  });
+  }catch(err){
+    console.error(err);
+  }
 }
 
 function drawCharts(){
-  const kpis = currentTab === 'acceptance' ? acceptanceKpis : monitoringKpis;
-  const filter = document.getElementById('siteFilter').value.trim().toLowerCase();
-  document.getElementById('charts').innerHTML = '';
-  charts = {};
+  const container = document.getElementById("chartContainer");
+  container.innerHTML = "";
+  charts = [];
+  
+  const siteName = document.getElementById("siteFilter").value.trim().toLowerCase();
+  let filteredData = allData;
 
-  kpis.forEach(kpi=>{
-    const container = document.createElement('div');
-    container.className = 'chart-container';
-    const canvas = document.createElement('canvas');
-    container.appendChild(canvas);
-    document.getElementById('charts').appendChild(container);
+  if(siteName && fuse){
+    const result = fuse.search(siteName);
+    if(result.length) filteredData = [result[0].item];
+    else filteredData = [];
+  }
 
-    const filteredData = allData.filter(r=>!filter || r['eNodeB Name'].toLowerCase().includes(filter));
-    if(filteredData.length === 0) return;
+  if(filteredData.length === 0) return;
 
-    let labels = [];
-    let datasets = [];
+  const kpiGroups = [
+    {title:'Acceptance KPIs', list:acceptanceKpis},
+    {title:'Monitoring KPIs', list:monitoringKpis}
+  ];
 
-    if(mode === 'trend'){
-      labels = filteredData[0]['Time'].split(';'); // adjust according to your time column
-      datasets = filteredData.map(r=>({
-        label: r['eNodeB Name'],
-        data: filteredData.map(d=>parseFloat(d[kpi]||0)),
-        borderColor: '#' + Math.floor(Math.random()*16777215).toString(16),
-        fill: false
+  kpiGroups.forEach(group=>{
+    group.list.forEach(kpi=>{
+      const card = document.createElement("div");
+      card.className = "chart-card";
+      const title = document.createElement("div");
+      title.className = "chart-title";
+      title.textContent = kpi;
+      const canvas = document.createElement("canvas");
+      canvas.id = `chart-${kpi.replace(/\s+/g,'-')}`;
+      card.appendChild(title);
+      card.appendChild(canvas);
+      container.appendChild(card);
+
+      const datasets = filteredData.map(r=>({
+        label:r["eNodeB Name"],
+        data:[r[kpi]||0],
+        borderColor:'#'+Math.floor(Math.random()*16777215).toString(16),
+        fill:false
       }));
-    } else {
-      // Pre/Post mode
-      const prePeriod = ['16/11/2025','17/11/2025','18/11/2025','19/11/2025','20/11/2025','23/11/2025','24/11/2025','25/11/2025','26/11/2025','27/11/2025','30/11/2025','01/12/2025'];
-      const postPeriod = filteredData.map(d=>d['Time']); // adjust to recent week
-      labels = prePeriod;
-      datasets = filteredData.map(r=>({
-        label: r['eNodeB Name'] + ' Pre',
-        data: prePeriod.map(date=>parseFloat(r[kpi]||0)),
-        borderColor: '#2F80ED', fill:false
-      })).concat(filteredData.map(r=>({
-        label: r['eNodeB Name'] + ' Post',
-        data: postPeriod.map(date=>parseFloat(r[kpi]||0)),
-        borderColor: '#FF0000', fill:false
-      })));
-    }
 
-    const ctx = canvas.getContext('2d');
-    charts[kpi] = new Chart(ctx,{ type:'line', data:{labels, datasets}, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'top' } } } });
+      const ctx = canvas.getContext("2d");
+      charts.push(new Chart(ctx,{
+        type:'line',
+        data:{labels:["Current"], datasets},
+        options:{
+          responsive:true,
+          maintainAspectRatio:false,
+          plugins:{legend:{position:'top'}},
+          scales:{y:{beginAtZero:true}}
+        }
+      }));
+    });
   });
 }
 
-// Tabs
-document.querySelectorAll('.tab').forEach(tab=>{
-  tab.addEventListener('click',()=>{
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    tab.classList.add('active');
-    currentTab = tab.dataset.tab;
-    drawCharts();
-  });
-});
+// Fuzzy search input
+document.getElementById("siteFilter").addEventListener("input", drawCharts);
 
-// Search
-document.getElementById('siteFilter').addEventListener('input', drawCharts);
+// Manual refresh
+document.getElementById("refreshBtn").addEventListener("click", fetchData);
 
-// Mode toggle
-document.getElementById('modeToggle').addEventListener('click',()=>{
-  mode = (mode==='trend')?'prepost':'trend';
-  document.getElementById('modeToggle').textContent = mode==='trend'?'Switch to Pre/Post Mode':'Switch to Trend Mode';
-  drawCharts();
-});
-
+// Initial fetch
 fetchData();
-setInterval(fetchData, 60000);
-</script>
 
+</script>
 </body>
 </html>
