@@ -35,7 +35,6 @@ canvas { background:white; border-radius:12px; padding:16px; width:100% !importa
 .kpiDrawer.open { right:0; }
 .kpiDrawer h3 { margin-top:0; margin-bottom:12px; color:#2F80ED; }
 .kpiOption { margin-bottom:6px; }
-#applyKpiBtn { margin-top:10px; width:100%; }
 
 /* Minimal blue toggle button */
 .kpiDrawerToggle { position:fixed; top:20px; right:0; width:30px; height:80px; background:#2F80ED; border-radius:6px 0 0 6px; cursor:pointer; z-index:25; }
@@ -89,14 +88,14 @@ canvas { background:white; border-radius:12px; padding:16px; width:100% !importa
 
 <script>
 let allData=[], fuse=null, allSites=[];
-let selectedSites=[]; // Persist across pages
+let selectedSites=[]; 
 let acceptanceKpisList=[], monitoringKpisList=[];
 let selectedAcceptanceKpis=[], selectedMonitoringKpis=[];
+const animationDuration=200;
 
-// KPI lists
 const acceptanceKpis = [
   "LTE RRC Setup Success Rate","ERAB Setup Success Rate","LTE Call Setup Success Rate","E-RAB Call Drop Rate",
-  "CSFB Access Success Rate","LTE Intra Freq HO Success Rate","Intra-eNB HO Success Success Rate","Inter-eNBX2HO Success Rate",
+  "CSFB Access Success Rate","LTE Intra Freq HO Success Rate","Intra-eNB HO Success Rate","Inter-eNBX2HO Success Rate",
   "Inter-eNBS1HO Success Rate","Max RRC Connected Ue","DL Data Total Volume (Gbyte)","UL Data Total Volume (Gbyte)",
   "E-RAB Setup Success Rate (VoIP)","Call Drop Rate (VoIP)","Intra-frequency Handover Out Success Rate(VoIP)",
   "Inter-frequency Handover Out Success Rate(VoIP)","SRVCC Success Rate (L2W)","SRVCC Success Rate (L2G)"
@@ -108,7 +107,7 @@ const monitoringKpis = [
   "VoLTE Traffic Erlang","VoLTE Traffic DL (MB)","VoLTE Traffic UL (MB)","DL BLER QCI1","UL BLER QCI1"
 ];
 
-// Fetch CSV
+// --- Fetch and parse CSV ---
 async function fetchData(){
   const res=await fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?output=csv");
   const text=await res.text();
@@ -123,10 +122,10 @@ async function fetchData(){
   allSites=[...new Set(allData.map(d=>d["eNodeB Name"]))].sort();
   populateSiteDropdown();
   populateKpiDrawers();
-  drawAcceptanceCharts();
+  drawCurrentPageCharts();
 }
 
-// Site dropdown with select all / clear filter
+// --- Site dropdown ---
 function populateSiteDropdown(){
   const list=document.getElementById("siteDropdownList");
   list.innerHTML="";
@@ -157,7 +156,6 @@ function populateSiteDropdown(){
 
   document.getElementById("siteDropdownBtn").onclick=()=>{ list.style.display=list.style.display==="block"?"none":"block"; };
 }
-
 function updateSiteButtonLabel(){
   const btn=document.getElementById("siteDropdownBtn");
   if(selectedSites.length===0 || selectedSites.length===allSites.length){ btn.textContent="All Sites ▼"; }
@@ -165,16 +163,54 @@ function updateSiteButtonLabel(){
   else btn.textContent="Multiple Sites ▼";
 }
 
-// KPI drawer functions (remain same as previous code)
-function populateKpiDrawers(){ /* similar as previous implementation */ }
+// --- KPI drawer ---
+function populateKpiDrawers(){
+  function renderDrawer(kpiArr,idDrawer,idOptions,idSelectAll){
+    const drawer=document.getElementById(idDrawer);
+    const kpiDiv=document.getElementById(idOptions);
+    let tempSelected=kpiArr.slice();
+    const selectAllChk=document.getElementById(idSelectAll);
+    selectAllChk.checked=true;
+    selectAllChk.onchange=()=>{ tempSelected=selectAllChk.checked?kpiArr.slice():[]; renderOptions(); };
+    function renderOptions(){
+      kpiDiv.innerHTML="";
+      kpiArr.forEach(kpi=>{
+        const checked=tempSelected.includes(kpi)?"checked":"";
+        const div=document.createElement("div");
+        div.className="kpiOption";
+        div.innerHTML=`<input type="checkbox" class="kpiCheckbox" value="${kpi}" ${checked}> ${kpi}`;
+        kpiDiv.appendChild(div);
+      });
+      kpiDiv.querySelectorAll(".kpiCheckbox").forEach(chk=>{
+        chk.onchange=()=>{ tempSelected=Array.from(kpiDiv.querySelectorAll(".kpiCheckbox:checked")).map(c=>c.value); selectAllChk.checked=tempSelected.length===kpiArr.length; };
+      });
+    }
+    renderOptions();
+    return ()=>tempSelected.slice();
+  }
+  acceptanceKpisList=renderDrawer(acceptanceKpis,"acceptanceDrawer","acceptanceKpiOptions","selectAllAcceptance");
+  monitoringKpisList=renderDrawer(monitoringKpis,"monitoringDrawer","monitoringKpiOptions","selectAllMonitoring");
+}
 
-// Drawer toggle
+// --- Drawer toggle ---
 document.getElementById("drawerToggle").addEventListener("click", ()=>{
   const drawer=document.getElementById(currentTab+"Drawer");
   drawer.classList.toggle("open");
 });
 
-// Tab switching
+// --- Apply buttons ---
+document.getElementById("applyAcceptanceBtn").addEventListener("click",()=>{
+  selectedAcceptanceKpis=acceptanceKpisList();
+  document.getElementById("acceptanceDrawer").classList.remove("open");
+  drawAcceptanceCharts();
+});
+document.getElementById("applyMonitoringBtn").addEventListener("click",()=>{
+  selectedMonitoringKpis=monitoringKpisList();
+  document.getElementById("monitoringDrawer").classList.remove("open");
+  drawMonitoringCharts();
+});
+
+// --- Tabs ---
 let currentTab="acceptance";
 document.querySelectorAll(".tab").forEach(tab=>{
   tab.addEventListener("click", ()=>{
@@ -192,9 +228,64 @@ function drawCurrentPageCharts(){
   else drawMonitoringCharts();
 }
 
-// Chart draw functions (remain same as previous implementation)
-function drawAcceptanceCharts(){ /* as before */ }
-function drawMonitoringCharts(){ /* as before */ }
+// --- Draw charts ---
+function drawAcceptanceCharts(){ drawCharts(selectedAcceptanceKpis.length?selectedAcceptanceKpis:acceptanceKpis,"acceptanceChartContainer"); }
+function drawMonitoringCharts(){ drawCharts(selectedMonitoringKpis.length?selectedMonitoringKpis:monitoringKpis,"monitoringChartContainer"); }
+
+function drawCharts(kpis,containerId){
+  const container=document.getElementById(containerId);
+  container.innerHTML="";
+  const timeline=[...new Set(allData.map(d=>d["Date"]))].sort((a,b)=>{
+    const [da,ma,ya]=a.split('/').map(Number); const [db,mb,yb]=b.split('/').map(Number);
+    return new Date(ya,ma-1,da)-new Date(yb,mb-1,db);
+  });
+  const timelineLabels=timeline.map(d=>{ const [day,month]=d.split('/').map(Number); const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; return `${day} ${months[month-1]}`; });
+
+  kpis.forEach(kpi=>{
+    const card=document.createElement("div"); card.className="chart-card";
+    const title=document.createElement("div"); title.className="chart-title";
+    let labelText="All Sites";
+    if(selectedSites.length===1) labelText=selectedSites[0];
+    else if(selectedSites.length>1 && selectedSites.length<allSites.length) labelText="Multiple Sites";
+    title.textContent=`${kpi} - ${labelText}`;
+    const canvas=document.createElement("canvas");
+    card.appendChild(title); card.appendChild(canvas);
+    container.appendChild(card);
+
+    let filteredData=allData;
+    if(selectedSites.length>0) filteredData=allData.filter(d=>selectedSites.includes(d["eNodeB Name"]));
+
+    const dataPoints=timeline.map(date=>{
+      const vals=filteredData.filter(d=>d["Date"]===date).map(d=>{ const v=d[kpi]; return (v===""||v==null||isNaN(v))?0:v; });
+      if(vals.length===0) return 0;
+      if(kpi.toLowerCase().includes("%")||kpi.toLowerCase().includes("rate")||kpi.toLowerCase().includes("ratio")) return vals.reduce((a,b)=>a+b,0)/vals.length;
+      else return vals.reduce((a,b)=>a+b,0);
+    });
+
+    new Chart(canvas.getContext("2d"),{
+      type:'line',
+      data:{ labels:timelineLabels,datasets:[{label:labelText,data:dataPoints,borderColor:'#'+Math.floor(Math.random()*16777215).toString(16),fill:false,tension:0.3,pointRadius:3}] },
+      options:{ responsive:true, maintainAspectRatio:false, animation:{ x:{ type:'number', easing:'linear', duration:animationDuration, from:NaN, delay(ctx){ return ctx.index*10; } }, y:{duration:0} }, scales:{x:{display:true},y:{beginAtZero:true,ticks:{maxTicksLimit:6}}}, plugins:{legend:{position:'top'}} }
+    });
+  });
+}
+
+// --- Fuzzy search ---
+const siteInput=document.getElementById("siteFilter");
+const dropdown=document.getElementById("dropdown");
+siteInput.addEventListener("input",()=>{
+  const val=siteInput.value.trim();
+  if(!val || !fuse){ dropdown.style.display="none"; return; }
+  const results=fuse.search(val).slice(0,5).map(r=>r.item["eNodeB Name"]);
+  dropdown.innerHTML="";
+  results.forEach(r=>{
+    const div=document.createElement("div"); div.textContent=r;
+    div.onclick=()=>{ siteInput.value=r; dropdown.style.display="none"; selectedSites=[r]; document.querySelectorAll(".siteOption").forEach(c=>c.checked=c.value===r); updateSiteButtonLabel(); drawCurrentPageCharts(); };
+    dropdown.appendChild(div);
+  });
+  dropdown.style.display=results.length?"block":"none";
+});
+document.addEventListener("click", e=>{ if(e.target!==siteInput) dropdown.style.display="none"; });
 
 document.getElementById("refreshBtn").addEventListener("click", fetchData);
 fetchData();
