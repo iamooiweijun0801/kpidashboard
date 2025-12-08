@@ -17,7 +17,6 @@ header { text-align:center; padding:20px 0; font-size:32px; font-weight:bold; co
 #dropdown { position:absolute; background:white; border:1px solid #ccc; max-height:150px; overflow-y:auto; display:none; z-index:10; width:250px; top:38px; left:0; border-radius:6px; }
 #dropdown div { padding:6px 10px; cursor:pointer; transition:0.2s; }
 #dropdown div:hover { background:#2F80ED; color:white; }
-
 #siteDropdownBtn { padding:8px 10px; cursor:pointer; border:1px solid #ccc; border-radius:6px; background:white; min-width:250px; text-align:left; position:relative; z-index:5; }
 #siteDropdownList { position:absolute; background:white; border:1px solid #ccc; max-height:200px; overflow-y:auto; display:none; z-index:10; width:250px; border-radius:6px; padding:6px; }
 
@@ -30,11 +29,16 @@ canvas { background:white; border-radius:12px; padding:16px; width:100% !importa
 .chart-card:hover { transform:translateY(-4px); box-shadow:0 6px 20px rgba(0,0,0,0.15); }
 .chart-title { text-align:center; font-weight:bold; margin-bottom:10px; color:#333; }
 
-/* KPI Drawer */
-.kpiDrawer { position:fixed; top:0; right:-320px; width:320px; height:100%; background:white; box-shadow:-4px 0 12px rgba(0,0,0,0.15); transition:0.3s; z-index:20; padding:20px; overflow-y:auto; }
-.kpiDrawer.open { right:0; }
+/* Drawer */
+.kpiDrawer { 
+  position:fixed; top:0; right:0; width:320px; height:100%; background:white; 
+  box-shadow:-4px 0 12px rgba(0,0,0,0.15); transition:0.3s; z-index:20; padding:20px; 
+  overflow-y:auto; display:none; 
+}
+.kpiDrawer.open { display:block; }
 .kpiDrawer h3 { margin-top:0; margin-bottom:12px; color:#2F80ED; }
 .kpiOption { margin-bottom:6px; }
+#applyAcceptanceBtn, #applyMonitoringBtn { margin-top:10px; width:100%; }
 
 /* Minimal blue toggle button */
 .kpiDrawerToggle { position:fixed; top:20px; right:0; width:30px; height:80px; background:#2F80ED; border-radius:6px 0 0 6px; cursor:pointer; z-index:25; }
@@ -88,14 +92,14 @@ canvas { background:white; border-radius:12px; padding:16px; width:100% !importa
 
 <script>
 let allData=[], fuse=null, allSites=[];
-let selectedSites=[]; 
+let selectedSites=[];
 let acceptanceKpisList=[], monitoringKpisList=[];
 let selectedAcceptanceKpis=[], selectedMonitoringKpis=[];
-const animationDuration=200;
+const animationDuration=150;
 
 const acceptanceKpis = [
   "LTE RRC Setup Success Rate","ERAB Setup Success Rate","LTE Call Setup Success Rate","E-RAB Call Drop Rate",
-  "CSFB Access Success Rate","LTE Intra Freq HO Success Rate","Intra-eNB HO Success Rate","Inter-eNBX2HO Success Rate",
+  "CSFB Access Success Rate","LTE Intra Freq HO Success Rate","Intra-eNB HO Success Success Rate","Inter-eNBX2HO Success Rate",
   "Inter-eNBS1HO Success Rate","Max RRC Connected Ue","DL Data Total Volume (Gbyte)","UL Data Total Volume (Gbyte)",
   "E-RAB Setup Success Rate (VoIP)","Call Drop Rate (VoIP)","Intra-frequency Handover Out Success Rate(VoIP)",
   "Inter-frequency Handover Out Success Rate(VoIP)","SRVCC Success Rate (L2W)","SRVCC Success Rate (L2G)"
@@ -107,71 +111,57 @@ const monitoringKpis = [
   "VoLTE Traffic Erlang","VoLTE Traffic DL (MB)","VoLTE Traffic UL (MB)","DL BLER QCI1","UL BLER QCI1"
 ];
 
-// --- Fetch and parse CSV ---
 async function fetchData(){
-  const res=await fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?output=csv");
-  const text=await res.text();
-  const rows=text.trim().split('\n').map(r=>r.split(','));
-  const headers=rows.shift().map(h=>h.trim());
-  allData=rows.map(r=>{
-    const obj={};
-    headers.forEach((h,i)=>{ const val=r[i]?r[i].trim():"0"; obj[h]=isNaN(val)?val:parseFloat(val); });
-    return obj;
-  });
-  fuse=new Fuse(allData,{keys:['eNodeB Name'], threshold:0.4});
-  allSites=[...new Set(allData.map(d=>d["eNodeB Name"]))].sort();
+  const res = await fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?output=csv");
+  const text = await res.text();
+  const rows = text.trim().split('\n').map(r=>r.split(','));
+  const headers = rows.shift().map(h=>h.trim());
+  allData = rows.map(r=>{ const obj={}; headers.forEach((h,i)=>{ const val=r[i]?r[i].trim():"0"; obj[h]=isNaN(val)?val:parseFloat(val); }); return obj; });
+  fuse = new Fuse(allData,{ keys:['eNodeB Name'], threshold:0.4 });
+  allSites = [...new Set(allData.map(d=>d["eNodeB Name"]))].sort();
   populateSiteDropdown();
   populateKpiDrawers();
-  drawCurrentPageCharts();
+  drawAcceptanceCharts();
 }
 
-// --- Site dropdown ---
+// SITE DROPDOWN
 function populateSiteDropdown(){
-  const list=document.getElementById("siteDropdownList");
+  const list = document.getElementById("siteDropdownList");
   list.innerHTML="";
-  const allDiv=document.createElement("div");
-  allDiv.innerHTML='<input type="checkbox" id="siteAll" checked> <label for="siteAll"><b>All Sites</b></label>';
-  list.appendChild(allDiv);
-
-  allDiv.querySelector("#siteAll").addEventListener("change", function(){
-    const checkboxes=list.querySelectorAll(".siteOption");
-    checkboxes.forEach(c=>c.checked=this.checked);
-    selectedSites=this.checked?allSites.slice():[];
-    updateSiteButtonLabel();
-    drawCurrentPageCharts();
-  });
-
   allSites.forEach((site,i)=>{
     const div=document.createElement("div");
-    div.innerHTML=`<input type="checkbox" class="siteOption" id="site_${i}" value="${site}" checked> <label for="site_${i}">${site}</label>`;
+    div.innerHTML=`<input type="checkbox" class="siteOption" id="site_${i}" value="${site}"> <label for="site_${i}">${site}</label>`;
     list.appendChild(div);
-    div.querySelector(".siteOption").addEventListener("change",()=>{
-      const checked=list.querySelectorAll(".siteOption:checked");
-      selectedSites=Array.from(checked).map(c=>c.value);
-      list.querySelector("#siteAll").checked=selectedSites.length===allSites.length;
+  });
+  document.getElementById("siteDropdownBtn").onclick = ()=>{ list.style.display=list.style.display==="block"?"none":"block"; };
+  list.querySelectorAll(".siteOption").forEach(chk=>{
+    chk.addEventListener("change", ()=>{
+      selectedSites=Array.from(list.querySelectorAll(".siteOption:checked")).map(c=>c.value);
       updateSiteButtonLabel();
       drawCurrentPageCharts();
     });
   });
-
-  document.getElementById("siteDropdownBtn").onclick=()=>{ list.style.display=list.style.display==="block"?"none":"block"; };
 }
 function updateSiteButtonLabel(){
   const btn=document.getElementById("siteDropdownBtn");
   if(selectedSites.length===0 || selectedSites.length===allSites.length){ btn.textContent="All Sites ▼"; }
   else if(selectedSites.length===1){ btn.textContent=selectedSites[0]+" ▼"; }
-  else btn.textContent="Multiple Sites ▼";
+  else{ btn.textContent="Multiple Sites ▼"; }
 }
 
-// --- KPI drawer ---
+// KPI Drawers
 function populateKpiDrawers(){
   function renderDrawer(kpiArr,idDrawer,idOptions,idSelectAll){
     const drawer=document.getElementById(idDrawer);
     const kpiDiv=document.getElementById(idOptions);
-    let tempSelected=kpiArr.slice();
-    const selectAllChk=document.getElementById(idSelectAll);
+    let tempSelected = kpiArr.slice();
+    const selectAllChk = document.getElementById(idSelectAll);
     selectAllChk.checked=true;
-    selectAllChk.onchange=()=>{ tempSelected=selectAllChk.checked?kpiArr.slice():[]; renderOptions(); };
+    selectAllChk.onchange=()=>{
+      if(selectAllChk.checked) tempSelected=kpiArr.slice();
+      else tempSelected=[];
+      renderOptions();
+    };
     function renderOptions(){
       kpiDiv.innerHTML="";
       kpiArr.forEach(kpi=>{
@@ -182,43 +172,55 @@ function populateKpiDrawers(){
         kpiDiv.appendChild(div);
       });
       kpiDiv.querySelectorAll(".kpiCheckbox").forEach(chk=>{
-        chk.onchange=()=>{ tempSelected=Array.from(kpiDiv.querySelectorAll(".kpiCheckbox:checked")).map(c=>c.value); selectAllChk.checked=tempSelected.length===kpiArr.length; };
+        chk.onchange=()=>{
+          tempSelected=Array.from(kpiDiv.querySelectorAll(".kpiCheckbox:checked")).map(c=>c.value);
+          selectAllChk.checked=tempSelected.length===kpiArr.length;
+        };
       });
     }
     renderOptions();
     return ()=>tempSelected.slice();
   }
-  acceptanceKpisList=renderDrawer(acceptanceKpis,"acceptanceDrawer","acceptanceKpiOptions","selectAllAcceptance");
-  monitoringKpisList=renderDrawer(monitoringKpis,"monitoringDrawer","monitoringKpiOptions","selectAllMonitoring");
+  acceptanceKpisList = renderDrawer(acceptanceKpis,"acceptanceDrawer","acceptanceKpiOptions","selectAllAcceptance");
+  monitoringKpisList = renderDrawer(monitoringKpis,"monitoringDrawer","monitoringKpiOptions","selectAllMonitoring");
 }
 
-// --- Drawer toggle ---
+// Drawer toggle
 document.getElementById("drawerToggle").addEventListener("click", ()=>{
-  const drawer=document.getElementById(currentTab+"Drawer");
-  drawer.classList.toggle("open");
+  const drawer = document.getElementById(currentTab+"Drawer");
+  if(drawer.style.display==="block"){
+    drawer.classList.remove("open");
+    setTimeout(()=>drawer.style.display="none",300);
+  } else {
+    drawer.style.display="block";
+    setTimeout(()=>drawer.classList.add("open"),10);
+  }
 });
 
-// --- Apply buttons ---
+// Apply buttons
 document.getElementById("applyAcceptanceBtn").addEventListener("click",()=>{
   selectedAcceptanceKpis=acceptanceKpisList();
   document.getElementById("acceptanceDrawer").classList.remove("open");
+  setTimeout(()=>document.getElementById("acceptanceDrawer").style.display="none",300);
   drawAcceptanceCharts();
 });
 document.getElementById("applyMonitoringBtn").addEventListener("click",()=>{
   selectedMonitoringKpis=monitoringKpisList();
   document.getElementById("monitoringDrawer").classList.remove("open");
+  setTimeout(()=>document.getElementById("monitoringDrawer").style.display="none",300);
   drawMonitoringCharts();
 });
 
-// --- Tabs ---
+// Tabs
 let currentTab="acceptance";
 document.querySelectorAll(".tab").forEach(tab=>{
-  tab.addEventListener("click", ()=>{
+  tab.addEventListener("click",()=>{
     document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
     tab.classList.add("active");
-    currentTab=tab.dataset.tab;
-    document.getElementById("acceptancePage").style.display=currentTab==="acceptance"?"block":"none";
-    document.getElementById("monitoringPage").style.display=currentTab==="monitoring"?"block":"none";
+    const tabName=tab.dataset.tab;
+    document.getElementById("acceptancePage").style.display=tabName==="acceptance"?"block":"none";
+    document.getElementById("monitoringPage").style.display=tabName==="monitoring"?"block":"none";
+    currentTab=tabName;
     drawCurrentPageCharts();
   });
 });
@@ -228,38 +230,50 @@ function drawCurrentPageCharts(){
   else drawMonitoringCharts();
 }
 
-// --- Draw charts ---
 function drawAcceptanceCharts(){ drawCharts(selectedAcceptanceKpis.length?selectedAcceptanceKpis:acceptanceKpis,"acceptanceChartContainer"); }
 function drawMonitoringCharts(){ drawCharts(selectedMonitoringKpis.length?selectedMonitoringKpis:monitoringKpis,"monitoringChartContainer"); }
 
 function drawCharts(kpis,containerId){
   const container=document.getElementById(containerId);
   container.innerHTML="";
-  const timeline=[...new Set(allData.map(d=>d["Date"]))].sort((a,b)=>{
-    const [da,ma,ya]=a.split('/').map(Number); const [db,mb,yb]=b.split('/').map(Number);
+  const timeline = [...new Set(allData.map(d=>d["Date"]))];
+  timeline.sort((a,b)=>{
+    const [da,ma,ya]=a.split('/').map(Number);
+    const [db,mb,yb]=b.split('/').map(Number);
     return new Date(ya,ma-1,da)-new Date(yb,mb-1,db);
   });
-  const timelineLabels=timeline.map(d=>{ const [day,month]=d.split('/').map(Number); const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; return `${day} ${months[month-1]}`; });
-
+  const timelineLabels = timeline.map(d=>{
+    const [day,month]=d.split('/').map(Number);
+    const monthNames=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return `${day} ${monthNames[month-1]}`;
+  });
   kpis.forEach(kpi=>{
-    const card=document.createElement("div"); card.className="chart-card";
-    const title=document.createElement("div"); title.className="chart-title";
+    const card=document.createElement("div");
+    card.className="chart-card";
+    const title=document.createElement("div");
+    title.className="chart-title";
+
     let labelText="All Sites";
     if(selectedSites.length===1) labelText=selectedSites[0];
     else if(selectedSites.length>1 && selectedSites.length<allSites.length) labelText="Multiple Sites";
     title.textContent=`${kpi} - ${labelText}`;
+
     const canvas=document.createElement("canvas");
-    card.appendChild(title); card.appendChild(canvas);
+    card.appendChild(title);
+    card.appendChild(canvas);
     container.appendChild(card);
 
     let filteredData=allData;
     if(selectedSites.length>0) filteredData=allData.filter(d=>selectedSites.includes(d["eNodeB Name"]));
 
     const dataPoints=timeline.map(date=>{
-      const vals=filteredData.filter(d=>d["Date"]===date).map(d=>{ const v=d[kpi]; return (v===""||v==null||isNaN(v))?0:v; });
+      const vals = filteredData.filter(d=>d["Date"]===date).map(d=>{
+        const v=d[kpi]; return (v===""||v==null||isNaN(v))?0:v;
+      });
       if(vals.length===0) return 0;
-      if(kpi.toLowerCase().includes("%")||kpi.toLowerCase().includes("rate")||kpi.toLowerCase().includes("ratio")) return vals.reduce((a,b)=>a+b,0)/vals.length;
-      else return vals.reduce((a,b)=>a+b,0);
+      if(kpi.toLowerCase().includes("%")||kpi.toLowerCase().includes("rate")||kpi.toLowerCase().includes("ratio")){
+        return vals.reduce((a,b)=>a+b,0)/vals.length;
+      }else return vals.reduce((a,b)=>a+b,0);
     });
 
     new Chart(canvas.getContext("2d"),{
@@ -270,17 +284,25 @@ function drawCharts(kpis,containerId){
   });
 }
 
-// --- Fuzzy search ---
+// Fuzzy search
 const siteInput=document.getElementById("siteFilter");
 const dropdown=document.getElementById("dropdown");
-siteInput.addEventListener("input",()=>{
+siteInput.addEventListener("input", ()=>{
   const val=siteInput.value.trim();
   if(!val || !fuse){ dropdown.style.display="none"; return; }
   const results=fuse.search(val).slice(0,5).map(r=>r.item["eNodeB Name"]);
   dropdown.innerHTML="";
   results.forEach(r=>{
-    const div=document.createElement("div"); div.textContent=r;
-    div.onclick=()=>{ siteInput.value=r; dropdown.style.display="none"; selectedSites=[r]; document.querySelectorAll(".siteOption").forEach(c=>c.checked=c.value===r); updateSiteButtonLabel(); drawCurrentPageCharts(); };
+    const div=document.createElement("div");
+    div.textContent=r;
+    div.onclick=()=>{
+      siteInput.value=r;
+      dropdown.style.display="none";
+      selectedSites=[r];
+      document.querySelectorAll(".siteOption").forEach(c=>c.checked=c.value===r);
+      updateSiteButtonLabel();
+      drawCurrentPageCharts();
+    };
     dropdown.appendChild(div);
   });
   dropdown.style.display=results.length?"block":"none";
@@ -288,6 +310,7 @@ siteInput.addEventListener("input",()=>{
 document.addEventListener("click", e=>{ if(e.target!==siteInput) dropdown.style.display="none"; });
 
 document.getElementById("refreshBtn").addEventListener("click", fetchData);
+
 fetchData();
 </script>
 
