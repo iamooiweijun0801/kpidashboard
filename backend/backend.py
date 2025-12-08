@@ -17,6 +17,11 @@ app.add_middleware(
 EXCEL_FILE = "test KPI.xlsx"
 UPLOAD_PASSWORD = "Cellcard@2025"  # Set your own secret
 
+# Root route to check if backend is live
+@app.get("/")
+def root():
+    return {"message": "KPI backend is running!"}
+
 def read_excel_to_json():
     if not os.path.exists(EXCEL_FILE):
         return []
