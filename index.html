@@ -35,10 +35,11 @@ canvas { background:white; border-radius:12px; padding:16px; width:100% !importa
 .chart-title { text-align:center; font-weight:bold; margin-bottom:10px; color:#333; }
 
 /* Drawer styles */
-#kpiDrawer { position:fixed; top:0; right:-300px; width:300px; height:100%; background:white; box-shadow:-4px 0 12px rgba(0,0,0,0.15); transition:0.3s; z-index:20; padding:20px; overflow-y:auto; }
+#kpiDrawer { position:fixed; top:0; right:-320px; width:320px; height:100%; background:white; box-shadow:-4px 0 12px rgba(0,0,0,0.15); transition:0.3s; z-index:20; padding:20px; overflow-y:auto; }
 #kpiDrawer.open { right:0; }
 #kpiDrawer h3 { margin-top:0; margin-bottom:12px; color:#2F80ED; }
 .kpiOption { margin-bottom:6px; }
+#applyKpiBtn { margin-top:10px; width:100%; }
 
 /* Minimal blue tab button top-right */
 #kpiDrawerToggle { position:fixed; top:20px; right:0; width:30px; height:80px; background:#2F80ED; border-radius:6px 0 0 6px; cursor:pointer; z-index:25; }
@@ -75,6 +76,7 @@ canvas { background:white; border-radius:12px; padding:16px; width:100% !importa
     <input type="checkbox" id="selectAllKpi"> <label for="selectAllKpi"><b>Select All</b></label>
   </div>
   <div id="kpiOptions"></div>
+  <button id="applyKpiBtn">Apply</button>
 </div>
 <div id="kpiDrawerToggle"></div>
 
@@ -84,8 +86,9 @@ let charts = [];
 let fuse = null;
 let currentTab = "acceptance";
 let allSites = [];
+let tempSelectedKpis = [];
 let selectedKpis = [];
-const animationDuration = 600; // faster
+const animationDuration = 500; // faster
 
 const acceptanceKpis = [
   "LTE RRC Setup Success Rate","ERAB Setup Success Rate","LTE Call Setup Success Rate","E-RAB Call Drop Rate",
@@ -127,104 +130,63 @@ function parseCSV(str){
   allSites = [...new Set(allData.map(d=>d["eNodeB Name"]))].sort();
 }
 
+// Site dropdown
 function populateSiteDropdown(){
   const dropdownList = document.getElementById("siteDropdownList");
   dropdownList.innerHTML = '';
-
-  const selectAllDiv = document.createElement("div");
-  selectAllDiv.innerHTML = `<input type="checkbox" id="selectAll"> <label for="selectAll"><b>Select All</b></label>`;
-  dropdownList.appendChild(selectAllDiv);
-
-  const clearDiv = document.createElement("div");
-  clearDiv.innerHTML = `<input type="checkbox" id="clearFilter"> <label for="clearFilter"><b>Clear Filter</b></label>`;
-  dropdownList.appendChild(clearDiv);
-
   allSites.forEach((site,i)=>{
     const div = document.createElement("div");
     div.innerHTML = `<input type="checkbox" class="siteOption" id="site_${i}" value="${site}"> <label for="site_${i}">${site}</label>`;
     dropdownList.appendChild(div);
   });
-
   document.getElementById("siteDropdownBtn").onclick = ()=>{
-    dropdownList.style.display = dropdownList.style.display==="block" ? "none":"block";
+    dropdownList.style.display = dropdownList.style.display==="block"?"none":"block";
   };
-
   const updateButtonLabel = ()=>{
     const checked = Array.from(dropdownList.querySelectorAll(".siteOption:checked")).map(c=>c.value);
     let labelText = "All Sites";
-    if(checked.length === 1){
-      labelText = checked[0];
-    } else if(checked.length > 1 && checked.length<allSites.length){
-      labelText = "Multiple Sites";
-    }
+    if(checked.length === 1){ labelText = checked[0]; }
+    else if(checked.length > 1 && checked.length<allSites.length){ labelText = "Multiple Sites"; }
     document.getElementById("siteDropdownBtn").textContent = labelText + " ▼";
-    drawCharts();
   };
-
-  document.getElementById("selectAll").addEventListener("change", function(){
-    const checked = this.checked;
-    dropdownList.querySelectorAll(".siteOption").forEach(c=>c.checked = checked);
-    document.getElementById("clearFilter").checked = false;
-    updateButtonLabel();
-  });
-
-  document.getElementById("clearFilter").addEventListener("change", function(){
-    if(this.checked){
-      dropdownList.querySelectorAll(".siteOption").forEach(c=>c.checked=false);
-      document.getElementById("selectAll").checked = false;
-      updateButtonLabel();
-    }
-  });
-
   dropdownList.querySelectorAll(".siteOption").forEach(c=>{
-    c.addEventListener("change", ()=>{
-      const allChecked = Array.from(dropdownList.querySelectorAll(".siteOption")).every(chk=>chk.checked);
-      document.getElementById("selectAll").checked = allChecked;
-      document.getElementById("clearFilter").checked = false;
-      updateButtonLabel();
-    });
+    c.addEventListener("change", updateButtonLabel);
   });
 }
 
+// KPI drawer
 function populateKpiDrawer(){
   const kpiDiv = document.getElementById("kpiOptions");
   kpiDiv.innerHTML = '';
   const kpis = currentTab==="acceptance"?acceptanceKpis:monitoringKpis;
-  selectedKpis = JSON.parse(localStorage.getItem("selectedKpis")) || kpis.slice();
+  tempSelectedKpis = selectedKpis.length? selectedKpis.slice():kpis.slice();
 
-  // Handle select all
   const selectAllKpiChk = document.getElementById("selectAllKpi");
-  selectAllKpiChk.checked = selectedKpis.length === kpis.length;
+  selectAllKpiChk.checked = tempSelectedKpis.length===kpis.length;
+  selectAllKpiChk.onchange = ()=>{
+    if(selectAllKpiChk.checked){ tempSelectedKpis = kpis.slice(); }
+    else { tempSelectedKpis = []; }
+    renderKpiOptions();
+  };
 
-  selectAllKpiChk.addEventListener("change", ()=>{
-    if(selectAllKpiChk.checked){
-      selectedKpis = kpis.slice();
-    } else {
-      selectedKpis = [];
-    }
-    localStorage.setItem("selectedKpis", JSON.stringify(selectedKpis));
-    drawCharts();
-    populateKpiDrawer(); // refresh checkboxes
-  });
-
-  kpis.forEach(kpi=>{
-    const checked = selectedKpis.includes(kpi)? "checked":"";
-    const div = document.createElement("div");
-    div.className = "kpiOption";
-    div.innerHTML = `<input type="checkbox" class="kpiCheckbox" value="${kpi}" ${checked}> ${kpi}`;
-    kpiDiv.appendChild(div);
-  });
-
-  document.querySelectorAll(".kpiCheckbox").forEach(chk=>{
-    chk.addEventListener("change", ()=>{
-      selectedKpis = Array.from(document.querySelectorAll(".kpiCheckbox:checked")).map(c=>c.value);
-      localStorage.setItem("selectedKpis", JSON.stringify(selectedKpis));
-      drawCharts();
-      // Update select all checkbox
-      const kpisList = currentTab==="acceptance"?acceptanceKpis:monitoringKpis;
-      document.getElementById("selectAllKpi").checked = selectedKpis.length===kpisList.length;
+  function renderKpiOptions(){
+    kpiDiv.innerHTML = '';
+    kpis.forEach(kpi=>{
+      const checked = tempSelectedKpis.includes(kpi)? "checked":"";
+      const div = document.createElement("div");
+      div.className = "kpiOption";
+      div.innerHTML = `<input type="checkbox" class="kpiCheckbox" value="${kpi}" ${checked}> ${kpi}`;
+      kpiDiv.appendChild(div);
     });
-  });
+    document.querySelectorAll(".kpiCheckbox").forEach(chk=>{
+      chk.onchange = ()=>{
+        const checkedKpis = Array.from(document.querySelectorAll(".kpiCheckbox:checked")).map(c=>c.value);
+        tempSelectedKpis = checkedKpis;
+        selectAllKpiChk.checked = tempSelectedKpis.length===kpis.length;
+      };
+    });
+  }
+  renderKpiOptions();
 }
 
 // Drawer toggle
@@ -236,6 +198,15 @@ toggle.addEventListener("click", ()=>{
 });
 if(localStorage.getItem("kpiDrawerOpen")==="true") drawer.classList.add("open");
 
+// Apply button
+document.getElementById("applyKpiBtn").addEventListener("click", ()=>{
+  selectedKpis = tempSelectedKpis.slice();
+  localStorage.setItem("selectedKpis", JSON.stringify(selectedKpis));
+  drawCharts();
+  drawer.classList.remove("open");
+});
+
+// Draw charts
 function drawCharts(){
   const container = document.getElementById("chartContainer");
   container.innerHTML = "";
@@ -244,13 +215,8 @@ function drawCharts(){
   const siteNameSearch = document.getElementById("siteFilter").value.trim();
   const selectedSites = Array.from(document.querySelectorAll("#siteDropdownList .siteOption:checked")).map(c=>c.value);
   let filteredData = allData;
-
-  if(siteNameSearch){
-    filteredData = filteredData.filter(d=>d["eNodeB Name"]===siteNameSearch);
-  } else if(selectedSites.length>0){
-    filteredData = filteredData.filter(d=>selectedSites.includes(d["eNodeB Name"]));
-  }
-
+  if(siteNameSearch) filteredData = filteredData.filter(d=>d["eNodeB Name"]===siteNameSearch);
+  else if(selectedSites.length>0) filteredData = filteredData.filter(d=>selectedSites.includes(d["eNodeB Name"]));
   if(filteredData.length===0) return;
 
   const kpis = selectedKpis.length? selectedKpis:(currentTab==="acceptance"?acceptanceKpis:monitoringKpis);
@@ -292,32 +258,14 @@ function drawCharts(){
       if(values.length===0) return 0;
       if(kpi.toLowerCase().includes("%") || kpi.toLowerCase().includes("rate") || kpi.toLowerCase().includes("ratio")){
         return values.reduce((a,b)=>a+b,0)/values.length;
-      }else{
-        return values.reduce((a,b)=>a+b,0);
-      }
+      }else{ return values.reduce((a,b)=>a+b,0); }
     });
 
     const ctx = canvas.getContext("2d");
     charts.push(new Chart(ctx,{
       type:'line',
-      data:{
-        labels: timelineLabels,
-        datasets:[{
-          label: labelText,
-          data:dataPoints,
-          borderColor:'#'+Math.floor(Math.random()*16777215).toString(16),
-          fill:false,
-          tension:0.3,
-          pointRadius:3,
-        }]
-      },
-      options:{
-        responsive:true,
-        maintainAspectRatio:false,
-        animation: { x: { type:'number', easing:'linear', duration:animationDuration, from:NaN, delay(ctx){ return ctx.index*20; } }, y:{duration:0} },
-        scales:{ x:{display:true}, y:{beginAtZero:true, ticks:{ maxTicksLimit:6 }} },
-        plugins:{ legend:{ position:'top' } }
-      }
+      data:{ labels: timelineLabels, datasets:[{ label: labelText, data:dataPoints, borderColor:'#'+Math.floor(Math.random()*16777215).toString(16), fill:false, tension:0.3, pointRadius:3 }] },
+      options:{ responsive:true, maintainAspectRatio:false, animation:{ x:{ type:'number', easing:'linear', duration:animationDuration, from:NaN, delay(ctx){ return ctx.index*20; } }, y:{duration:0} }, scales:{ x:{display:true}, y:{beginAtZero:true, ticks:{ maxTicksLimit:6 }} }, plugins:{ legend:{ position:'top' } } }
     }));
   });
 }
@@ -351,7 +299,6 @@ document.querySelectorAll(".tab").forEach(tab=>{
     tab.classList.add("active");
     currentTab = tab.dataset.tab;
     populateKpiDrawer();
-    drawCharts();
   });
 });
 
