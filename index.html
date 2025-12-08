@@ -13,10 +13,15 @@ header { text-align:center; padding:20px 0; font-size:32px; font-weight:bold; co
 .tab.active { background:#2F80ED; color:white; }
 .tab:hover:not(.active) { background:#d0e1ff; }
 .controls { display:flex; justify-content:center; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
-#siteFilter, #siteDropdown { padding:8px; width:250px; border-radius:6px; border:1px solid #ccc; }
+#siteFilter { padding:8px; width:250px; border-radius:6px; border:1px solid #ccc; }
 #dropdown { position:absolute; background:white; border:1px solid #ccc; max-height:150px; overflow-y:auto; display:none; z-index:10; width:250px; top:38px; left:0; border-radius:6px; }
 #dropdown div { padding:6px 10px; cursor:pointer; transition:0.2s; }
 #dropdown div:hover { background:#2F80ED; color:white; }
+
+/* Custom checklist dropdown button */
+#siteDropdownBtn { padding:8px 10px; cursor:pointer; border:1px solid #ccc; border-radius:6px; background:white; min-width:250px; text-align:left; }
+#siteDropdownList { position:absolute; background:white; border:1px solid #ccc; max-height:200px; overflow-y:auto; display:none; z-index:10; width:250px; border-radius:6px; padding:6px; }
+
 button { padding:10px 18px; cursor:pointer; border:none; background:#2F80ED; color:white; border-radius:6px; font-weight:bold; transition:0.2s; }
 button:hover { background:#1f5ab5; }
 .chart-grid { 
@@ -45,9 +50,10 @@ canvas { background:white; border-radius:12px; padding:16px; width:100% !importa
     <input type="text" id="siteFilter" placeholder="Search eNodeB Name">
     <div id="dropdown"></div>
   </div>
-  <select id="siteDropdown">
-    <option value="">All Sites</option>
-  </select>
+  <div style="position:relative;">
+    <button id="siteDropdownBtn">All Sites ▼</button>
+    <div id="siteDropdownList"></div>
+  </div>
   <button id="refreshBtn">Refresh Data</button>
 </div>
 
@@ -87,7 +93,7 @@ async function fetchData(){
   }
 }
 
-// Parse CSV and convert empty cells to 0
+// Parse CSV
 function parseCSV(str){
   const rows = str.trim().split('\n').map(r=>r.split(','));
   const headers = rows.shift().map(h=>h.trim());
@@ -103,15 +109,58 @@ function parseCSV(str){
   allSites = [...new Set(allData.map(d=>d["eNodeB Name"]))].sort();
 }
 
-// Populate full site dropdown
+// Populate custom checklist dropdown
 function populateSiteDropdown(){
-  const dropdown = document.getElementById("siteDropdown");
-  dropdown.innerHTML = '<option value="">All Sites</option>';
-  allSites.forEach(site=>{
-    const opt = document.createElement("option");
-    opt.value = site;
-    opt.textContent = site;
-    dropdown.appendChild(opt);
+  const dropdownList = document.getElementById("siteDropdownList");
+  dropdownList.innerHTML = '';
+
+  // Select All
+  const selectAllDiv = document.createElement("div");
+  selectAllDiv.innerHTML = `<input type="checkbox" id="selectAll"> <label for="selectAll"><b>Select All</b></label>`;
+  dropdownList.appendChild(selectAllDiv);
+
+  // Clear Filter
+  const clearDiv = document.createElement("div");
+  clearDiv.innerHTML = `<input type="checkbox" id="clearFilter"> <label for="clearFilter"><b>Clear Filter</b></label>`;
+  dropdownList.appendChild(clearDiv);
+
+  allSites.forEach((site,i)=>{
+    const div = document.createElement("div");
+    div.innerHTML = `<input type="checkbox" class="siteOption" id="site_${i}" value="${site}"> <label for="site_${i}">${site}</label>`;
+    dropdownList.appendChild(div);
+  });
+
+  document.getElementById("siteDropdownBtn").onclick = ()=>{
+    dropdownList.style.display = dropdownList.style.display==="block" ? "none":"block";
+  };
+
+  const updateButtonLabel = ()=>{
+    const checked = Array.from(dropdownList.querySelectorAll(".siteOption:checked")).map(c=>c.value);
+    document.getElementById("siteDropdownBtn").textContent = checked.length===0 ? "All Sites ▼" : checked.join(", ") + " ▼";
+    drawCharts();
+  };
+
+  dropdownList.querySelectorAll(".siteOption").forEach(c=>{
+    c.addEventListener("change", ()=>{
+      document.getElementById("selectAll").checked = false;
+      document.getElementById("clearFilter").checked = false;
+      updateButtonLabel();
+    });
+  });
+
+  document.getElementById("selectAll").addEventListener("change", function(){
+    const checked = this.checked;
+    dropdownList.querySelectorAll(".siteOption").forEach(c=>c.checked = checked);
+    document.getElementById("clearFilter").checked = false;
+    updateButtonLabel();
+  });
+
+  document.getElementById("clearFilter").addEventListener("change", function(){
+    if(this.checked){
+      dropdownList.querySelectorAll(".siteOption").forEach(c=>c.checked=false);
+      document.getElementById("selectAll").checked = false;
+      updateButtonLabel();
+    }
   });
 }
 
@@ -122,15 +171,19 @@ function drawCharts(){
   charts = [];
 
   const siteNameSearch = document.getElementById("siteFilter").value.trim();
-  const siteNameSelect = document.getElementById("siteDropdown").value;
-  const selectedSite = siteNameSearch || siteNameSelect;
+  const selectedSites = Array.from(document.querySelectorAll("#siteDropdownList .siteOption:checked")).map(c=>c.value);
+  let filteredData = allData;
 
-  let filteredData = selectedSite ? allData.filter(d=>d["eNodeB Name"]===selectedSite) : allData;
+  if(siteNameSearch){
+    filteredData = filteredData.filter(d=>d["eNodeB Name"]===siteNameSearch);
+  } else if(selectedSites.length>0){
+    filteredData = filteredData.filter(d=>selectedSites.includes(d["eNodeB Name"]));
+  }
+
   if(filteredData.length===0) return;
 
   const kpis = currentTab==="acceptance"?acceptanceKpis:monitoringKpis;
 
-  // Create timeline sorted by DD/MM/YYYY
   const timeline = [...new Set(allData.map(d=>d["Date"]))];
   timeline.sort((a,b)=>{
     const [da, ma, ya] = a.split('/').map(Number);
@@ -138,12 +191,18 @@ function drawCharts(){
     return new Date(ya, ma-1, da) - new Date(yb, mb-1, db);
   });
 
+  const timelineLabels = timeline.map(d=>{
+    const [day, month] = d.split('/').map(Number);
+    const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return `${day} ${monthNames[month-1]}`;
+  });
+
   kpis.forEach(kpi=>{
     const card = document.createElement("div");
     card.className = "chart-card";
     const title = document.createElement("div");
     title.className = "chart-title";
-    title.textContent = `${kpi} - ${selectedSite||"All Sites"}`;
+    title.textContent = `${kpi} - ${selectedSites.length>0 ? selectedSites.join(', ') : "All Sites"}`;
     const canvas = document.createElement("canvas");
     card.appendChild(title);
     card.appendChild(canvas);
@@ -166,9 +225,9 @@ function drawCharts(){
     charts.push(new Chart(ctx,{
       type:'line',
       data:{
-        labels:timeline,
+        labels: timelineLabels,
         datasets:[{
-          label:selectedSite||"All Sites",
+          label: selectedSites.length>0 ? selectedSites.join(', ') : "All Sites",
           data:dataPoints,
           borderColor:'#'+Math.floor(Math.random()*16777215).toString(16),
           fill:false,
@@ -179,20 +238,8 @@ function drawCharts(){
       options:{
         responsive:true,
         maintainAspectRatio:false,
-        animation: {
-          x: { 
-            type: 'number', 
-            easing: 'linear', 
-            duration: 1500, 
-            from: NaN, 
-            delay(ctx) { return ctx.index * 50; }
-          },
-          y: { duration:0 } 
-        },
-        scales:{
-          x:{ display:true },
-          y:{ beginAtZero:true, ticks:{ maxTicksLimit:6 } }
-        },
+        animation: { x: { type:'number', easing:'linear', duration:1500, from:NaN, delay(ctx){ return ctx.index*50; } }, y:{duration:0} },
+        scales:{ x:{display:true}, y:{beginAtZero:true, ticks:{ maxTicksLimit:6 }} },
         plugins:{ legend:{ position:'top' } }
       }
     }));
@@ -230,9 +277,6 @@ document.querySelectorAll(".tab").forEach(tab=>{
     drawCharts();
   });
 });
-
-// Full site dropdown selection
-document.getElementById("siteDropdown").addEventListener("change", drawCharts);
 
 // Refresh
 document.getElementById("refreshBtn").addEventListener("click", fetchData);
