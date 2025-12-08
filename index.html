@@ -6,7 +6,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.6.2/fuse.min.js"></script>
 <style>
-body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin:0; padding:0; background:#f0f2f5; overflow-x:hidden; }
+body { font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin:0; padding:0; background:#f0f2f5; overflow-x:hidden; }
 header { text-align:center; padding:20px 0; font-size:32px; font-weight:bold; color:#2F80ED; background:white; box-shadow:0 2px 6px rgba(0,0,0,0.1); margin-bottom:16px; }
 .tabs { display:flex; justify-content:center; margin-bottom:16px; flex-wrap:wrap; gap:8px; }
 .tab { padding:10px 20px; cursor:pointer; border:1px solid #ccc; border-radius:8px; background:#eee; font-weight:bold; transition:0.3s; }
@@ -23,26 +23,22 @@ header { text-align:center; padding:20px 0; font-size:32px; font-weight:bold; co
 button { padding:10px 18px; cursor:pointer; border:none; background:#2F80ED; color:white; border-radius:6px; font-weight:bold; transition:0.2s; }
 button:hover { background:#1f5ab5; }
 
-.chart-grid { 
-  display:grid; 
-  grid-template-columns:repeat(auto-fit,minmax(400px,1fr)); 
-  gap:20px; 
-  padding:0 20px 20px 20px; 
-}
+.chart-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(400px,1fr)); gap:20px; padding:0 20px 20px 20px; }
 canvas { background:white; border-radius:12px; padding:16px; width:100% !important; height:250px !important; }
 .chart-card { padding:10px; border-radius:12px; background:white; box-shadow:0 2px 12px rgba(0,0,0,0.1); transition:0.3s; }
 .chart-card:hover { transform:translateY(-4px); box-shadow:0 6px 20px rgba(0,0,0,0.15); }
 .chart-title { text-align:center; font-weight:bold; margin-bottom:10px; color:#333; }
 
-/* Drawer styles */
-#kpiDrawer { position:fixed; top:0; right:-300px; width:300px; height:100%; background:white; box-shadow:-4px 0 12px rgba(0,0,0,0.15); transition:0.3s; z-index:20; padding:20px; overflow-y:auto; }
-#kpiDrawer.open { right:0; }
-#kpiDrawer h3 { margin-top:0; margin-bottom:12px; color:#2F80ED; }
+/* Drawer */
+.kpiDrawer { position:fixed; top:0; right:-320px; width:320px; height:100%; background:white; box-shadow:-4px 0 12px rgba(0,0,0,0.15); transition:0.3s; z-index:20; padding:20px; overflow-y:auto; }
+.kpiDrawer.open { right:0; }
+.kpiDrawer h3 { margin-top:0; margin-bottom:12px; color:#2F80ED; }
 .kpiOption { margin-bottom:6px; }
+#applyKpiBtn { margin-top:10px; width:100%; }
 
-/* Minimal blue tab button top-right */
-#kpiDrawerToggle { position:fixed; top:20px; right:0; width:30px; height:80px; background:#2F80ED; border-radius:6px 0 0 6px; cursor:pointer; z-index:25; }
-#kpiDrawerToggle:hover { background:#1f5ab5; }
+/* Minimal blue toggle button */
+.kpiDrawerToggle { position:fixed; top:20px; right:0; width:30px; height:80px; background:#2F80ED; border-radius:6px 0 0 6px; cursor:pointer; z-index:25; }
+.kpiDrawerToggle:hover { background:#1f5ab5; }
 </style>
 </head>
 <body>
@@ -66,27 +62,38 @@ canvas { background:white; border-radius:12px; padding:16px; width:100% !importa
   <button id="refreshBtn">Refresh Data</button>
 </div>
 
-<div class="chart-grid" id="chartContainer"></div>
-
-<!-- KPI Drawer -->
-<div id="kpiDrawer">
-  <h3>Select KPIs</h3>
-  <div>
-    <input type="checkbox" id="selectAllKpi"> <label for="selectAllKpi"><b>Select All</b></label>
-  </div>
-  <div id="kpiOptions"></div>
+<!-- Pages -->
+<div id="acceptancePage">
+  <div class="chart-grid" id="acceptanceChartContainer"></div>
 </div>
-<div id="kpiDrawerToggle"></div>
+<div id="monitoringPage" style="display:none;">
+  <div class="chart-grid" id="monitoringChartContainer"></div>
+</div>
+
+<!-- KPI Drawers -->
+<div id="acceptanceDrawer" class="kpiDrawer">
+  <h3>KPIs</h3>
+  <div><input type="checkbox" id="selectAllAcceptance"> <label for="selectAllAcceptance"><b>Select All</b></label></div>
+  <div id="acceptanceKpiOptions"></div>
+  <button id="applyAcceptanceBtn">Apply</button>
+</div>
+<div id="monitoringDrawer" class="kpiDrawer">
+  <h3>KPIs</h3>
+  <div><input type="checkbox" id="selectAllMonitoring"> <label for="selectAllMonitoring"><b>Select All</b></label></div>
+  <div id="monitoringKpiOptions"></div>
+  <button id="applyMonitoringBtn">Apply</button>
+</div>
+
+<div id="drawerToggle" class="kpiDrawerToggle"></div>
 
 <script>
-let allData = [];
-let charts = [];
-let fuse = null;
-let currentTab = "acceptance";
-let allSites = [];
-let selectedKpis = [];
-const animationDuration = 600; // faster
+let allData=[], fuse=null, allSites=[];
+let selectedSites=[]; // Persist across pages
+let acceptanceKpisList=[], monitoringKpisList=[];
+let selectedAcceptanceKpis=[], selectedMonitoringKpis=[];
+const animationDuration=200;
 
+// KPI lists
 const acceptanceKpis = [
   "LTE RRC Setup Success Rate","ERAB Setup Success Rate","LTE Call Setup Success Rate","E-RAB Call Drop Rate",
   "CSFB Access Success Rate","LTE Intra Freq HO Success Rate","Intra-eNB HO Success Rate","Inter-eNBX2HO Success Rate",
@@ -101,264 +108,208 @@ const monitoringKpis = [
   "VoLTE Traffic Erlang","VoLTE Traffic DL (MB)","VoLTE Traffic UL (MB)","DL BLER QCI1","UL BLER QCI1"
 ];
 
+// Fetch and parse CSV
 async function fetchData(){
-  try{
-    const res = await fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?output=csv");
-    const text = await res.text();
-    parseCSV(text);
-    populateSiteDropdown();
-    populateKpiDrawer();
-    drawCharts();
-  }catch(err){ console.error(err); }
-}
-
-function parseCSV(str){
-  const rows = str.trim().split('\n').map(r=>r.split(','));
+  const res = await fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?output=csv");
+  const text = await res.text();
+  const rows = text.trim().split('\n').map(r=>r.split(','));
   const headers = rows.shift().map(h=>h.trim());
   allData = rows.map(r=>{
-    const obj = {};
-    headers.forEach((h,i)=>{
-      const val = r[i]?r[i].trim():"0";
-      obj[h] = isNaN(val)?val:parseFloat(val);
-    });
+    const obj={};
+    headers.forEach((h,i)=>{ const val=r[i]?r[i].trim():"0"; obj[h]=isNaN(val)?val:parseFloat(val); });
     return obj;
   });
-  fuse = new Fuse(allData, { keys:['eNodeB Name'], threshold:0.4 });
+  fuse = new Fuse(allData,{ keys:['eNodeB Name'], threshold:0.4 });
   allSites = [...new Set(allData.map(d=>d["eNodeB Name"]))].sort();
+  populateSiteDropdown();
+  populateKpiDrawers();
+  drawAcceptanceCharts();
 }
 
+// Site dropdown
 function populateSiteDropdown(){
-  const dropdownList = document.getElementById("siteDropdownList");
-  dropdownList.innerHTML = '';
-
-  const selectAllDiv = document.createElement("div");
-  selectAllDiv.innerHTML = `<input type="checkbox" id="selectAll"> <label for="selectAll"><b>Select All</b></label>`;
-  dropdownList.appendChild(selectAllDiv);
-
-  const clearDiv = document.createElement("div");
-  clearDiv.innerHTML = `<input type="checkbox" id="clearFilter"> <label for="clearFilter"><b>Clear Filter</b></label>`;
-  dropdownList.appendChild(clearDiv);
-
+  const list = document.getElementById("siteDropdownList");
+  list.innerHTML="";
   allSites.forEach((site,i)=>{
-    const div = document.createElement("div");
-    div.innerHTML = `<input type="checkbox" class="siteOption" id="site_${i}" value="${site}"> <label for="site_${i}">${site}</label>`;
-    dropdownList.appendChild(div);
+    const div=document.createElement("div");
+    div.innerHTML=`<input type="checkbox" class="siteOption" id="site_${i}" value="${site}"> <label for="site_${i}">${site}</label>`;
+    list.appendChild(div);
   });
-
-  document.getElementById("siteDropdownBtn").onclick = ()=>{
-    dropdownList.style.display = dropdownList.style.display==="block" ? "none":"block";
-  };
-
-  const updateButtonLabel = ()=>{
-    const checked = Array.from(dropdownList.querySelectorAll(".siteOption:checked")).map(c=>c.value);
-    let labelText = "All Sites";
-    if(checked.length === 1){
-      labelText = checked[0];
-    } else if(checked.length > 1 && checked.length<allSites.length){
-      labelText = "Multiple Sites";
-    }
-    document.getElementById("siteDropdownBtn").textContent = labelText + " ▼";
-    drawCharts();
-  };
-
-  document.getElementById("selectAll").addEventListener("change", function(){
-    const checked = this.checked;
-    dropdownList.querySelectorAll(".siteOption").forEach(c=>c.checked = checked);
-    document.getElementById("clearFilter").checked = false;
-    updateButtonLabel();
-  });
-
-  document.getElementById("clearFilter").addEventListener("change", function(){
-    if(this.checked){
-      dropdownList.querySelectorAll(".siteOption").forEach(c=>c.checked=false);
-      document.getElementById("selectAll").checked = false;
-      updateButtonLabel();
-    }
-  });
-
-  dropdownList.querySelectorAll(".siteOption").forEach(c=>{
-    c.addEventListener("change", ()=>{
-      const allChecked = Array.from(dropdownList.querySelectorAll(".siteOption")).every(chk=>chk.checked);
-      document.getElementById("selectAll").checked = allChecked;
-      document.getElementById("clearFilter").checked = false;
-      updateButtonLabel();
+  document.getElementById("siteDropdownBtn").onclick = ()=>{ list.style.display=list.style.display==="block"?"none":"block"; };
+  list.querySelectorAll(".siteOption").forEach(chk=>{
+    chk.addEventListener("change", ()=>{
+      selectedSites=Array.from(list.querySelectorAll(".siteOption:checked")).map(c=>c.value);
+      updateSiteButtonLabel();
+      drawCurrentPageCharts();
     });
   });
 }
+function updateSiteButtonLabel(){
+  const btn=document.getElementById("siteDropdownBtn");
+  if(selectedSites.length===0 || selectedSites.length===allSites.length){ btn.textContent="All Sites ▼"; }
+  else if(selectedSites.length===1){ btn.textContent=selectedSites[0]+" ▼"; }
+  else{ btn.textContent="Multiple Sites ▼"; }
+}
 
-function populateKpiDrawer(){
-  const kpiDiv = document.getElementById("kpiOptions");
-  kpiDiv.innerHTML = '';
-  const kpis = currentTab==="acceptance"?acceptanceKpis:monitoringKpis;
-  selectedKpis = JSON.parse(localStorage.getItem("selectedKpis")) || kpis.slice();
-
-  // Handle select all
-  const selectAllKpiChk = document.getElementById("selectAllKpi");
-  selectAllKpiChk.checked = selectedKpis.length === kpis.length;
-
-  selectAllKpiChk.addEventListener("change", ()=>{
-    if(selectAllKpiChk.checked){
-      selectedKpis = kpis.slice();
-    } else {
-      selectedKpis = [];
+// KPI drawers
+function populateKpiDrawers(){
+  function renderDrawer(kpiArr,idDrawer,idOptions,idSelectAll){
+    const drawer=document.getElementById(idDrawer);
+    const kpiDiv=document.getElementById(idOptions);
+    let tempSelected = kpiArr.slice();
+    const selectAllChk = document.getElementById(idSelectAll);
+    selectAllChk.checked=true;
+    selectAllChk.onchange=()=>{
+      if(selectAllChk.checked) tempSelected=kpiArr.slice();
+      else tempSelected=[];
+      renderOptions();
+    };
+    function renderOptions(){
+      kpiDiv.innerHTML="";
+      kpiArr.forEach(kpi=>{
+        const checked=tempSelected.includes(kpi)?"checked":"";
+        const div=document.createElement("div");
+        div.className="kpiOption";
+        div.innerHTML=`<input type="checkbox" class="kpiCheckbox" value="${kpi}" ${checked}> ${kpi}`;
+        kpiDiv.appendChild(div);
+      });
+      kpiDiv.querySelectorAll(".kpiCheckbox").forEach(chk=>{
+        chk.onchange=()=>{
+          tempSelected=Array.from(kpiDiv.querySelectorAll(".kpiCheckbox:checked")).map(c=>c.value);
+          selectAllChk.checked=tempSelected.length===kpiArr.length;
+        };
+      });
     }
-    localStorage.setItem("selectedKpis", JSON.stringify(selectedKpis));
-    drawCharts();
-    populateKpiDrawer(); // refresh checkboxes
-  });
-
-  kpis.forEach(kpi=>{
-    const checked = selectedKpis.includes(kpi)? "checked":"";
-    const div = document.createElement("div");
-    div.className = "kpiOption";
-    div.innerHTML = `<input type="checkbox" class="kpiCheckbox" value="${kpi}" ${checked}> ${kpi}`;
-    kpiDiv.appendChild(div);
-  });
-
-  document.querySelectorAll(".kpiCheckbox").forEach(chk=>{
-    chk.addEventListener("change", ()=>{
-      selectedKpis = Array.from(document.querySelectorAll(".kpiCheckbox:checked")).map(c=>c.value);
-      localStorage.setItem("selectedKpis", JSON.stringify(selectedKpis));
-      drawCharts();
-      // Update select all checkbox
-      const kpisList = currentTab==="acceptance"?acceptanceKpis:monitoringKpis;
-      document.getElementById("selectAllKpi").checked = selectedKpis.length===kpisList.length;
-    });
-  });
+    renderOptions();
+    return ()=>tempSelected.slice();
+  }
+  acceptanceKpisList = renderDrawer(acceptanceKpis,"acceptanceDrawer","acceptanceKpiOptions","selectAllAcceptance");
+  monitoringKpisList = renderDrawer(monitoringKpis,"monitoringDrawer","monitoringKpiOptions","selectAllMonitoring");
 }
 
 // Drawer toggle
-const drawer = document.getElementById("kpiDrawer");
-const toggle = document.getElementById("kpiDrawerToggle");
-toggle.addEventListener("click", ()=>{
-  const isOpen = drawer.classList.toggle("open");
-  localStorage.setItem("kpiDrawerOpen", isOpen);
+const drawerToggle = document.getElementById("drawerToggle");
+drawerToggle.addEventListener("click", ()=>{
+  const page = document.getElementById(currentTab+"Drawer");
+  page.classList.toggle("open");
 });
-if(localStorage.getItem("kpiDrawerOpen")==="true") drawer.classList.add("open");
 
-function drawCharts(){
-  const container = document.getElementById("chartContainer");
-  container.innerHTML = "";
-  charts = [];
-
-  const siteNameSearch = document.getElementById("siteFilter").value.trim();
-  const selectedSites = Array.from(document.querySelectorAll("#siteDropdownList .siteOption:checked")).map(c=>c.value);
-  let filteredData = allData;
-
-  if(siteNameSearch){
-    filteredData = filteredData.filter(d=>d["eNodeB Name"]===siteNameSearch);
-  } else if(selectedSites.length>0){
-    filteredData = filteredData.filter(d=>selectedSites.includes(d["eNodeB Name"]));
-  }
-
-  if(filteredData.length===0) return;
-
-  const kpis = selectedKpis.length? selectedKpis:(currentTab==="acceptance"?acceptanceKpis:monitoringKpis);
-
-  const timeline = [...new Set(allData.map(d=>d["Date"]))];
-  timeline.sort((a,b)=>{
-    const [da, ma, ya] = a.split('/').map(Number);
-    const [db, mb, yb] = b.split('/').map(Number);
-    return new Date(ya, ma-1, da) - new Date(yb, mb-1, db);
-  });
-
-  const timelineLabels = timeline.map(d=>{
-    const [day, month] = d.split('/').map(Number);
-    const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    return `${day} ${monthNames[month-1]}`;
-  });
-
-  kpis.forEach(kpi=>{
-    const card = document.createElement("div");
-    card.className = "chart-card";
-    const title = document.createElement("div");
-    title.className = "chart-title";
-
-    let labelText = "All Sites";
-    if(selectedSites.length === 1) labelText = selectedSites[0];
-    else if(selectedSites.length > 1 && selectedSites.length<allSites.length) labelText = "Multiple Sites";
-
-    title.textContent = `${kpi} - ${labelText}`;
-    const canvas = document.createElement("canvas");
-    card.appendChild(title);
-    card.appendChild(canvas);
-    container.appendChild(card);
-
-    const dataPoints = timeline.map(date=>{
-      const values = filteredData.filter(d=>d["Date"]===date).map(d=>{
-        const v = d[kpi];
-        return (v === "" || v === null || isNaN(v)) ? 0 : v;
-      });
-      if(values.length===0) return 0;
-      if(kpi.toLowerCase().includes("%") || kpi.toLowerCase().includes("rate") || kpi.toLowerCase().includes("ratio")){
-        return values.reduce((a,b)=>a+b,0)/values.length;
-      }else{
-        return values.reduce((a,b)=>a+b,0);
-      }
-    });
-
-    const ctx = canvas.getContext("2d");
-    charts.push(new Chart(ctx,{
-      type:'line',
-      data:{
-        labels: timelineLabels,
-        datasets:[{
-          label: labelText,
-          data:dataPoints,
-          borderColor:'#'+Math.floor(Math.random()*16777215).toString(16),
-          fill:false,
-          tension:0.3,
-          pointRadius:3,
-        }]
-      },
-      options:{
-        responsive:true,
-        maintainAspectRatio:false,
-        animation: { x: { type:'number', easing:'linear', duration:animationDuration, from:NaN, delay(ctx){ return ctx.index*20; } }, y:{duration:0} },
-        scales:{ x:{display:true}, y:{beginAtZero:true, ticks:{ maxTicksLimit:6 }} },
-        plugins:{ legend:{ position:'top' } }
-      }
-    }));
-  });
-}
-
-// Fuzzy search dropdown
-const siteInput = document.getElementById("siteFilter");
-const dropdown = document.getElementById("dropdown");
-siteInput.addEventListener("input", ()=>{
-  const val = siteInput.value.trim();
-  if(!val || !fuse){ dropdown.style.display="none"; return; }
-  const results = fuse.search(val).slice(0,5).map(r=>r.item["eNodeB Name"]);
-  dropdown.innerHTML = "";
-  results.forEach(r=>{
-    const div = document.createElement("div");
-    div.textContent = r;
-    div.onclick = ()=>{
-      siteInput.value=r;
-      dropdown.style.display="none";
-      drawCharts();
-    };
-    dropdown.appendChild(div);
-  });
-  dropdown.style.display = results.length? "block":"none";
+// Apply buttons
+document.getElementById("applyAcceptanceBtn").addEventListener("click",()=>{
+  selectedAcceptanceKpis=acceptanceKpisList();
+  document.getElementById("acceptanceDrawer").classList.remove("open");
+  drawAcceptanceCharts();
 });
-document.addEventListener("click", e=>{ if(e.target!==siteInput) dropdown.style.display="none"; });
+document.getElementById("applyMonitoringBtn").addEventListener("click",()=>{
+  selectedMonitoringKpis=monitoringKpisList();
+  document.getElementById("monitoringDrawer").classList.remove("open");
+  drawMonitoringCharts();
+});
 
-// Tabs switching
+// Current page tracking
+let currentTab="acceptance";
 document.querySelectorAll(".tab").forEach(tab=>{
   tab.addEventListener("click",()=>{
     document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
     tab.classList.add("active");
-    currentTab = tab.dataset.tab;
-    populateKpiDrawer();
-    drawCharts();
+    const tabName = tab.dataset.tab;
+    document.getElementById("acceptancePage").style.display = tabName==="acceptance"?"block":"none";
+    document.getElementById("monitoringPage").style.display = tabName==="monitoring"?"block":"none";
+    currentTab = tabName;
+    drawCurrentPageCharts();
   });
 });
 
-// Refresh
+function drawCurrentPageCharts(){
+  if(currentTab==="acceptance") drawAcceptanceCharts();
+  else drawMonitoringCharts();
+}
+
+// Chart draw functions
+function drawAcceptanceCharts(){
+  drawCharts(selectedAcceptanceKpis.length?selectedAcceptanceKpis:acceptanceKpis,"acceptanceChartContainer");
+}
+function drawMonitoringCharts(){
+  drawCharts(selectedMonitoringKpis.length?selectedMonitoringKpis:monitoringKpis,"monitoringChartContainer");
+}
+function drawCharts(kpis,containerId){
+  const container=document.getElementById(containerId);
+  container.innerHTML="";
+  const timeline = [...new Set(allData.map(d=>d["Date"]))];
+  timeline.sort((a,b)=>{
+    const [da,ma,ya]=a.split('/').map(Number);
+    const [db,mb,yb]=b.split('/').map(Number);
+    return new Date(ya,ma-1,da)-new Date(yb,mb-1,db);
+  });
+  const timelineLabels = timeline.map(d=>{
+    const [day,month]=d.split('/').map(Number);
+    const monthNames=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return `${day} ${monthNames[month-1]}`;
+  });
+
+  kpis.forEach(kpi=>{
+    const card=document.createElement("div");
+    card.className="chart-card";
+    const title=document.createElement("div");
+    title.className="chart-title";
+
+    let labelText="All Sites";
+    if(selectedSites.length===1) labelText=selectedSites[0];
+    else if(selectedSites.length>1 && selectedSites.length<allSites.length) labelText="Multiple Sites";
+    title.textContent=`${kpi} - ${labelText}`;
+    const canvas=document.createElement("canvas");
+    card.appendChild(title);
+    card.appendChild(canvas);
+    container.appendChild(card);
+
+    let filteredData=allData;
+    if(selectedSites.length>0) filteredData=allData.filter(d=>selectedSites.includes(d["eNodeB Name"]));
+
+    const dataPoints=timeline.map(date=>{
+      const vals = filteredData.filter(d=>d["Date"]===date).map(d=>{
+        const v=d[kpi]; return (v===""||v==null||isNaN(v))?0:v;
+      });
+      if(vals.length===0) return 0;
+      if(kpi.toLowerCase().includes("%")||kpi.toLowerCase().includes("rate")||kpi.toLowerCase().includes("ratio")){
+        return vals.reduce((a,b)=>a+b,0)/vals.length;
+      }else return vals.reduce((a,b)=>a+b,0);
+    });
+
+    new Chart(canvas.getContext("2d"),{
+      type:'line',
+      data:{ labels:timelineLabels,datasets:[{label:labelText,data:dataPoints,borderColor:'#'+Math.floor(Math.random()*16777215).toString(16),fill:false,tension:0.3,pointRadius:3}] },
+      options:{ responsive:true, maintainAspectRatio:false, animation:{ x:{ type:'number', easing:'linear', duration:animationDuration, from:NaN, delay(ctx){ return ctx.index*10; } }, y:{duration:0} }, scales:{x:{display:true},y:{beginAtZero:true,ticks:{maxTicksLimit:6}}}, plugins:{legend:{position:'top'}} }
+    });
+  });
+}
+
+// Fuzzy search
+const siteInput=document.getElementById("siteFilter");
+const dropdown=document.getElementById("dropdown");
+siteInput.addEventListener("input", ()=>{
+  const val=siteInput.value.trim();
+  if(!val || !fuse){ dropdown.style.display="none"; return; }
+  const results=fuse.search(val).slice(0,5).map(r=>r.item["eNodeB Name"]);
+  dropdown.innerHTML="";
+  results.forEach(r=>{
+    const div=document.createElement("div");
+    div.textContent=r;
+    div.onclick=()=>{
+      siteInput.value=r;
+      dropdown.style.display="none";
+      selectedSites=[r];
+      document.querySelectorAll(".siteOption").forEach(c=>c.checked=c.value===r);
+      updateSiteButtonLabel();
+      drawCurrentPageCharts();
+    };
+    dropdown.appendChild(div);
+  });
+  dropdown.style.display=results.length?"block":"none";
+});
+document.addEventListener("click", e=>{ if(e.target!==siteInput) dropdown.style.display="none"; });
+
 document.getElementById("refreshBtn").addEventListener("click", fetchData);
 
-// Initial fetch
 fetchData();
 </script>
 
