@@ -88,7 +88,7 @@ let currentTab = "acceptance";
 let allSites = [];
 let tempSelectedKpis = [];
 let selectedKpis = [];
-const animationDuration = 500; // faster
+const animationDuration = 500;
 
 const acceptanceKpis = [
   "LTE RRC Setup Success Rate","ERAB Setup Success Rate","LTE Call Setup Success Rate","E-RAB Call Drop Rate",
@@ -110,7 +110,6 @@ async function fetchData(){
     const text = await res.text();
     parseCSV(text);
     populateSiteDropdown();
-    populateKpiDrawer();
     drawCharts();
   }catch(err){ console.error(err); }
 }
@@ -196,7 +195,7 @@ toggle.addEventListener("click", ()=>{
   const isOpen = drawer.classList.toggle("open");
   localStorage.setItem("kpiDrawerOpen", isOpen);
 });
-if(localStorage.getItem("kpiDrawerOpen")==="true") drawer.classList.add("open");
+drawer.classList.remove("open"); // hide by default
 
 // Apply button
 document.getElementById("applyKpiBtn").addEventListener("click", ()=>{
@@ -241,8 +240,8 @@ function drawCharts(){
     title.className = "chart-title";
 
     let labelText = "All Sites";
-    if(selectedSites.length === 1) labelText = selectedSites[0];
-    else if(selectedSites.length > 1 && selectedSites.length<allSites.length) labelText = "Multiple Sites";
+    if(selectedSites.length === 1){ labelText = selectedSites[0]; }
+    else if(selectedSites.length > 1 && selectedSites.length<allSites.length){ labelText = "Multiple Sites"; }
 
     title.textContent = `${kpi} - ${labelText}`;
     const canvas = document.createElement("canvas");
@@ -298,7 +297,7 @@ document.querySelectorAll(".tab").forEach(tab=>{
     document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
     tab.classList.add("active");
     currentTab = tab.dataset.tab;
-    populateKpiDrawer();
+    populateKpiDrawer(); // update drawer options for new tab
   });
 });
 
