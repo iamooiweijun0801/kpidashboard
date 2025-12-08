@@ -18,7 +18,6 @@ header { text-align:center; padding:20px 0; font-size:32px; font-weight:bold; co
 #dropdown div { padding:6px 10px; cursor:pointer; transition:0.2s; }
 #dropdown div:hover { background:#2F80ED; color:white; }
 
-/* Custom checklist dropdown button */
 #siteDropdownBtn { padding:8px 10px; cursor:pointer; border:1px solid #ccc; border-radius:6px; background:white; min-width:250px; text-align:left; }
 #siteDropdownList { position:absolute; background:white; border:1px solid #ccc; max-height:200px; overflow-y:auto; display:none; z-index:10; width:250px; border-radius:6px; padding:6px; }
 
@@ -80,7 +79,6 @@ const monitoringKpis = [
   "VoLTE Traffic Erlang","VoLTE Traffic DL (MB)","VoLTE Traffic UL (MB)","DL BLER QCI1","UL BLER QCI1"
 ];
 
-// Fetch CSV
 async function fetchData(){
   try{
     const res = await fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?output=csv");
@@ -93,7 +91,6 @@ async function fetchData(){
   }
 }
 
-// Parse CSV
 function parseCSV(str){
   const rows = str.trim().split('\n').map(r=>r.split(','));
   const headers = rows.shift().map(h=>h.trim());
@@ -109,17 +106,14 @@ function parseCSV(str){
   allSites = [...new Set(allData.map(d=>d["eNodeB Name"]))].sort();
 }
 
-// Populate custom checklist dropdown
 function populateSiteDropdown(){
   const dropdownList = document.getElementById("siteDropdownList");
   dropdownList.innerHTML = '';
 
-  // Select All
   const selectAllDiv = document.createElement("div");
   selectAllDiv.innerHTML = `<input type="checkbox" id="selectAll"> <label for="selectAll"><b>Select All</b></label>`;
   dropdownList.appendChild(selectAllDiv);
 
-  // Clear Filter
   const clearDiv = document.createElement("div");
   clearDiv.innerHTML = `<input type="checkbox" id="clearFilter"> <label for="clearFilter"><b>Clear Filter</b></label>`;
   dropdownList.appendChild(clearDiv);
@@ -136,17 +130,15 @@ function populateSiteDropdown(){
 
   const updateButtonLabel = ()=>{
     const checked = Array.from(dropdownList.querySelectorAll(".siteOption:checked")).map(c=>c.value);
-    document.getElementById("siteDropdownBtn").textContent = checked.length===0 ? "All Sites ▼" : checked.join(", ") + " ▼";
+    let labelText = "All Sites"; // default
+    if(checked.length === 1){
+      labelText = checked[0];
+    } else if(checked.length > 1){
+      labelText = "Multiple Sites";
+    }
+    document.getElementById("siteDropdownBtn").textContent = labelText + " ▼";
     drawCharts();
   };
-
-  dropdownList.querySelectorAll(".siteOption").forEach(c=>{
-    c.addEventListener("change", ()=>{
-      document.getElementById("selectAll").checked = false;
-      document.getElementById("clearFilter").checked = false;
-      updateButtonLabel();
-    });
-  });
 
   document.getElementById("selectAll").addEventListener("change", function(){
     const checked = this.checked;
@@ -162,9 +154,17 @@ function populateSiteDropdown(){
       updateButtonLabel();
     }
   });
+
+  dropdownList.querySelectorAll(".siteOption").forEach(c=>{
+    c.addEventListener("change", ()=>{
+      const allChecked = Array.from(dropdownList.querySelectorAll(".siteOption")).every(chk=>chk.checked);
+      document.getElementById("selectAll").checked = allChecked;
+      document.getElementById("clearFilter").checked = false;
+      updateButtonLabel();
+    });
+  });
 }
 
-// Draw charts
 function drawCharts(){
   const container = document.getElementById("chartContainer");
   container.innerHTML = "";
@@ -202,7 +202,12 @@ function drawCharts(){
     card.className = "chart-card";
     const title = document.createElement("div");
     title.className = "chart-title";
-    title.textContent = `${kpi} - ${selectedSites.length>0 ? selectedSites.join(', ') : "All Sites"}`;
+
+    let labelText = "All Sites";
+    if(selectedSites.length === 1) labelText = selectedSites[0];
+    else if(selectedSites.length > 1) labelText = "Multiple Sites";
+
+    title.textContent = `${kpi} - ${labelText}`;
     const canvas = document.createElement("canvas");
     card.appendChild(title);
     card.appendChild(canvas);
@@ -227,7 +232,7 @@ function drawCharts(){
       data:{
         labels: timelineLabels,
         datasets:[{
-          label: selectedSites.length>0 ? selectedSites.join(', ') : "All Sites",
+          label: labelText,
           data:dataPoints,
           borderColor:'#'+Math.floor(Math.random()*16777215).toString(16),
           fill:false,
@@ -238,7 +243,7 @@ function drawCharts(){
       options:{
         responsive:true,
         maintainAspectRatio:false,
-        animation: { x: { type:'number', easing:'linear', duration:1500, from:NaN, delay(ctx){ return ctx.index*50; } }, y:{duration:0} },
+        animation: { x: { type:'number', easing:'linear', duration:800, from:NaN, delay(ctx){ return ctx.index*20; } }, y:{duration:0} },
         scales:{ x:{display:true}, y:{beginAtZero:true, ticks:{ maxTicksLimit:6 }} },
         plugins:{ legend:{ position:'top' } }
       }
