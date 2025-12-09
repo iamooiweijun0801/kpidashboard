@@ -201,21 +201,32 @@ button.ppt-btn:hover { background:#a8381e; }
             <div class="settings-group">
                 <h4>Graphs per Slide (Rows)</h4>
                 <div class="graph-options">
-                    <button class="action-btn" data-count="1" onclick="updatePreviewSettings(1, chartExportColor)">1 Graph</button>
-                    <button class="action-btn" data-count="2" onclick="updatePreviewSettings(2, chartExportColor)">2 Graphs</button>
-                    <button class="action-btn" data-count="3" onclick="updatePreviewSettings(3, chartExportColor)">3 Graphs</button>
-                    <button class="action-btn" data-count="4" onclick="updatePreviewSettings(4, chartExportColor)">4 Graphs</button>
+                    <button class="action-btn" data-count="1" onclick="updatePreviewSettings(1, chartExportColor, chartExportTitleColor)">1 Graph</button>
+                    <button class="action-btn" data-count="2" onclick="updatePreviewSettings(2, chartExportColor, chartExportTitleColor)">2 Graphs</button>
+                    <button class="action-btn" data-count="3" onclick="updatePreviewSettings(3, chartExportColor, chartExportTitleColor)">3 Graphs</button>
+                    <button class="action-btn" data-count="4" onclick="updatePreviewSettings(4, chartExportColor, chartExportTitleColor)">4 Graphs</button>
                 </div>
             </div>
 
             <div class="settings-group">
                 <h4>Line & Dot Color for PPT</h4>
-                <div id="colorOptions">
-                    <span class="color-option" style="background-color:#2F80ED;" data-color="#2F80ED" onclick="updatePreviewSettings(graphsPerSlide, '#2F80ED')"></span>
-                    <span class="color-option" style="background-color:#27AE60;" data-color="#27AE60" onclick="updatePreviewSettings(graphsPerSlide, '#27AE60')"></span>
-                    <span class="color-option" style="background-color:#D24726;" data-color="#D24726" onclick="updatePreviewSettings(graphsPerSlide, '#D24726')"></span>
-                    <span class="color-option" style="background-color:#8E44AD;" data-color="#8E44AD" onclick="updatePreviewSettings(graphsPerSlide, '#8E44AD')"></span>
-                    <span class="color-option" style="background-color:#F39C12;" data-color="#F39C12" onclick="updatePreviewSettings(graphsPerSlide, '#F39C12')"></span>
+                <div id="lineColorOptions">
+                    <span class="color-option" style="background-color:#2F80ED;" data-color="#2F80ED" onclick="updatePreviewSettings(graphsPerSlide, '#2F80ED', chartExportTitleColor)"></span>
+                    <span class="color-option" style="background-color:#27AE60;" data-color="#27AE60" onclick="updatePreviewSettings(graphsPerSlide, '#27AE60', chartExportTitleColor)"></span>
+                    <span class="color-option" style="background-color:#D24726;" data-color="#D24726" onclick="updatePreviewSettings(graphsPerSlide, '#D24726', chartExportTitleColor)"></span>
+                    <span class="color-option" style="background-color:#8E44AD;" data-color="#8E44AD" onclick="updatePreviewSettings(graphsPerSlide, '#8E44AD', chartExportTitleColor)"></span>
+                    <span class="color-option" style="background-color:#F39C12;" data-color="#F39C12" onclick="updatePreviewSettings(graphsPerSlide, '#F39C12', chartExportTitleColor)"></span>
+                </div>
+            </div>
+
+            <div class="settings-group">
+                <h4>Chart Title Color for PPT</h4>
+                <div id="titleColorOptions">
+                    <span class="color-option" style="background-color:#333333;" data-color="#333333" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#333333')"></span>
+                    <span class="color-option" style="background-color:#000000;" data-color="#000000" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#000000')"></span>
+                    <span class="color-option" style="background-color:#2F80ED;" data-color="#2F80ED" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#2F80ED')"></span>
+                    <span class="color-option" style="background-color:#8E44AD;" data-color="#8E44AD" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#8E44AD')"></span>
+                    <span class="color-option" style="background-color:#D24726;" data-color="#D24726" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#D24726')"></span>
                 </div>
             </div>
 
@@ -241,7 +252,8 @@ let selectedSites = [];
 let currentTab = "both"; // DEFAULT IS NOW 'BOTH'
 let graphsPerSlide = 2; 
 
-let chartExportColor = '#2F80ED'; // Default Dark Blue
+let chartExportColor = '#2F80ED'; // Default Line/Dot Color (Dark Blue)
+let chartExportTitleColor = '#333333'; // Default Title Color (Dark Gray/Black)
 
 const acceptanceKpis = [
   "LTE RRC Setup Success Rate","ERAB Setup Success Rate","LTE Call Setup Success Rate","E-RAB Call Drop Rate",
@@ -469,17 +481,18 @@ function openPreview() {
     const canvases = document.querySelectorAll("canvas");
     if(canvases.length === 0) { alert("No charts to export."); return; }
     
-    // Set initial state for the modal
-    graphsPerSlide = 2; // Default
-    chartExportColor = '#2F80ED'; // Default
+    // Set initial state for the modal (re-apply defaults)
+    graphsPerSlide = 2; 
+    chartExportColor = '#2F80ED'; 
+    chartExportTitleColor = '#333333';
 
     // Update the visual controls and render the preview
-    updatePreviewSettings(graphsPerSlide, chartExportColor);
+    updatePreviewSettings(graphsPerSlide, chartExportColor, chartExportTitleColor);
     
     document.getElementById("previewModal").style.display = "flex";
 }
 
-function highlightSettingButtons(count, color) {
+function highlightSettingButtons(count, lineColor, titleColor) {
     // Highlight graph count button
     document.querySelectorAll('.graph-options button').forEach(btn => {
         btn.classList.remove('active');
@@ -490,27 +503,36 @@ function highlightSettingButtons(count, color) {
         }
     });
 
-    // Highlight color option
-    document.querySelectorAll('.color-option').forEach(el => {
+    // Highlight line color option
+    document.querySelectorAll('#lineColorOptions .color-option').forEach(el => {
         el.classList.remove('selected');
-        if (el.dataset.color === color) {
+        if (el.dataset.color === lineColor) {
+            el.classList.add('selected');
+        }
+    });
+
+    // Highlight title color option
+    document.querySelectorAll('#titleColorOptions .color-option').forEach(el => {
+        el.classList.remove('selected');
+        if (el.dataset.color === titleColor) {
             el.classList.add('selected');
         }
     });
 }
 
-function updatePreviewSettings(newCount, newColor) {
+function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
     if (newCount) graphsPerSlide = newCount;
-    if (newColor) chartExportColor = newColor;
+    if (newLineColor) chartExportColor = newLineColor;
+    if (newTitleColor) chartExportTitleColor = newTitleColor;
 
-    highlightSettingButtons(graphsPerSlide, chartExportColor);
+    highlightSettingButtons(graphsPerSlide, chartExportColor, chartExportTitleColor);
     
     // Render the preview with the new settings
     const count = graphsPerSlide;
     const body = document.getElementById("previewBody");
     const canvases = document.querySelectorAll("canvas");
     
-    document.getElementById("previewTitle").textContent = `PPT Export Preview (${count} Graphs per Slide) - Line Color: ${chartExportColor}`;
+    document.getElementById("previewTitle").textContent = `PPT Export Preview (${count} Graphs per Slide) - Line: ${chartExportColor}, Title: ${chartExportTitleColor}`;
     body.innerHTML = "";
     
     for(let i=0; i<canvases.length; i+=count){
@@ -531,7 +553,7 @@ function updatePreviewSettings(newCount, newColor) {
             if(i+j < canvases.length){
                 const c = canvases[i+j];
                 // Pass current export settings to createPreviewBox
-                const box = createPreviewBox(c, chartExportColor); 
+                const box = createPreviewBox(c, chartExportColor, chartExportTitleColor); 
                 grid.appendChild(box);
             }
         }
@@ -540,7 +562,7 @@ function updatePreviewSettings(newCount, newColor) {
     }
 }
 
-function createPreviewBox(canvas, color) {
+function createPreviewBox(canvas, lineColor, titleColor) {
   const box = document.createElement("div");
   box.className = "preview-img-box";
   
@@ -554,24 +576,23 @@ function createPreviewBox(canvas, color) {
   let imgData = '';
   
   if (chartInstance) {
+      // Store original settings
       const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
       const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
+      const originalTitleColor = chartInstance.options.plugins.title.color;
       
       // Override style for screenshot using current settings
       chartInstance.data.datasets.forEach(d => { 
-        d.borderColor = color; 
-        d.pointBorderColor = color; 
-        d.pointBackgroundColor = color; 
+        d.borderColor = lineColor; 
+        d.pointBorderColor = lineColor; 
+        d.pointBackgroundColor = lineColor; 
         d.pointRadius = 3; 
         d.pointStyle = 'circle'; 
         d.spanGaps = true; 
       });
 
-      // Get original title configuration
-      const originalTitle = chartInstance.options.plugins.title;
-
-      // Temporarily change title color to match line color for a unified look in PPT
-      chartInstance.options.plugins.title.color = color; 
+      // Temporarily change title color 
+      chartInstance.options.plugins.title.color = titleColor; 
       
       chartInstance.update('none'); 
       
@@ -583,7 +604,7 @@ function createPreviewBox(canvas, color) {
         d.borderColor = originalColors[index]; 
         d.pointBorderColor = originalPointColors[index];
       });
-      chartInstance.options.plugins.title.color = originalTitle.color;
+      chartInstance.options.plugins.title.color = originalTitleColor;
       chartInstance.update('none');
   }
 
@@ -608,7 +629,8 @@ async function downloadPPT(){
 
   const canvases = document.querySelectorAll("canvas");
   const count = graphsPerSlide;
-  const exportColor = chartExportColor; 
+  const lineColor = chartExportColor; 
+  const titleColor = chartExportTitleColor;
   
   // Define base positions and sizes in inches (for 16x9 slide layout)
   const layoutDef = {
@@ -652,7 +674,7 @@ async function downloadPPT(){
         const c = canvases[i+j];
         const params = layout[j];
         
-        // --- PPT CHART EXPORT LOGIC (Now includes title) ---
+        // --- PPT CHART EXPORT LOGIC ---
         const chartInstance = Chart.getChart(c.id);
         const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
         const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
@@ -660,13 +682,13 @@ async function downloadPPT(){
         
         // Override style for PPT export
         chartInstance.data.datasets.forEach(d => { 
-          d.borderColor = exportColor; 
-          d.pointBorderColor = exportColor; 
-          d.pointBackgroundColor = exportColor; 
+          d.borderColor = lineColor; 
+          d.pointBorderColor = lineColor; 
+          d.pointBackgroundColor = lineColor; 
           d.pointRadius = 3;
           d.spanGaps = true; 
         });
-        chartInstance.options.plugins.title.color = exportColor; // Change chart title color for consistency
+        chartInstance.options.plugins.title.color = titleColor; // Set selected title color
         chartInstance.update('none'); 
         
         const imgData = c.toDataURL("image/png");
