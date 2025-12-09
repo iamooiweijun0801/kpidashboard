@@ -5,9 +5,14 @@
 <title>LTE KPI Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.6.2/fuse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
 <style>
 body { font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin:0; padding:0; background:#f0f2f5; overflow-x:hidden; }
 header { text-align:center; padding:20px 0; font-size:32px; font-weight:bold; color:#2F80ED; background:white; box-shadow:0 2px 6px rgba(0,0,0,0.1); margin-bottom:16px; }
+
+/* Navbar & Controls */
 .navbar { display:flex; justify-content:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
 .navbar button { padding:8px 16px; cursor:pointer; border:none; background:#2F80ED; color:white; border-radius:6px; font-weight:bold; transition:0.2s; }
 .navbar button:hover { background:#1f5ab5; }
@@ -15,44 +20,49 @@ header { text-align:center; padding:20px 0; font-size:32px; font-weight:bold; co
 .tab { padding:10px 20px; cursor:pointer; border:1px solid #ccc; border-radius:8px; background:#eee; font-weight:bold; transition:0.3s; }
 .tab.active { background:#2F80ED; color:white; }
 .tab:hover:not(.active) { background:#d0e1ff; }
-.controls { display:flex; justify-content:center; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+.controls { display:flex; justify-content:center; gap:12px; margin-bottom:16px; flex-wrap:wrap; align-items: center; }
+
+/* Inputs & Dropdowns */
 #siteFilter { padding:8px; width:250px; border-radius:6px; border:1px solid #ccc; }
 #dropdown { position:absolute; background:white; border:1px solid #ccc; max-height:150px; overflow-y:auto; display:none; z-index:10; width:250px; top:38px; left:0; border-radius:6px; }
 #dropdown div { padding:6px 10px; cursor:pointer; transition:0.2s; }
 #dropdown div:hover { background:#2F80ED; color:white; }
-#siteDropdownBtn { padding:8px 10px; cursor:pointer; border:1px solid #ccc; border-radius:6px; background:white; min-width:250px; text-align:left; position:relative; z-index:5; }
-#siteDropdownList { position:absolute; background:white; border:1px solid #ccc; max-height:200px; overflow-y:auto; display:none; z-index:10; width:250px; border-radius:6px; padding:6px; }
+#siteDropdownBtn { padding:8px 10px; cursor:pointer; border:1px solid #ccc; border-radius:6px; background:white; min-width:250px; text-align:left; position:relative; z-index:5; color:#333; }
+#siteDropdownList { position:absolute; background:white; border:1px solid #ccc; max-height:200px; overflow-y:auto; display:none; z-index:10; width:250px; border-radius:6px; padding:6px; top:40px; }
 
 button { padding:10px 18px; cursor:pointer; border:none; background:#2F80ED; color:white; border-radius:6px; font-weight:bold; transition:0.2s; }
 button:hover { background:#1f5ab5; }
+/* Special style for export button */
+#exportBtn { background: #E04F5F; } 
+#exportBtn:hover { background: #c0392b; }
 
+/* Charts */
 .chart-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(400px,1fr)); gap:20px; padding:0 20px 20px 20px; }
 canvas { background:white; border-radius:12px; padding:16px; width:100% !important; height:250px !important; }
 .chart-card { padding:10px; border-radius:12px; background:white; box-shadow:0 2px 12px rgba(0,0,0,0.1); transition:0.3s; }
-.chart-card:hover { transform:translateY(-4px); box-shadow:0 6px 20px rgba(0,0,0,0.15); }
 .chart-title { text-align:center; font-weight:bold; margin-bottom:10px; color:#333; }
 
 /* Drawer */
-.kpiDrawer { 
-  position:fixed; top:0; right:0; width:320px; height:100%; background:white; 
-  box-shadow:-4px 0 12px rgba(0,0,0,0.15); transition:0.3s; z-index:20; padding:20px; 
-  overflow-y:auto; display:none; 
-}
+.kpiDrawer { position:fixed; top:0; right:0; width:320px; height:100%; background:white; box-shadow:-4px 0 12px rgba(0,0,0,0.15); transition:0.3s; z-index:20; padding:20px; overflow-y:auto; display:none; }
 .kpiDrawer.open { display:block; }
-.kpiDrawer h3 { margin-top:0; margin-bottom:12px; color:#2F80ED; }
-.kpiOption { margin-bottom:6px; }
-#applyAcceptanceBtn, #applyMonitoringBtn { margin-top:10px; width:100%; }
-
-/* Minimal blue toggle button */
 .kpiDrawerToggle { position:fixed; top:20px; right:0; width:30px; height:80px; background:#2F80ED; border-radius:6px 0 0 6px; cursor:pointer; z-index:25; }
-.kpiDrawerToggle:hover { background:#1f5ab5; }
+
+/* --- EXPORT PREVIEW MODAL STYLES --- */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; display: none; align-items: center; justify-content: center; }
+.modal-content { background: white; padding: 20px; width: 80%; max-width: 900px; height: 85%; border-radius: 12px; display: flex; flex-direction: column; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+.modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 15px; }
+.modal-title { font-size: 20px; font-weight: bold; color: #333; }
+.modal-body { flex: 1; overflow-y: auto; background: #f9f9f9; padding: 20px; border-radius: 8px; border: 1px solid #eee; }
+.modal-footer { margin-top: 15px; display: flex; justify-content: flex-end; gap: 10px; }
+.preview-item { background: white; padding: 10px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; page-break-inside: avoid; }
+.preview-item img { max-width: 100%; height: auto; border: 1px solid #eee; }
+.preview-title { font-weight: bold; margin-bottom: 8px; color: #555; font-size: 14px; }
 </style>
 </head>
 <body>
 
 <header>LTE KPI Dashboard</header>
 
-<!-- Navigation Buttons -->
 <div class="navbar">
   <button onclick="window.location.href='gsm.html'">GSM</button>
   <button onclick="window.location.href='index.html'">LTE</button>
@@ -75,9 +85,9 @@ canvas { background:white; border-radius:12px; padding:16px; width:100% !importa
     <div id="siteDropdownList"></div>
   </div>
   <button id="refreshBtn">Refresh Data</button>
+  <button id="exportBtn">Export PDF</button>
 </div>
 
-<!-- Pages -->
 <div id="acceptancePage">
   <div class="chart-grid" id="acceptanceChartContainer"></div>
 </div>
@@ -85,7 +95,6 @@ canvas { background:white; border-radius:12px; padding:16px; width:100% !importa
   <div class="chart-grid" id="monitoringChartContainer"></div>
 </div>
 
-<!-- KPI Drawers -->
 <div id="acceptanceDrawer" class="kpiDrawer">
   <h3>KPIs</h3>
   <div><input type="checkbox" id="selectAllAcceptance"> <label for="selectAllAcceptance"><b>Select All</b></label></div>
@@ -100,6 +109,21 @@ canvas { background:white; border-radius:12px; padding:16px; width:100% !importa
 </div>
 
 <div id="drawerToggle" class="kpiDrawerToggle"></div>
+
+<div id="previewModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title">Export Preview</div>
+      <button onclick="closeModal()" style="background:#ccc; color:#333; padding:5px 10px;">✕</button>
+    </div>
+    <div class="modal-body" id="previewArea">
+      </div>
+    <div class="modal-footer">
+      <button onclick="closeModal()" style="background:#888;">Cancel</button>
+      <button onclick="generatePDF()" style="background:#2F80ED;">Download PDF</button>
+    </div>
+  </div>
+</div>
 
 <script>
 let allData=[], fuse=null, allSites=[];
@@ -123,16 +147,18 @@ const monitoringKpis = [
 ];
 
 async function fetchData(){
-  const res = await fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=0&single=true&output=csv");
-  const text = await res.text();
-  const rows = text.trim().split('\n').map(r=>r.split(','));
-  const headers = rows.shift().map(h=>h.trim());
-  allData = rows.map(r=>{ const obj={}; headers.forEach((h,i)=>{ const val=r[i]?r[i].trim():"0"; obj[h]=isNaN(val)?val:parseFloat(val); }); return obj; });
-  fuse = new Fuse(allData,{ keys:['eNodeB Name'], threshold:0.4 });
-  allSites = [...new Set(allData.map(d=>d["eNodeB Name"]))].sort();
-  populateSiteDropdown();
-  populateKpiDrawers();
-  drawAcceptanceCharts();
+  try {
+    const res = await fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=0&single=true&output=csv");
+    const text = await res.text();
+    const rows = text.trim().split('\n').map(r=>r.split(','));
+    const headers = rows.shift().map(h=>h.trim());
+    allData = rows.map(r=>{ const obj={}; headers.forEach((h,i)=>{ const val=r[i]?r[i].trim():"0"; obj[h]=isNaN(val)?val:parseFloat(val); }); return obj; });
+    fuse = new Fuse(allData,{ keys:['eNodeB Name'], threshold:0.4 });
+    allSites = [...new Set(allData.map(d=>d["eNodeB Name"]))].sort();
+    populateSiteDropdown();
+    populateKpiDrawers();
+    drawAcceptanceCharts();
+  } catch(e) { console.error("Error fetching data", e); }
 }
 
 // SITE DROPDOWN
@@ -140,7 +166,6 @@ function populateSiteDropdown(){
   const list = document.getElementById("siteDropdownList");
   list.innerHTML="";
 
-  // --- Select All ---
   const selectAllDiv = document.createElement("div");
   selectAllDiv.style.padding="6px 10px";
   selectAllDiv.style.borderBottom="1px solid #ddd";
@@ -154,7 +179,6 @@ function populateSiteDropdown(){
   };
   list.appendChild(selectAllDiv);
 
-  // --- Clear Filter ---
   const clearDiv = document.createElement("div");
   clearDiv.style.padding="6px 10px";
   clearDiv.style.borderBottom="1px solid #ddd";
@@ -168,22 +192,15 @@ function populateSiteDropdown(){
   };
   list.appendChild(clearDiv);
 
-  // --- Site list ----
   allSites.forEach((site,i)=>{
     const div=document.createElement("div");
-    div.innerHTML=
-      `<input type="checkbox" class="siteOption" id="site_${i}" value="${site}">
-       <label for="site_${i}">${site}</label>`;
+    div.innerHTML= `<input type="checkbox" class="siteOption" id="site_${i}" value="${site}"> <label for="site_${i}">${site}</label>`;
     div.style.padding="6px 10px";
     list.appendChild(div);
   });
 
-  // Toggle dropdown visibility
-  document.getElementById("siteDropdownBtn").onclick = ()=>{
-    list.style.display = list.style.display==="block" ? "none" : "block";
-  };
-
-  // Checkbox logic
+  document.getElementById("siteDropdownBtn").onclick = ()=>{ list.style.display = list.style.display==="block" ? "none" : "block"; };
+  
   list.querySelectorAll(".siteOption").forEach(chk=>{
     chk.addEventListener("change", ()=>{
       selectedSites = Array.from(list.querySelectorAll(".siteOption:checked")).map(c=>c.value);
@@ -236,7 +253,6 @@ function populateKpiDrawers(){
   monitoringKpisList = renderDrawer(monitoringKpis,"monitoringDrawer","monitoringKpiOptions","selectAllMonitoring");
 }
 
-// Drawer toggle
 document.getElementById("drawerToggle").addEventListener("click", ()=>{
   const drawer = document.getElementById(currentTab+"Drawer");
   if(drawer.style.display==="block"){
@@ -248,7 +264,6 @@ document.getElementById("drawerToggle").addEventListener("click", ()=>{
   }
 });
 
-// Apply buttons
 document.getElementById("applyAcceptanceBtn").addEventListener("click",()=>{
   selectedAcceptanceKpis=acceptanceKpisList();
   document.getElementById("acceptanceDrawer").classList.remove("open");
@@ -262,7 +277,6 @@ document.getElementById("applyMonitoringBtn").addEventListener("click",()=>{
   drawMonitoringCharts();
 });
 
-// Tabs
 let currentTab="acceptance";
 document.querySelectorAll(".tab").forEach(tab=>{
   tab.addEventListener("click",()=>{
@@ -330,12 +344,12 @@ function drawCharts(kpis,containerId){
     new Chart(canvas.getContext("2d"),{
       type:'line',
       data:{ labels:timelineLabels,datasets:[{label:labelText,data:dataPoints,borderColor:'#'+Math.floor(Math.random()*16777215).toString(16),fill:false,tension:0.3,pointRadius:3}] },
-      options:{ responsive:true, maintainAspectRatio:false, animation:{ x:{ type:'number', easing:'linear', duration:animationDuration, from:NaN, delay(ctx){ return ctx.index*10; } }, y:{duration:0} }, scales:{x:{display:true},y:{beginAtZero:true,ticks:{maxTicksLimit:6}}}, plugins:{legend:{position:'top'}} }
+      options:{ responsive:true, maintainAspectRatio:false, animation:{ duration:0 }, scales:{x:{display:true},y:{beginAtZero:true}}, plugins:{legend:{position:'top'}} }
     });
   });
 }
 
-// Fuzzy search
+// Search & Refresh
 const siteInput=document.getElementById("siteFilter");
 const dropdown=document.getElementById("dropdown");
 siteInput.addEventListener("input", ()=>{
@@ -359,8 +373,97 @@ siteInput.addEventListener("input", ()=>{
   dropdown.style.display=results.length?"block":"none";
 });
 document.addEventListener("click", e=>{ if(e.target!==siteInput) dropdown.style.display="none"; });
-
 document.getElementById("refreshBtn").addEventListener("click", fetchData);
+
+/* --- EXPORT FUNCTIONALITY --- */
+const modal = document.getElementById("previewModal");
+const previewArea = document.getElementById("previewArea");
+
+document.getElementById("exportBtn").addEventListener("click", () => {
+  previewArea.innerHTML = "";
+  // Identify which container is currently visible
+  const activeContainerId = currentTab === "acceptance" ? "acceptanceChartContainer" : "monitoringChartContainer";
+  const container = document.getElementById(activeContainerId);
+  const cards = container.getElementsByClassName("chart-card");
+  
+  if(cards.length === 0) { alert("No charts to export!"); return; }
+
+  // Loop through visible charts and create images for preview
+  Array.from(cards).forEach(card => {
+    const title = card.querySelector(".chart-title").textContent;
+    const canvas = card.querySelector("canvas");
+    
+    // Convert canvas to image data URL
+    const imgData = canvas.toDataURL("image/png");
+    
+    // Create Preview Element
+    const previewItem = document.createElement("div");
+    previewItem.className = "preview-item";
+    
+    const pTitle = document.createElement("div");
+    pTitle.className = "preview-title";
+    pTitle.textContent = title;
+    
+    const img = document.createElement("img");
+    img.src = imgData;
+    
+    previewItem.appendChild(pTitle);
+    previewItem.appendChild(img);
+    previewArea.appendChild(previewItem);
+  });
+  
+  // Show Modal
+  modal.style.display = "flex";
+});
+
+function closeModal() {
+  modal.style.display = "none";
+}
+
+async function generatePDF() {
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('p', 'mm', 'a4'); // Portrait, A4
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 10;
+  let yPosition = margin;
+
+  const items = previewArea.getElementsByClassName("preview-item");
+  
+  // Add Header to PDF
+  pdf.setFontSize(16);
+  pdf.text(`LTE KPI Report - ${currentTab.toUpperCase()}`, pageWidth/2, yPosition, { align: "center" });
+  yPosition += 10;
+  pdf.setFontSize(10);
+  pdf.text(`Generated on: ${new Date().toLocaleString()}`, pageWidth/2, yPosition, { align: "center" });
+  yPosition += 15;
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const title = item.querySelector(".preview-title").textContent;
+    const img = item.querySelector("img");
+
+    // Check if we need a new page
+    if (yPosition + 80 > pageHeight) {
+      pdf.addPage();
+      yPosition = margin;
+    }
+
+    // Add Title
+    pdf.setFontSize(11);
+    pdf.text(title, margin, yPosition + 5);
+    
+    // Add Image (Scaling to fit width)
+    const imgWidth = pageWidth - (margin * 2);
+    const imgHeight = 70; // Fixed height for consistency
+    pdf.addImage(img.src, 'PNG', margin, yPosition + 7, imgWidth, imgHeight);
+
+    yPosition += imgHeight + 15; // Move down for next chart
+  }
+
+  pdf.save(`KPI_Report_${currentTab}_${new Date().toISOString().slice(0,10)}.pdf`);
+  closeModal();
+}
 
 fetchData();
 </script>
