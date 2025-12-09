@@ -462,75 +462,68 @@ function getRandomColor() {
  */
 function getNiceYAxisScale(minValue, maxValue, isRateMetric) {
     const dataRange = maxValue - minValue;
-    
+
     // Handle no data or min=max case
     if (dataRange <= 0) {
         let min = 0;
-        let max = isRateMetric ? 100 : minValue + 10;
-        let step = isRateMetric ? 20 : 2;
-        if (!isRateMetric && minValue === maxValue) { // Case where all points are e.g., 5.0
-            max = minValue + (minValue === 0 ? 10 : minValue * 0.1); 
-            step = max / 5;
-        }
+        let max = isRateMetric ? 100 : minValue + (minValue === 0 ? 10 : minValue * 0.1);
+        let step = isRateMetric ? 20 : (max - min) / 5;
         return { yMin: min, yMax: max, yStepSize: step };
     }
 
     let C_min = minValue;
     let C_max = maxValue;
 
-    // Rule 1 & 2: Initial boundary conditions
     if (isRateMetric) {
-        C_max = Math.max(C_max, 80); // If max is below 80, we still want 100 on the axis if possible.
-        C_max = Math.min(100, C_max); 
+        // Rule: max ≥ 100 → cap 100
+        if (C_max >= 100) C_max = 100;
+        // Rule: 80 < max < 100 → cap 100
+        else if (C_max > 80) C_max = 100;
+        // Rule: min ≤ 0 → min 0
+        if (C_min <= 0) C_min = 0;
     }
-    C_min = Math.max(0, C_min); // If min value is 0, min 0.
-    
-    // Rule 3: Estimate a step size (aim for ~6 major ticks)
-    const effectiveRange = C_max - C_min;
-    let delta_initial = effectiveRange / 6; 
 
-    // Rule 4: Nice Rounding Logic
-    let P = Math.pow(10, Math.floor(Math.log10(delta_initial)));
-    let M = delta_initial / P;
-    
+    // Estimate step for ~6 labels
+    let effectiveRange = C_max - C_min;
+    let delta = effectiveRange / 6;
+
+    // Nice rounding for step
+    let P = Math.pow(10, Math.floor(Math.log10(delta)));
+    let M = delta / P;
     let M_nice;
     if (M <= 1) M_nice = 1;
     else if (M <= 2) M_nice = 2;
     else if (M <= 5) M_nice = 5;
     else M_nice = 10;
-    
+
     let delta_nice = M_nice * P;
 
-    // Rule 6: Final Adjustment for 0-100 range (min 6 labels)
-    if (isRateMetric && delta_nice > 20) { 
-        delta_nice = 20; // Ensure at least 6 labels (0, 20, 40, 60, 80, 100)
+    // Handle very small ranges like 0–0.05
+    if (!isRateMetric && effectiveRange < 0.1) {
+        delta_nice = 0.01;
     }
 
-    // Rule 5: Calculate final min and max
+    // Calculate final min/max
     let yMin = Math.floor(C_min / delta_nice) * delta_nice;
     let yMax = Math.ceil(C_max / delta_nice) * delta_nice;
 
-    // Correct floating point errors and ensure yMin is not above C_min
-    if (yMin > minValue) yMin -= delta_nice; 
-    
-    // Ensure yMin is exactly 0 if data is positive and near zero
-    if (minValue >= 0 && yMin < 0) yMin = 0;
+    // Ensure yMin not below 0 for positive-only data
+    if (C_min >= 0 && yMin < 0) yMin = 0;
 
-    // Final checks and clean decimal places
-    const numDecimals = Math.max(0, delta_nice.toString().includes('.') ? delta_nice.toString().split('.').pop().length : 0);
-    yMin = parseFloat(yMin.toFixed(numDecimals));
-    yMax = parseFloat(yMax.toFixed(numDecimals));
-    delta_nice = parseFloat(delta_nice.toFixed(numDecimals));
-    
-    // Ensure yMax is at least data's max
-    if (yMax < maxValue) {
-        yMax += delta_nice;
-    }
+    // Ensure yMax covers the actual max
+    if (yMax < C_max) yMax += delta_nice;
 
-    // Final cap for rates
+    // For rate metrics, force max = 100 if needed and step = 20
     if (isRateMetric) {
-        yMax = Math.min(100, yMax);
+        yMax = 100;
+        delta_nice = 20;
     }
+
+    // Round off to avoid floating point errors
+    const decimals = delta_nice.toString().includes('.') ? delta_nice.toString().split('.').pop().length : 0;
+    yMin = parseFloat(yMin.toFixed(decimals));
+    yMax = parseFloat(yMax.toFixed(decimals));
+    delta_nice = parseFloat(delta_nice.toFixed(decimals));
 
     return { yMin: yMin, yMax: yMax, yStepSize: delta_nice };
 }
@@ -1204,164 +1197,146 @@ function createPreviewBox(canvas, lineColor, titleColor) {
 function closePreview(){ document.getElementById("previewModal").style.display = "none"; }
 
 async function downloadPPT(){
-  const pptx = new PptxGenJS();
-  pptx.layout = 'LAYOUT_16x9';
-  
-  // Title Slide
-  let slide = pptx.addSlide();
-  slide.addText("LTE KPI Report", { x:0.5, y:2, fontSize:32, bold:true, color:'2F80ED' });
-  slide.addText(`Generated: ${new Date().toLocaleDateString()}`, { x:0.5, y:3, fontSize:14 });
+    const pptx = new PptxGenJS();
+    pptx.layout = 'LAYOUT_16x9';
 
-  const canvases = document.querySelectorAll("canvas");
-  const count = graphsPerSlide;
-  const lineColor = chartExportColor; 
-  const titleColor = chartExportTitleColor;
-  
-  const layoutDef = {
-    1: { cols: 1, rows: 1, chartW: 9.0, chartH: 5.5, padding: 0.5 },
-    2: { cols: 2, rows: 1, chartW: 4.5, chartH: 3.5, padding: 0.4 },
-    3: { cols: 3, rows: 1, chartW: 3.0, chartH: 3.0, padding: 0.4 },
-    4: { cols: 2, rows: 2, chartW: 4.5, chartH: 2.5, padding: 0.3 },
-    6: { cols: 3, rows: 2, chartW: 3.0, chartH: 2.5, padding: 0.2 },
-    9: { cols: 3, rows: 3, chartW: 3.0, chartH: 1.7, padding: 0.1 } 
-  }[count] || { cols: 2, rows: 1, chartW: 4.5, chartH: 3.5, padding: 0.4 }; 
+    // Title Slide
+    let slide = pptx.addSlide();
+    slide.addText("LTE KPI Report", { x:0.5, y:2, fontSize:32, bold:true, color:'2F80ED' });
+    slide.addText(`Generated: ${new Date().toLocaleDateString()}`, { x:0.5, y:3, fontSize:14 });
 
-  const layoutPositions = [];
-  const startX = 0.5; 
-  const startY = 1.2; 
-  const maxW = 9.5; 
-  
-  const numCols = layoutDef.cols;
-  const numRows = layoutDef.rows;
-  const chartW = layoutDef.chartW;
-  const chartH = layoutDef.chartH;
-  const padding = layoutDef.padding;
+    const canvases = document.querySelectorAll("canvas");
+    const count = graphsPerSlide;
+    const lineColor = chartExportColor; 
+    const titleColor = chartExportTitleColor;
 
-  const totalChartWidth = numCols * chartW;
-  const totalPaddingWidth = (numCols - 1) * padding;
-  const remainingXSpace = maxW - totalChartWidth - totalPaddingWidth;
-  const marginX = (remainingXSpace / 2) + startX; 
-  
-  
-  for (let r = 0; r < numRows; r++) {
-      for (let c = 0; c < numCols; c++) {
-          const x = marginX + (c * chartW) + (c * padding);
-          const y = startY + (r * chartH) + (r * padding);
-          layoutPositions.push({ x: x, y: y, w: chartW, h: chartH });
-          if (layoutPositions.length >= count) break; 
-      }
-      if (layoutPositions.length >= count) break;
-  }
-  
-  if (count === 4) {
-      layoutPositions.length = 0; 
-      const marginX4 = (maxW - (2 * chartW) - padding) / 2 + startX; 
-      const startY4 = 1.0; 
-      
-      layoutPositions.push({ x: marginX4, y: startY4, w: chartW, h: chartH });
-      layoutPositions.push({ x: marginX4 + chartW + padding, y: startY4, w: chartW, h: chartH });
-      layoutPositions.push({ x: marginX4, y: startY4 + chartH + padding, w: chartW, h: chartH });
-      layoutPositions.push({ x: marginX4 + chartW + padding, y: startY4 + chartH + padding, w: chartW, h: chartH });
-  }
+    const layoutDef = {
+        1: { cols: 1, rows: 1, chartW: 9.0, chartH: 5.5, padding: 0.5 },
+        2: { cols: 2, rows: 1, chartW: 4.5, chartH: 3.5, padding: 0.4 },
+        3: { cols: 3, rows: 1, chartW: 3.0, chartH: 3.0, padding: 0.4 },
+        4: { cols: 2, rows: 2, chartW: 4.5, chartH: 2.5, padding: 0.3 },
+        6: { cols: 3, rows: 2, chartW: 3.0, chartH: 2.5, padding: 0.2 },
+        9: { cols: 3, rows: 3, chartW: 3.0, chartH: 1.7, padding: 0.1 } 
+    }[count] || { cols: 2, rows: 1, chartW: 4.5, chartH: 3.5, padding: 0.4 };
 
+    const numCols = layoutDef.cols;
+    const numRows = layoutDef.rows;
+    const chartW = layoutDef.chartW;
+    const chartH = layoutDef.chartH;
+    const padding = layoutDef.padding;
+    const startX = 0.5;
+    const startY = 1.0;
+    const maxW = 9.5;
 
-  for(let i=0; i<canvases.length; i+=count){
-    let slide = pptx.addSlide();
-    
-    slide.addText(`KPI Analysis - Slide ${Math.floor(i/count)+1}`, { x:0.5, y:0.2, fontSize:16, color:'D24726', bold:true });
+    for(let i = 0; i < canvases.length; i += count){
+        let slide = pptx.addSlide();
+        slide.addText(`KPI Analysis - Slide ${Math.floor(i / count) + 1}`, { x:0.5, y:0.2, fontSize:16, color:'D24726', bold:true });
 
-    for(let j=0; j<count; j++){
-      if(i+j < canvases.length){
-          const c = canvases[i+j];
-          const chartInstance = Chart.getChart(c.id);
+        const chartsThisSlide = Math.min(count, canvases.length - i);
 
-          // === START: Re-apply PPT export overrides and scale calculation for final export ===
-          
-          // 1. Store original chart properties
-          const originalDatasetProps = chartInstance.data.datasets.map(d => ({
-              borderColor: d.borderColor,
-              fill: d.fill,
-              backgroundColor: d.backgroundColor,
-              stepped: d.stepped
-          }));
-          const originalTitleColor = chartInstance.options.plugins.title.color;
-          const originalYMin = chartInstance.options.scales.y.min;
-          const originalYMax = chartInstance.options.scales.y.max;
-          const originalYStep = chartInstance.options.scales.y.ticks.stepSize;
-          
-          const style = chartStyles[selectedStyle];
-          
-          // 2. Apply PPT visual overrides (Color and Style)
-          chartInstance.data.datasets.forEach(d => { 
-            d.borderColor = lineColor; 
-            
-            let bColor = 'transparent';
-            if (style.fill) {
-                const hex = lineColor.substring(1);
-                const r = parseInt(hex.substring(0, 2), 16);
-                const g = parseInt(hex.substring(2, 4), 16);
-                const b = parseInt(hex.substring(4, 6), 16);
-                bColor = `rgba(${r}, ${g}, ${b}, ${style.alpha || 0.15})`;
-            }
-            d.backgroundColor = bColor;
-            d.fill = style.fill;
-            d.stepped = style.stepped;
-          });
-          chartInstance.options.plugins.title.color = titleColor; 
-          chartInstance.update('none');
+        // Calculate layout positions dynamically for each slide
+        const layoutPositions = [];
+        const totalChartWidth = numCols * chartW;
+        const totalPaddingWidth = (numCols - 1) * padding;
+        const remainingXSpace = maxW - totalChartWidth - totalPaddingWidth;
+        const marginX = (remainingXSpace / 2) + startX;
 
-          // 3. Re-calculate and apply Y-Axis Scale (Crucial for correct image render)
-          const kpi = chartInstance.options.plugins.title.text;
-          const dataPoints = chartInstance.data.datasets[0].data;
-          const dataOnly = dataPoints.filter(v => v !== null);
-          const minValue = dataOnly.length > 0 ? Math.min(...dataOnly) : 0;
-          const maxValue = dataOnly.length > 0 ? Math.max(...dataOnly) : 100;
-          const isRateMetric = kpi.match(/(rate|success|%|ratio)/i) !== null;
-          
-          let pptYMin, pptYMax, pptYStep;
-          if (dataOnly.length === 0) {
-              pptYMin = 0;
-              pptYMax = isRateMetric ? 100 : 10;
-              pptYStep = isRateMetric ? 20 : 2;
-          } else {
-              const scale = getNiceYAxisScale(minValue, maxValue, isRateMetric);
-              pptYMin = scale.yMin;
-              pptYMax = scale.yMax;
-              pptYStep = scale.yStepSize;
-          }
+        for(let r = 0; r < numRows; r++){
+            for(let c = 0; c < numCols; c++){
+                if(layoutPositions.length >= chartsThisSlide) break;
+                const x = marginX + c * (chartW + padding);
+                const y = startY + r * (chartH + padding);
+                layoutPositions.push({ x, y, w: chartW, h: chartH });
+            }
+            if(layoutPositions.length >= chartsThisSlide) break;
+        }
 
-          chartInstance.options.scales.y.min = pptYMin;
-          chartInstance.options.scales.y.max = pptYMax;
-          chartInstance.options.scales.y.ticks.stepSize = pptYStep;
-          chartInstance.update('none');
-          // === END: Re-apply PPT export overrides and scale calculation for final export ===
+        for(let j = 0; j < chartsThisSlide; j++){
+            const c = canvases[i+j];
+            const chartInstance = Chart.getChart(c.id);
 
+            if(!chartInstance) continue;
 
-          const imgData = c.toDataURL("image/png");
-          const { x, y, w, h } = layoutPositions[j];
-          
-          slide.addImage({ data: imgData, x:x, y:y, w:w, h:h, sizing: { type:'contain', w:w, h:h } });
+            // === Store original chart properties ===
+            const originalDatasetProps = chartInstance.data.datasets.map(d => ({
+                borderColor: d.borderColor,
+                fill: d.fill,
+                backgroundColor: d.backgroundColor,
+                stepped: d.stepped
+            }));
+            const originalTitleColor = chartInstance.options.plugins.title.color;
+            const originalYMin = chartInstance.options.scales.y.min;
+            const originalYMax = chartInstance.options.scales.y.max;
+            const originalYStep = chartInstance.options.scales.y.ticks.stepSize;
 
-          // === START: Restore original properties for dashboard view ===
-          chartInstance.data.datasets.forEach((d, index) => { 
-            Object.assign(d, originalDatasetProps[index]);
-          });
-          chartInstance.options.plugins.title.color = originalTitleColor;
-          chartInstance.options.scales.y.min = originalYMin;
-          chartInstance.options.scales.y.max = originalYMax;
-          chartInstance.options.scales.y.ticks.stepSize = originalYStep;
-          chartInstance.update('none');
-          // === END: Restore original properties for dashboard view ===
-      }
-    }
-  }
-  
-  // Final restore of any global Chart.js state (though not strictly needed, it's good practice)
-  renderCharts();
+            // === Apply PPT visual overrides ===
+            const style = chartStyles[selectedStyle];
+            chartInstance.data.datasets.forEach(d => {
+                d.borderColor = lineColor;
 
-  pptx.writeFile({ fileName: "LTE_KPI_Report.pptx" });
-  closePreview();
+                let bColor = 'transparent';
+                if(style.fill){
+                    const hex = lineColor.substring(1);
+                    const r = parseInt(hex.substring(0,2),16);
+                    const g = parseInt(hex.substring(2,4),16);
+                    const b = parseInt(hex.substring(4,6),16);
+                    bColor = `rgba(${r}, ${g}, ${b}, ${style.alpha || 0.15})`;
+                }
+                d.backgroundColor = bColor;
+                d.fill = style.fill;
+                d.stepped = style.stepped;
+            });
+            chartInstance.options.plugins.title.color = titleColor;
+
+            // === Apply nice Y-axis scaling ===
+            const kpi = chartInstance.options.plugins.title.text;
+            const dataPoints = chartInstance.data.datasets[0].data;
+            const dataOnly = dataPoints.filter(v => v !== null);
+            const minValue = dataOnly.length > 0 ? Math.min(...dataOnly) : 0;
+            const maxValue = dataOnly.length > 0 ? Math.max(...dataOnly) : 100;
+            const isRateMetric = /(rate|success|%|ratio)/i.test(kpi);
+
+            let pptYMin, pptYMax, pptYStep;
+            if(dataOnly.length === 0){
+                pptYMin = 0;
+                pptYMax = isRateMetric ? 100 : 10;
+                pptYStep = isRateMetric ? 20 : 2;
+            } else {
+                const scale = getNiceYAxisScale(minValue, maxValue, isRateMetric);
+                pptYMin = scale.yMin;
+                pptYMax = scale.yMax;
+                pptYStep = scale.yStepSize;
+            }
+
+            chartInstance.options.scales.y.min = pptYMin;
+            chartInstance.options.scales.y.max = pptYMax;
+            chartInstance.options.scales.y.ticks.stepSize = pptYStep;
+            chartInstance.update('none');
+
+            // === Add chart image to slide ===
+            const imgData = c.toDataURL("image/png");
+            const { x, y, w, h } = layoutPositions[j];
+            slide.addImage({ data: imgData, x, y, w, h, sizing: { type:'contain', w, h } });
+
+            // === Restore original chart properties ===
+            chartInstance.data.datasets.forEach((d, index) => {
+                Object.assign(d, originalDatasetProps[index]);
+            });
+            chartInstance.options.plugins.title.color = originalTitleColor;
+            chartInstance.options.scales.y.min = originalYMin;
+            chartInstance.options.scales.y.max = originalYMax;
+            chartInstance.options.scales.y.ticks.stepSize = originalYStep;
+            chartInstance.update('none');
+        }
+    }
+
+    // Ensure any dashboard charts are re-rendered correctly
+    renderCharts();
+
+    pptx.writeFile({ fileName: "LTE_KPI_Report.pptx" });
+    closePreview();
 }
+
 
 document.addEventListener('DOMContentLoaded', fetchData);
 </script>
