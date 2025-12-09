@@ -47,7 +47,8 @@ button.ppt-btn:hover { background:#a8381e; }
 
 /* --- CARDS & CHARTS --- */
 .chart-card { background:white; border-radius:8px; padding:15px; box-shadow:0 2px 8px rgba(0,0,0,0.08); display:flex; flex-direction:column; }
-.chart-title { text-align:center; font-weight:bold; margin-bottom:10px; color:#333; font-size:14px; min-height:35px; display:flex; align-items:center; justify-content:center; }
+/* .chart-title is now handled by Chart.js, but kept for historical context if needed */
+.chart-title { display:none; } 
 .chart-container { position: relative; height: 280px; width: 100%; }
 
 /* --- DROPDOWNS --- */
@@ -105,7 +106,8 @@ button.ppt-btn:hover { background:#a8381e; }
 .preview-grid { display:grid; height:100%; align-items:center; padding-top:30px; }
 .preview-img-box { text-align:center; padding:5px; height:100%; display:flex; flex-direction:column; justify-content:center; }
 .preview-img-box img { max-width:100%; max-height:calc(100% - 20px); object-fit:contain; border:1px solid #eee; }
-.preview-label { font-size:12px; margin-top:5px; font-weight:bold; }
+/* The label below the chart is now redundant since the title is in the chart */
+.preview-label { display: none; } 
 
 /* Settings Side (Fixed, not scrollable) */
 #previewSettingsPanel {
@@ -145,9 +147,9 @@ button.ppt-btn:hover { background:#a8381e; }
 </div>
 
 <div class="tabs">
-  <button class="tab active" onclick="switchTab('acceptance')">Acceptance</button>
+  <button class="tab active" onclick="switchTab('both')">All KPIs (Both)</button> 
+  <button class="tab" onclick="switchTab('acceptance')">Acceptance</button>
   <button class="tab" onclick="switchTab('monitoring')">Monitoring</button>
-  <button class="tab" onclick="switchTab('both')">All KPIs (Both)</button>
 </div>
 
 <div class="controls">
@@ -236,7 +238,7 @@ let allData = [];
 let fuse = null;
 let allSites = [];
 let selectedSites = [];
-let currentTab = "acceptance";
+let currentTab = "both"; // DEFAULT IS NOW 'BOTH'
 let graphsPerSlide = 2; 
 
 let chartExportColor = '#2F80ED'; // Default Dark Blue
@@ -328,10 +330,6 @@ function renderCharts(){
     const card = document.createElement("div");
     card.className = "chart-card";
     
-    const title = document.createElement("div");
-    title.className = "chart-title";
-    title.textContent = kpi;
-    
     const wrapper = document.createElement("div");
     wrapper.className = "chart-container";
     
@@ -339,7 +337,6 @@ function renderCharts(){
     canvas.id = `chart_${idx}`;
     
     wrapper.appendChild(canvas);
-    card.appendChild(title);
     card.appendChild(wrapper);
     container.appendChild(card);
 
@@ -364,7 +361,8 @@ function renderCharts(){
           backgroundColor: 'transparent',
           borderWidth: 2,
           pointRadius: 3,
-          tension: 0.1 
+          tension: 0.1,
+          spanGaps: true 
         }]
       },
       options: {
@@ -380,9 +378,23 @@ function renderCharts(){
             },
             y: { duration: 0 }
         },
-        plugins: { legend: { display: false } },
+        plugins: { 
+            legend: { display: false },
+            title: { // Chart.js built-in title
+                display: true,
+                text: kpi,
+                font: {
+                    size: 14,
+                    weight: 'bold'
+                },
+                color: '#333'
+            }
+        },
         scales: {
-           x: { ticks: { maxTicksLimit: 6, font: {size:10} }, grid: {display:false} },
+           x: { 
+               ticks: { font: {size:8} }, 
+               grid: {display:false} 
+           },
            y: { beginAtZero: true, grid: {color:'#eee'} }
         }
       }
@@ -546,36 +558,39 @@ function createPreviewBox(canvas, color) {
       const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
       
       // Override style for screenshot using current settings
-      // Line Color = Dot Color (Border Color for the point)
       chartInstance.data.datasets.forEach(d => { 
         d.borderColor = color; 
         d.pointBorderColor = color; 
-        d.pointBackgroundColor = color; /* Also set background color for solid dot */
-        d.pointRadius = 3; /* Keep dots visible */
-        d.pointStyle = 'circle'; /* Keep a standard circle shape */
+        d.pointBackgroundColor = color; 
+        d.pointRadius = 3; 
+        d.pointStyle = 'circle'; 
+        d.spanGaps = true; 
       });
+
+      // Get original title configuration
+      const originalTitle = chartInstance.options.plugins.title;
+
+      // Temporarily change title color to match line color for a unified look in PPT
+      chartInstance.options.plugins.title.color = color; 
+      
       chartInstance.update('none'); 
       
       tempCtx.drawImage(canvas, 0, 0);
       imgData = tempCanvas.toDataURL("image/png");
       
-      // Restore original styles
+      // Restore original styles and title color
       chartInstance.data.datasets.forEach((d, index) => { 
         d.borderColor = originalColors[index]; 
         d.pointBorderColor = originalPointColors[index];
       });
+      chartInstance.options.plugins.title.color = originalTitle.color;
       chartInstance.update('none');
   }
 
   const img = document.createElement("img");
   img.src = imgData;
   
-  const titleText = canvas.closest(".chart-card").querySelector(".chart-title").textContent;
-  const label = document.createElement("div");
-  label.className = "preview-label";
-  label.textContent = titleText;
-  
-  box.appendChild(label); 
+  // No separate label needed, title is in the image
   box.appendChild(img);
   return box;
 }
@@ -596,37 +611,32 @@ async function downloadPPT(){
   const exportColor = chartExportColor; 
   
   // Define base positions and sizes in inches (for 16x9 slide layout)
-  // Max slide width is around 10 inches, max height around 5.6 inches.
-  // We allocate space for a title (0.5 inches) and padding.
-  const baseLayouts = {
-    // [Title Height, Chart Height, Chart Width]
-    1: { titleH: 0.3, chartH: 5.0, chartW: 9.0, padding: 0.5 },
-    2: { titleH: 0.3, chartH: 3.0, chartW: 4.5, padding: 0.4 },
-    3: { titleH: 0.3, chartH: 2.5, chartW: 3.0, padding: 0.4 },
-    4: { titleH: 0.3, chartH: 2.2, chartW: 4.5, padding: 0.3 }
-  };
-  const layoutDef = baseLayouts[count] || baseLayouts[2]; // Default to 2 if something goes wrong
+  const layoutDef = {
+    1: { chartY: 1.2, chartW: 9.0, chartH: 5.5, padding: 0.5 },
+    2: { chartY: 1.2, chartW: 4.5, chartH: 3.5, padding: 0.4 },
+    3: { chartY: 1.2, chartW: 3.0, chartH: 3.0, padding: 0.4 },
+    4: { chartY: 1.2, chartW: 4.5, chartH: 2.5, padding: 0.3 }
+  }[count] || { chartY: 1.2, chartW: 4.5, chartH: 3.5, padding: 0.4 }; // Default to 2
 
   const layout = [];
+  const startY = 1.2; // Starting Y position after slide header
+  
+  // Calculate specific positions
   if (count === 1) {
-    // Single chart: centered
-    layout.push({ x:0.5, y:1.2 + layoutDef.titleH, w:layoutDef.chartW, h:layoutDef.chartH });
+    layout.push({ x:0.5, y:startY, w:layoutDef.chartW, h:layoutDef.chartH });
   } else if (count === 2) {
-    // Two charts: side by side
-    layout.push({ x:0.5, y:1.2 + layoutDef.titleH, w:layoutDef.chartW, h:layoutDef.chartH });
-    layout.push({ x:0.5 + layoutDef.chartW + layoutDef.padding, y:1.2 + layoutDef.titleH, w:layoutDef.chartW, h:layoutDef.chartH });
+    layout.push({ x:0.5, y:startY, w:layoutDef.chartW, h:layoutDef.chartH });
+    layout.push({ x:0.5 + layoutDef.chartW + layoutDef.padding, y:startY, w:layoutDef.chartW, h:layoutDef.chartH });
   } else if (count === 3) {
-    // Three charts: side by side
     const gap = (9.5 - (3 * layoutDef.chartW)) / 2;
-    layout.push({ x:0.5, y:1.2 + layoutDef.titleH, w:layoutDef.chartW, h:layoutDef.chartH });
-    layout.push({ x:0.5 + layoutDef.chartW + gap, y:1.2 + layoutDef.titleH, w:layoutDef.chartW, h:layoutDef.chartH });
-    layout.push({ x:0.5 + 2*(layoutDef.chartW + gap), y:1.2 + layoutDef.titleH, w:layoutDef.chartW, h:layoutDef.chartH });
+    layout.push({ x:0.5, y:startY, w:layoutDef.chartW, h:layoutDef.chartH });
+    layout.push({ x:0.5 + layoutDef.chartW + gap, y:startY, w:layoutDef.chartW, h:layoutDef.chartH });
+    layout.push({ x:0.5 + 2*(layoutDef.chartW + gap), y:startY, w:layoutDef.chartW, h:layoutDef.chartH });
   } else if (count === 4) {
-    // Four charts: 2x2 grid
-    layout.push({ x:0.5, y:1.2 + layoutDef.titleH, w:layoutDef.chartW, h:layoutDef.chartH });
-    layout.push({ x:0.5 + layoutDef.chartW + layoutDef.padding, y:1.2 + layoutDef.titleH, w:layoutDef.chartW, h:layoutDef.chartH });
-    layout.push({ x:0.5, y:1.2 + 2*layoutDef.titleH + layoutDef.chartH + layoutDef.padding, w:layoutDef.chartW, h:layoutDef.chartH });
-    layout.push({ x:0.5 + layoutDef.chartW + layoutDef.padding, y:1.2 + 2*layoutDef.titleH + layoutDef.chartH + layoutDef.padding, w:layoutDef.chartW, h:layoutDef.chartH });
+    layout.push({ x:0.5, y:startY, w:layoutDef.chartW, h:layoutDef.chartH });
+    layout.push({ x:0.5 + layoutDef.chartW + layoutDef.padding, y:startY, w:layoutDef.chartW, h:layoutDef.chartH });
+    layout.push({ x:0.5, y:startY + layoutDef.chartH + layoutDef.padding, w:layoutDef.chartW, h:layoutDef.chartH });
+    layout.push({ x:0.5 + layoutDef.chartW + layoutDef.padding, y:startY + layoutDef.chartH + layoutDef.padding, w:layoutDef.chartW, h:layoutDef.chartH });
   }
 
 
@@ -641,12 +651,12 @@ async function downloadPPT(){
       if(i+j < canvases.length){
         const c = canvases[i+j];
         const params = layout[j];
-        const titleText = c.closest(".chart-card").querySelector(".chart-title").textContent;
         
-        // --- PPT COLOR/DOT STYLE FIX LOGIC ---
+        // --- PPT CHART EXPORT LOGIC (Now includes title) ---
         const chartInstance = Chart.getChart(c.id);
         const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
         const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
+        const originalTitleColor = chartInstance.options.plugins.title.color;
         
         // Override style for PPT export
         chartInstance.data.datasets.forEach(d => { 
@@ -654,7 +664,9 @@ async function downloadPPT(){
           d.pointBorderColor = exportColor; 
           d.pointBackgroundColor = exportColor; 
           d.pointRadius = 3;
+          d.spanGaps = true; 
         });
+        chartInstance.options.plugins.title.color = exportColor; // Change chart title color for consistency
         chartInstance.update('none'); 
         
         const imgData = c.toDataURL("image/png");
@@ -663,20 +675,12 @@ async function downloadPPT(){
         chartInstance.data.datasets.forEach((d, index) => { 
           d.borderColor = originalColors[index]; 
           d.pointBorderColor = originalPointColors[index];
+          d.spanGaps = true; 
         });
+        chartInstance.options.plugins.title.color = originalTitleColor;
         chartInstance.update('none');
-        // --- END PPT COLOR/DOT STYLE FIX LOGIC ---
+        // --- END PPT CHART EXPORT LOGIC ---
         
-        // Calculate the title position just above the chart's Y coordinate
-        const titleY = params.y - layoutDef.titleH; 
-
-        // Title Text (Above the graph)
-        slide.addText(titleText, { 
-          x: params.x, y: titleY, w: params.w, 
-          fontSize: count <= 2 ? 12 : 10, bold:true, 
-          color: '333333' // Dark text for the specific chart title
-        });
-
         // Chart Image
         slide.addImage({ 
           data: imgData, 
