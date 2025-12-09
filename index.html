@@ -92,7 +92,6 @@ button.ppt-btn:hover { background:#a8381e; }
 /* Base Toggle Button Style */
 .drawerToggle { 
     position:fixed; 
-    top:100px; 
     width:36px; 
     height:36px; 
     background:#2F80ED; 
@@ -104,12 +103,13 @@ button.ppt-btn:hover { background:#a8381e; }
     justify-content:center; 
     font-size:20px; 
     z-index:900; 
-    transition: right 0.3s; /* For movement when another is open */
+    transition: right 0.3s; 
 }
-/* Positioning for KPI button */
-.kpiDrawerToggle { right:0; }
-/* Positioning for Style button (just left of KPI button) */
-.styleDrawerToggle { right:40px; } 
+/* Positioning for KPI button (bottom) */
+.kpiDrawerToggle { right:0; top:145px; } /* Moved down */
+
+/* Positioning for Style button (top, just above KPI) */
+.styleDrawerToggle { right:0; top:100px; } /* Moved up */ 
 
 /* Base Drawer Style */
 .drawer { 
@@ -122,14 +122,14 @@ button.ppt-btn:hover { background:#a8381e; }
 }
 .drawer.open { transform:translateX(0); }
 
-/* Specific KPI Drawer Adjustments */
-#kpiDrawer.open ~ .styleDrawerToggle { right: 360px; } /* Push the style toggle out when KPI drawer is open */
-#kpiDrawer.open ~ .kpiDrawerToggle { right: 320px; } /* Push the KPI toggle out when KPI drawer is open */
+/* Adjustments when drawers are open (both buttons move out of the way) */
+#kpiDrawer.open ~ .styleDrawerToggle { right: 320px; }
+#kpiDrawer.open ~ .kpiDrawerToggle { right: 320px; } 
 
-/* Specific Style Drawer Adjustments */
-#styleDrawer { z-index: 1001; } /* Keep style drawer on top */
-#styleDrawer.open ~ .kpiDrawerToggle { right: 320px; } /* Push the KPI toggle out when Style drawer is open */
-#styleDrawer.open ~ .styleDrawerToggle { right: 320px; } /* Push the Style toggle out when Style drawer is open */
+/* The style drawer opens on top and doesn't need to push the KPI toggle out since it is now below it. */
+#styleDrawer { z-index: 1001; }
+#styleDrawer.open ~ .kpiDrawerToggle { right: 320px; }
+#styleDrawer.open ~ .styleDrawerToggle { right: 320px; }
 
 
 .drawer-header { 
@@ -722,7 +722,7 @@ function renderCharts(){
        return isAvg ? sum/vals.length : sum;
     });
 
-    // Dynamic Y-Axis Start Calculation (Enhanced for high percentages)
+    // Dynamic Y-Axis Start Calculation (Unified Logic for ALL KPIs)
     const dataOnly = dataPoints.filter(v => v !== null);
     const minValue = dataOnly.length > 0 ? Math.min(...dataOnly) : 0;
     const maxValue = dataOnly.length > 0 ? Math.max(...dataOnly) : 100;
@@ -731,30 +731,28 @@ function renderCharts(){
     let yMax = 100;
     let yStepSize = null; 
     
-    // Logic for tight, dynamic scaling on high-range KPIs
-    if (kpi.match(/(rate|success|%|ratio)/i) && minValue >= 80) {
-        
-        // 1. Calculate a dynamic minimum that's visible but tight
-        let targetMin = minValue - 1.5;
+    if (dataOnly.length > 0 && dataRange > 0) {
+        // Calculate a safe padding below the minimum value (1.5% of the range or a fixed amount)
+        let padding = Math.max(1.0, dataRange * 0.05); 
+        let targetMin = minValue - padding;
 
-        // Round down to the nearest multiple of 0.5 for tighter scaling
-        yMin = Math.floor(targetMin * 2) / 2;
+        // Determine an appropriate step size based on the range magnitude
+        if (dataRange < 2) yStepSize = 0.2;
+        else if (dataRange < 5) yStepSize = 0.5;
+        else if (dataRange < 15) yStepSize = 1.0;
+        else if (dataRange < 50) yStepSize = 5.0;
+        else yStepSize = 10.0;
+        
+        // Round yMin down to the nearest multiple of the calculated step size
+        yMin = Math.floor(targetMin / yStepSize) * yStepSize;
         yMin = Math.max(0, yMin); 
 
-        // 2. Set Step Size for tight visualization if the range is small
-        if (dataRange > 0 && dataRange < 5) {
-            yStepSize = 0.5;
-        } else if (dataRange >= 5 && dataRange < 15) {
-            yStepSize = 1.0;
-        }
+        // Round yMax up to the nearest multiple of the calculated step size
+        yMax = Math.ceil(maxValue / yStepSize) * yStepSize;
         
-        // 3. Set yMax only if the max is not 100 and the range is tight
-        if (maxValue < 100 && yStepSize !== null) {
-            // Round up the max value to the nearest step size
-            yMax = Math.ceil(maxValue / yStepSize) * yStepSize;
-            yMax = Math.min(100, yMax); // Ensure max is not ridiculously high
-        } else if (maxValue === 100) {
-            yMax = 100;
+        // Ensure that for Rate/Success metrics, yMax is capped at 100
+        if (kpi.match(/(rate|success|%|ratio)/i)) {
+            yMax = Math.min(100, yMax);
         }
     }
     
@@ -1036,6 +1034,7 @@ function createPreviewBox(canvas, lineColor, titleColor) {
   let imgData = '';
   
   if (chartInstance) {
+      // 1. Store original chart properties
       const originalDatasetProps = chartInstance.data.datasets.map(d => ({
           borderColor: d.borderColor,
           pointBorderColor: d.pointBorderColor,
@@ -1051,6 +1050,7 @@ function createPreviewBox(canvas, lineColor, titleColor) {
       
       const style = chartStyles[selectedStyle];
       
+      // 2. Apply PPT visual overrides (Color and Style)
       chartInstance.data.datasets.forEach(d => { 
         d.borderColor = lineColor; 
         d.pointBorderColor = lineColor; 
@@ -1075,7 +1075,7 @@ function createPreviewBox(canvas, lineColor, titleColor) {
 
       chartInstance.options.plugins.title.color = titleColor; 
       
-      // Temporarily use tighter scaling for high-percentage KPIs in the preview if applicable
+      // 3. Apply TIGHT Dynamic Y-Axis Scaling for Preview/PPT
       const kpi = chartInstance.options.plugins.title.text;
       const dataPoints = chartInstance.data.datasets[0].data;
       const dataOnly = dataPoints.filter(v => v !== null);
@@ -1083,35 +1083,37 @@ function createPreviewBox(canvas, lineColor, titleColor) {
       const maxValue = dataOnly.length > 0 ? Math.max(...dataOnly) : 100;
       const dataRange = maxValue - minValue;
       
-      let previewYMin = originalYMin;
-      let previewYMax = originalYMax;
-      let previewYStep = originalYStep;
+      let pptYMin = originalYMin;
+      let pptYMax = originalYMax;
+      let pptYStep = originalYStep;
 
-      if (kpi.match(/(rate|success|%|ratio)/i) && minValue >= 80) {
-          let targetMin = minValue - 1.5;
-          previewYMin = Math.floor(targetMin * 2) / 2;
-          previewYMin = Math.max(0, previewYMin); 
+      if (dataOnly.length > 0 && dataRange > 0) {
+          let padding = Math.max(1.0, dataRange * 0.05); 
+          let targetMin = minValue - padding;
+
+          if (dataRange < 2) pptYStep = 0.2;
+          else if (dataRange < 5) pptYStep = 0.5;
+          else if (dataRange < 15) pptYStep = 1.0;
+          else if (dataRange < 50) pptYStep = 5.0;
+          else pptYStep = 10.0;
           
-          if (dataRange > 0 && dataRange < 5) {
-              previewYStep = 0.5;
-          } else if (dataRange >= 5 && dataRange < 15) {
-              previewYStep = 1.0;
-          }
+          pptYMin = Math.floor(targetMin / pptYStep) * pptYStep;
+          pptYMin = Math.max(0, pptYMin); 
+
+          pptYMax = Math.ceil(maxValue / pptYStep) * pptYStep;
           
-          if (maxValue < 100 && previewYStep !== null) {
-              previewYMax = Math.ceil(maxValue / previewYStep) * previewYStep;
-              previewYMax = Math.min(100, previewYMax); 
-          } else if (maxValue === 100) {
-              previewYMax = 100;
+          if (kpi.match(/(rate|success|%|ratio)/i)) {
+              pptYMax = Math.min(100, pptYMax); 
           }
       }
-      
-      chartInstance.options.scales.y.min = previewYMin;
-      chartInstance.options.scales.y.max = previewYMax;
-      chartInstance.options.scales.y.ticks.stepSize = previewYStep;
+
+      chartInstance.options.scales.y.min = pptYMin;
+      chartInstance.options.scales.y.max = pptYMax;
+      chartInstance.options.scales.y.ticks.stepSize = pptYStep;
 
       chartInstance.update('none'); 
       
+      // 4. Draw image and restore properties
       tempCtx.drawImage(canvas, 0, 0);
       imgData = tempCanvas.toDataURL("image/png");
       
@@ -1209,7 +1211,7 @@ async function downloadPPT(){
         
         const chartInstance = Chart.getChart(c.id);
         
-        // Save current chart style settings 
+        // 1. Store original chart properties
         const originalDatasetProps = chartInstance.data.datasets.map(d => ({
             borderColor: d.borderColor,
             pointBorderColor: d.pointBorderColor,
@@ -1225,7 +1227,7 @@ async function downloadPPT(){
 
         const style = chartStyles[selectedStyle];
         
-        // Override style for PPT export
+        // 2. Override style for PPT export
         chartInstance.data.datasets.forEach(d => { 
           d.borderColor = lineColor; 
           d.pointBorderColor = lineColor; 
@@ -1248,7 +1250,7 @@ async function downloadPPT(){
         });
         chartInstance.options.plugins.title.color = titleColor; 
         
-        // Recalculate and apply tighter scaling for PPT export
+        // 3. Recalculate and apply TIGHT Dynamic Y-Axis Scaling for PPT export
         const kpi = chartInstance.options.plugins.title.text;
         const dataPoints = chartInstance.data.datasets[0].data;
         const dataOnly = dataPoints.filter(v => v !== null);
@@ -1260,34 +1262,35 @@ async function downloadPPT(){
         let pptYMax = originalYMax;
         let pptYStep = originalYStep;
 
-        if (kpi.match(/(rate|success|%|ratio)/i) && minValue >= 80) {
-            let targetMin = minValue - 1.5;
-            pptYMin = Math.floor(targetMin * 2) / 2;
+        if (dataOnly.length > 0 && dataRange > 0) {
+            let padding = Math.max(1.0, dataRange * 0.05); 
+            let targetMin = minValue - padding;
+
+            if (dataRange < 2) pptYStep = 0.2;
+            else if (dataRange < 5) pptYStep = 0.5;
+            else if (dataRange < 15) pptYStep = 1.0;
+            else if (dataRange < 50) pptYStep = 5.0;
+            else pptYStep = 10.0;
+            
+            pptYMin = Math.floor(targetMin / pptYStep) * pptYStep;
             pptYMin = Math.max(0, pptYMin); 
+
+            pptYMax = Math.ceil(maxValue / pptYStep) * pptYStep;
             
-            if (dataRange > 0 && dataRange < 5) {
-                pptYStep = 0.5;
-            } else if (dataRange >= 5 && dataRange < 15) {
-                pptYStep = 1.0;
-            }
-            
-            if (maxValue < 100 && pptYStep !== null) {
-                pptYMax = Math.ceil(maxValue / pptYStep) * pptYStep;
+            if (kpi.match(/(rate|success|%|ratio)/i)) {
                 pptYMax = Math.min(100, pptYMax); 
-            } else if (maxValue === 100) {
-                pptYMax = 100;
             }
         }
         
         chartInstance.options.scales.y.min = pptYMin;
         chartInstance.options.scales.y.max = pptYMax;
         chartInstance.options.scales.y.ticks.stepSize = pptYStep;
-
+        
         chartInstance.update('none'); 
         
         const imgData = c.toDataURL("image/png");
         
-        // Restore original styles
+        // 4. Restore original styles
         chartInstance.data.datasets.forEach((d, index) => { 
             Object.assign(d, originalDatasetProps[index]);
         });
