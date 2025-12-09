@@ -681,194 +681,194 @@ function updateSiteFilterUI(options = {close: true}) {
 // --- CHART RENDERING ---
 
 function renderCharts(){
-    const container = document.getElementById("mainChartContainer");
-    container.innerHTML = "";
-    
-    let kpisToShow = [];
-    if(currentTab === "acceptance") kpisToShow = selectedKpis.acceptance;
-    else if(currentTab === "monitoring") kpisToShow = selectedKpis.monitoring;
-    else if(currentTab === "both") kpisToShow = [...selectedKpis.acceptance, ...selectedKpis.monitoring];
+    const container = document.getElementById("mainChartContainer");
+    container.innerHTML = "";
+    
+    let kpisToShow = [];
+    if(currentTab === "acceptance") kpisToShow = selectedKpis.acceptance;
+    else if(currentTab === "monitoring") kpisToShow = selectedKpis.monitoring;
+    else if(currentTab === "both") kpisToShow = [...selectedKpis.acceptance, ...selectedKpis.monitoring];
 
-    // 1. Determine final list of sites based on date filter AND site filter
-    let sitesFromDate = allSites.filter(site => {
-        const date = siteCutoverMap[site];
-        return selectedOnAirDates.includes(date);
-    });
+    // 1. Determine final list of sites based on date filter AND site filter
+    let sitesFromDate = allSites.filter(site => {
+        const date = siteCutoverMap[site];
+        return selectedOnAirDates.includes(date);
+    });
 
-    let finalSiteList;
-    if (selectedSites.length > 0) {
-        // Use specifically selected sites
-        finalSiteList = selectedSites;
-    } else {
-        // Use all sites allowed by the date filter (default behavior when no specific site is selected)
-        finalSiteList = sitesFromDate;
-    }
-    
-    let filteredData = allData.filter(d => finalSiteList.includes(d["eNodeB Name"]));
-
-
-    // 2. Process Timeline (unchanged)
-    const timeline = [...new Set(filteredData.map(d=>d["Date"]))].sort((a,b)=>{
-        const [da,ma,ya]=a.split('/').map(Number);
-        const [db,mb,yb]=b.split('/').map(Number);
-        return new Date(ya,ma-1,da)-new Date(yb,mb-1,db);
-    });
-
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const timelineLabels = timeline.map(d => {
-        const [day, month] = d.split('/').map(Number);
-        return `${day} ${monthNames[month - 1]}`; // e.g., "5 Jan"
-    });
-
-    // Apply selected style
-    const style = chartStyles[selectedStyle]; 
-    document.querySelectorAll('.chart-card').forEach(card => card.style.backgroundColor = style.bgColor);
+    let finalSiteList;
+    if (selectedSites.length > 0) {
+        // Use specifically selected sites
+        finalSiteList = selectedSites;
+    } else {
+        // Use all sites allowed by the date filter (default behavior when no specific site is selected)
+        finalSiteList = sitesFromDate;
+    }
+    
+    let filteredData = allData.filter(d => finalSiteList.includes(d["eNodeB Name"]));
 
 
-    // 3. Generate Charts
-    kpisToShow.forEach((kpi, idx) => {
-        const card = document.createElement("div");
-        card.className = "chart-card";
-        
-        const wrapper = document.createElement("div");
-        wrapper.className = "chart-container";
-        
-        const canvas = document.createElement("canvas");
-        canvas.id = `chart_${idx}`;
-        
-        wrapper.appendChild(canvas);
-        card.appendChild(wrapper);
-        container.appendChild(card);
+    // 2. Process Timeline
+    const timeline = [...new Set(filteredData.map(d=>d["Date"]))].sort((a,b)=>{
+        const [da,ma,ya]=a.split('/').map(Number);
+        const [db,mb,yb]=b.split('/').map(Number);
+        return new Date(ya,ma-1,da)-new Date(yb,mb-1,db);
+    });
 
-        // Calculate Data
-        const dataPoints = timeline.map(date => {
-            const vals = filteredData.filter(d => d["Date"] === date && d[kpi] !== null).map(d => d[kpi]);
-            if(vals.length === 0) return null;
-            const isAvg = kpi.match(/(rate|%|ratio|average)/i);
-            const sum = vals.reduce((a,b)=>a+b,0);
-            return isAvg ? sum/vals.length : sum; // Aggregate average for rates/percentages, sum for volume
-        });
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const timelineLabels = timeline.map(d => {
+        const [day, month] = d.split('/').map(Number);
+        return `${day} ${monthNames[month - 1]}`; // e.g., "5 Jan"
+    });
 
-        // --- DYNAMIC SCALING LOGIC START (NEW) ---
-        
-        const allValues = dataPoints.filter(v => v !== null);
-        const minVal = allValues.length > 0 ? Math.min(...allValues) : 0;
-        const maxVal = allValues.length > 0 ? Math.max(...allValues) : 0;
-        const isRateOrSuccess = kpi.match(/(rate|success|%|ratio)/i);
-        
-        // 1. Calculate finalYMin (Dynamic minimum for high percentages)
-        let finalYMin = 0;
-        if (isRateOrSuccess && minVal >= 80 && allValues.length > 0) {
-            // Subtract buffer (5 units) and round down to the nearest 5
-            let targetMin = Math.max(0, minVal - 5); 
-            finalYMin = Math.max(0, Math.floor(targetMin / 5) * 5); 
-        }
-        
-        // 2. Calculate finalYMax (Strict capping for percentage KPIs <= 100)
-        let finalYMax;
-        if (isRateOrSuccess) {
-            if (maxVal <= 100) {
-                // STRICT CAPPING: Max data value 100 or less, Y-axis max is exactly 100.
-                finalYMax = 100;
-            } else {
-                // If max is > 100, use padding (1.05x) and clean rounding (e.g., 110 data -> 120 axis max).
-                let yMaxRaw = maxVal * 1.05;
-                finalYMax = roundUpToCleanScale(yMaxRaw);
-            }
-        } else {
-            // Non-percentage KPIs (Volume, Throughput) always use padding and clean rounding.
-            let yMaxRaw = maxVal * 1.05;
-            // Handle small number edge case for non-percentage KPIs
-            if (maxVal === 0 && allValues.length > 0) yMaxRaw = 10;
-            if (yMaxRaw < 5 && allValues.length > 0) yMaxRaw = 5;
+    // Apply selected style
+    const style = chartStyles[selectedStyle]; 
+    document.querySelectorAll('.chart-card').forEach(card => card.style.backgroundColor = style.bgColor);
 
-            finalYMax = roundUpToCleanScale(yMaxRaw);
-        }
 
-        // Final check: If calculated min is higher than max (edge case for zero range), reset min.
-        if (finalYMax <= finalYMin) {
-            finalYMin = 0;
-        }
-        
-        // 3. Calculate Step Size (Clean, ideal steps)
-        const range = finalYMax - finalYMin;
-        const stepSize = getIdealTickStep(range);
-        
-        // --- DYNAMIC SCALING LOGIC END ---
+    // 3. Generate Charts
+    kpisToShow.forEach((kpi, idx) => {
+        const card = document.createElement("div");
+        card.className = "chart-card";
+        
+        const wrapper = document.createElement("div");
+        wrapper.className = "chart-container";
+        
+        const canvas = document.createElement("canvas");
+        canvas.id = `chart_${idx}`;
+        
+        wrapper.appendChild(canvas);
+        card.appendChild(wrapper);
+        container.appendChild(card);
 
-        // Determine line color using HSL based on index for consistency
-        const datasetColor = getKpiColor(idx); 
+        // Calculate Data
+        const dataPoints = timeline.map(date => {
+            const vals = filteredData.filter(d => d["Date"] === date && d[kpi] !== null).map(d => d[kpi]);
+            if(vals.length === 0) return null;
+            const isAvg = kpi.match(/(rate|%|ratio|average)/i);
+            const sum = vals.reduce((a,b)=>a+b,0);
+            return isAvg ? sum/vals.length : sum; // Aggregate average for rates/percentages, sum for volume
+        });
 
-        // Determine background color for fill if needed
-        let bColor = 'transparent';
-        if (style.fill) {
-            // Uses the new hexToRgba utility function
-            bColor = hexToRgba(datasetColor, style.alpha || 0.15); 
-        }
-    }
-        // Draw Chart with Animation (Custom Animation Options Preserved)
-        new Chart(canvas.getContext("2d"), {
-            type: 'line',
-            data: {
-                labels: timelineLabels,
-                datasets: [{
-                    label: (finalSiteList.length > 0 && dataPoints.some(p => p !== null)) ? "Aggregate" : "No Data",
-                    data: dataPoints,
-                    borderColor: datasetColor, // Use consistent HSL color
-                    backgroundColor: bColor, 
-                    fill: style.fill,
-                    borderWidth: style.border,
-                    pointRadius: style.pointRadius,
-                    tension: style.tension,
-                    stepped: style.stepped,
-                    spanGaps: true
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                animation: { // PRESERVED ANIMATION BLOCK
-                    x: {
-                        type: 'number',
-                        easing: 'linear',
-                        duration: 500,
-                        from: NaN,
-                        delay: (ctx) => ctx.index * 30 
-                    },
-                    y: { duration: 0 }
-                },
-                plugins: {
-                    title: {
-                        display: true,
-                        text: kpi,
-                        color: style.titleColor,
-                        font: { size: 14, weight: '600' }
-                    },
-                    legend: { display: false }
-                },
-                scales: {
-                    y: {
-                        min: finalYMin, // Applying the calculated minimum
-                        max: finalYMax, // Applying the calculated maximum
-                        ticks: {
-                            stepSize: stepSize, // Applying the calculated clean step
-                            color: style.titleColor,
-                            font: { size: 11 }
-                        },
-                        grid: { color: style.gridColor },
-                    },
-                    x: {
-                        ticks: {
-                            color: style.titleColor,
-                            maxRotation: 45, minRotation: 45,
-                            font: { size: 10 }
-                        },
-                        grid: { display: false },
-                    }
-                }
-            }
-        });
-    });
+        // --- DYNAMIC SCALING LOGIC START (Copied from previous response for completeness) ---
+        
+        const allValues = dataPoints.filter(v => v !== null);
+        const minVal = allValues.length > 0 ? Math.min(...allValues) : 0;
+        const maxVal = allValues.length > 0 ? Math.max(...allValues) : 0;
+        const isRateOrSuccess = kpi.match(/(rate|success|%|ratio)/i);
+        
+        // 1. Calculate finalYMin (Dynamic minimum for high percentages)
+        let finalYMin = 0;
+        if (isRateOrSuccess && minVal >= 80 && allValues.length > 0) {
+            // Subtract buffer (5 units) and round down to the nearest 5
+            let targetMin = Math.max(0, minVal - 5); 
+            finalYMin = Math.max(0, Math.floor(targetMin / 5) * 5); 
+        }
+        
+        // 2. Calculate finalYMax (Strict capping for percentage KPIs <= 100)
+        let finalYMax;
+        if (isRateOrSuccess) {
+            if (maxVal <= 100) {
+                // STRICT CAPPING: Max data value 100 or less, Y-axis max is exactly 100.
+                finalYMax = 100;
+            } else {
+                // If max is > 100, use padding (1.05x) and clean rounding (e.g., 110 data -> 120 axis max).
+                let yMaxRaw = maxVal * 1.05;
+                finalYMax = roundUpToCleanScale(yMaxRaw);
+            }
+        } else {
+            // Non-percentage KPIs (Volume, Throughput) always use padding and clean rounding.
+            let yMaxRaw = maxVal * 1.05;
+            // Handle small number edge case for non-percentage KPIs
+            if (maxVal === 0 && allValues.length > 0) yMaxRaw = 10;
+            if (yMaxRaw < 5 && allValues.length > 0) yMaxRaw = 5;
+
+            finalYMax = roundUpToCleanScale(yMaxRaw);
+        }
+
+        // Final check: If calculated min is higher than max (edge case for zero range), reset min.
+        if (finalYMax <= finalYMin) {
+            finalYMin = 0;
+        }
+        
+        // 3. Calculate Step Size (Clean, ideal steps)
+        const range = finalYMax - finalYMin;
+        const stepSize = getIdealTickStep(range);
+        
+        // --- DYNAMIC SCALING LOGIC END ---
+
+        // Determine line color using HSL based on index for consistency
+        const datasetColor = getKpiColor(idx); 
+
+        // Determine background color for fill if needed
+        let bColor = 'transparent';
+        if (style.fill) {
+            // Uses the new hexToRgba utility function
+            bColor = hexToRgba(datasetColor, style.alpha || 0.15); 
+        }
+
+        // Draw Chart with Animation
+        new Chart(canvas.getContext("2d"), {
+            type: 'line',
+            data: {
+                labels: timelineLabels,
+                datasets: [{
+                    label: (finalSiteList.length > 0 && dataPoints.some(p => p !== null)) ? "Aggregate" : "No Data",
+                    data: dataPoints,
+                    borderColor: datasetColor, // Use consistent HSL color
+                    backgroundColor: bColor, 
+                    fill: style.fill,
+                    borderWidth: style.border,
+                    pointRadius: style.pointRadius,
+                    tension: style.tension,
+                    stepped: style.stepped,
+                    spanGaps: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    x: {
+                        type: 'number',
+                        easing: 'linear',
+                        duration: 500,
+                        from: NaN,
+                        delay: (ctx) => ctx.index * 30 
+                    },
+                    y: { duration: 0 }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: kpi,
+                        color: style.titleColor,
+                        font: { size: 14, weight: '600' }
+                    },
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        min: finalYMin, // Applying the calculated minimum
+                        max: finalYMax, // Applying the calculated maximum
+                        ticks: {
+                            stepSize: stepSize, // Applying the calculated clean step
+                            color: style.titleColor,
+                            font: { size: 11 }
+                        },
+                        grid: { color: style.gridColor },
+                    },
+                    x: {
+                        ticks: {
+                            color: style.titleColor,
+                            maxRotation: 45, minRotation: 45,
+                            font: { size: 10 }
+                        },
+                        grid: { display: false },
+                    }
+                }
+            }
+        });
+    });
 }
 
     // Draw Chart with Animation
@@ -1390,9 +1390,8 @@ async function downloadPPT(){
   closePreview();
 }
 window.onload = function() {
-    // This part ensures the KPI drawer style options are generated on load
+    // 1. Generate KPI drawer style options
     const styleOptionsContainer = document.getElementById('chartStyleOptions');
-    // Check if the container exists before trying to populate it
     if (styleOptionsContainer) {
         for (const styleName in chartStyles) {
             const btn = document.createElement('button');
@@ -1406,8 +1405,9 @@ window.onload = function() {
         }
     }
     
-// Init
-fetchData();
+    // 2. Initial data load (This calls fetchData() which eventually calls renderCharts())
+    fetchData();
+};
 </script>
 </body>
 </html>
