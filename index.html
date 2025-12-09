@@ -227,6 +227,8 @@ button.ppt-btn:hover { background:#a8381e; }
                     <button class="action-btn" data-count="2" onclick="updatePreviewSettings(2, chartExportColor, chartExportTitleColor)">2 Graphs</button>
                     <button class="action-btn" data-count="3" onclick="updatePreviewSettings(3, chartExportColor, chartExportTitleColor)">3 Graphs</button>
                     <button class="action-btn" data-count="4" onclick="updatePreviewSettings(4, chartExportColor, chartExportTitleColor)">4 Graphs</button>
+                    <button class="action-btn" data-count="6" onclick="updatePreviewSettings(6, chartExportColor, chartExportTitleColor)">6 Graphs</button>
+                    <button class="action-btn" data-count="9" onclick="updatePreviewSettings(9, chartExportColor, chartExportTitleColor)">9 Graphs</button>
                 </div>
             </div>
 
@@ -684,7 +686,7 @@ function getRandomColor() {
   return colors[Math.floor(Math.random() * colors.length)];
 }
 
-// --- KPI DRAWER & UTILITY LOGIC (NEW SELECT/CLEAR ALL) ---
+// --- KPI DRAWER & UTILITY LOGIC ---
 
 function toggleDrawer(){
   const d = document.getElementById("kpiDrawer");
@@ -789,7 +791,7 @@ function applyKpis(){
   renderCharts();
 }
 
-// --- PPT EXPORT CUSTOMIZATION & PREVIEW (UNCHANGED) ---
+// --- PPT EXPORT CUSTOMIZATION & PREVIEW ---
 
 function openPreview() {
     const canvases = document.querySelectorAll("canvas");
@@ -842,7 +844,18 @@ function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
     
     document.getElementById("previewTitle").textContent = `PPT Export Preview (${count} Graphs per Slide) - Line: ${chartExportColor}, Title: ${chartExportTitleColor}`;
     body.innerHTML = "";
+
+    // Determine CSS grid columns based on count
+    let gridCols = '1fr';
+    let rows = 1;
+    if (count === 2) { gridCols = '1fr 1fr'; rows = 1; }
+    else if (count === 3 || count === 6 || count === 9) { gridCols = '1fr 1fr 1fr'; }
+    else if (count === 4) { gridCols = '1fr 1fr'; rows = 2; }
     
+    if (count === 6) rows = 2;
+    if (count === 9) rows = 3;
+
+
     for(let i=0; i<canvases.length; i+=count){
         const slideDiv = document.createElement("div");
         slideDiv.className = "preview-slide";
@@ -854,8 +867,10 @@ function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
 
         const grid = document.createElement("div");
         grid.className = "preview-grid";
-        grid.style.gridTemplateColumns = count === 1 ? '1fr' : (count === 2 ? '1fr 1fr' : (count === 3 ? '1fr 1fr 1fr' : 'repeat(2, 1fr)'));
-        grid.style.gridTemplateRows = count > 2 ? '1fr 1fr' : '1fr';
+        grid.style.gridTemplateColumns = gridCols;
+        // Use auto for rows to adapt to content height when the number of items doesn't perfectly match the row definition
+        grid.style.gridTemplateRows = rows === 1 ? '1fr' : (rows === 2 ? '1fr 1fr' : (rows === 3 ? '1fr 1fr 1fr' : 'repeat(auto-fit, 1fr)'));
+
 
         for(let j=0; j<count; j++){
             if(i+j < canvases.length){
@@ -935,31 +950,50 @@ async function downloadPPT(){
   
   // Define base positions and sizes in inches (for 16x9 slide layout)
   const layoutDef = {
-    1: { chartY: 1.2, chartW: 9.0, chartH: 5.5, padding: 0.5 },
-    2: { chartY: 1.2, chartW: 4.5, chartH: 3.5, padding: 0.4 },
-    3: { chartY: 1.2, chartW: 3.0, chartH: 3.0, padding: 0.4 },
-    4: { chartY: 1.2, chartW: 4.5, chartH: 2.5, padding: 0.3 }
-  }[count] || { chartY: 1.2, chartW: 4.5, chartH: 3.5, padding: 0.4 }; // Default to 2
+    1: { cols: 1, rows: 1, chartW: 9.0, chartH: 5.5, padding: 0.5 },
+    2: { cols: 2, rows: 1, chartW: 4.5, chartH: 3.5, padding: 0.4 },
+    3: { cols: 3, rows: 1, chartW: 3.0, chartH: 3.0, padding: 0.4 },
+    4: { cols: 2, rows: 2, chartW: 4.5, chartH: 2.5, padding: 0.3 },
+    6: { cols: 3, rows: 2, chartW: 3.0, chartH: 2.5, padding: 0.2 }, // New 6-grid: 3 wide, 2 high
+    9: { cols: 3, rows: 3, chartW: 3.0, chartH: 1.8, padding: 0.1 }  // New 9-grid: 3 wide, 3 high
+  }[count] || { cols: 2, rows: 1, chartW: 4.5, chartH: 3.5, padding: 0.4 }; 
 
-  const layout = [];
+  const layoutPositions = [];
+  const startX = 0.5; // Fixed left margin
   const startY = 1.2; // Starting Y position after slide header
+  const maxW = 9.5; // Max drawing width (10 inches wide slide, 0.5 margin on each side)
   
-  // Calculate specific positions
-  if (count === 1) {
-    layout.push({ x:0.5, y:startY, w:layoutDef.chartW, h:layoutDef.chartH });
-  } else if (count === 2) {
-    layout.push({ x:0.5, y:startY, w:layoutDef.chartW, h:layoutDef.chartH });
-    layout.push({ x:0.5 + layoutDef.chartW + layoutDef.padding, y:startY, w:layoutDef.chartW, h:layoutDef.chartH });
-  } else if (count === 3) {
-    const gap = (9.5 - (3 * layoutDef.chartW)) / 2;
-    layout.push({ x:0.5, y:startY, w:layoutDef.chartW, h:layoutDef.chartH });
-    layout.push({ x:0.5 + layoutDef.chartW + gap, y:startY, w:layoutDef.chartW, h:layoutDef.chartH });
-    layout.push({ x:0.5 + 2*(layoutDef.chartW + gap), y:startY, w:layoutDef.chartW, h:layoutDef.chartH });
-  } else if (count === 4) {
-    layout.push({ x:0.5, y:startY, w:layoutDef.chartW, h:layoutDef.chartH });
-    layout.push({ x:0.5 + layoutDef.chartW + layoutDef.padding, y:startY, w:layoutDef.chartW, h:layoutDef.chartH });
-    layout.push({ x:0.5, y:startY + layoutDef.chartH + layoutDef.padding, w:layoutDef.chartW, h:layoutDef.chartH });
-    layout.push({ x:0.5 + layoutDef.chartW + layoutDef.padding, y:startY + layoutDef.chartH + layoutDef.padding, w:layoutDef.chartW, h:layoutDef.chartH });
+  const numCols = layoutDef.cols;
+  const numRows = layoutDef.rows;
+  const chartW = layoutDef.chartW;
+  const chartH = layoutDef.chartH;
+  const padding = layoutDef.padding;
+
+  // Calculate dynamic spacing to center charts horizontally and vertically
+  const totalChartWidth = numCols * chartW;
+  const totalPaddingWidth = (numCols - 1) * padding;
+  const remainingXSpace = maxW - totalChartWidth - totalPaddingWidth;
+  const marginX = (remainingXSpace / 2) + startX; 
+  
+  // For vertical spacing, keeping Y fixed for now, using calculated H and fixed startY
+  
+  for (let r = 0; r < numRows; r++) {
+      for (let c = 0; c < numCols; c++) {
+          const x = marginX + (c * chartW) + (c * padding);
+          const y = startY + (r * chartH) + (r * padding);
+          layoutPositions.push({ x: x, y: y, w: chartW, h: chartH });
+          if (layoutPositions.length >= count) break; // Stop if we've defined all slots for the count
+      }
+      if (layoutPositions.length >= count) break;
+  }
+  
+  // Handle case where count is 4 (2x2 grid)
+  if (count === 4) {
+      layoutPositions.length = 0; // Reset for custom 2x2 logic
+      layoutPositions.push({ x: marginX, y: startY, w: chartW, h: chartH });
+      layoutPositions.push({ x: marginX + chartW + padding, y: startY, w: chartW, h: chartH });
+      layoutPositions.push({ x: marginX, y: startY + chartH + padding, w: chartW, h: chartH });
+      layoutPositions.push({ x: marginX + chartW + padding, y: startY + chartH + padding, w: chartW, h: chartH });
   }
 
 
@@ -973,7 +1007,7 @@ async function downloadPPT(){
     for(let j=0; j<count; j++){
       if(i+j < canvases.length){
         const c = canvases[i+j];
-        const params = layout[j];
+        const params = layoutPositions[j];
         
         // --- PPT CHART EXPORT LOGIC ---
         const chartInstance = Chart.getChart(c.id);
