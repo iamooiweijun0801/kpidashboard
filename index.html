@@ -255,7 +255,7 @@ button.ppt-btn:hover { background:#a8381e; }
     <h4>Chart Display Style (Select one)</h4>
     <div id="chartStyleOptions" class="style-options">
       </div>
-    <p style="margin-top:20px; font-size:12px; color:#555;">Styles like 'Area Fill' use the segment painting feature you requested.</p>
+    <p style="margin-top:20px; font-size:12px; color:#555;">Choose a style to adjust the line width, point size, smoothness, and background fill of the charts.</p>
   </div>
 </div>
 
@@ -388,16 +388,18 @@ let selectedKpis = {
 // --- GLOBAL UTILITY FUNCTIONS ---
 
 /**
- * Rounds a number up to the nearest clean scale (e.g., 3630 -> 4000).
+ * Rounds a number up to the nearest clean scale (e.g., 3630 -> 4000, 1580 -> 1600).
  * @param {number} value - The dynamic Ymax value calculated.
  * @returns {number} The cleanly rounded Ymax.
  */
 function roundUpToCleanScale(value) {
-    if (value <= 20) return Math.ceil(value / 5) * 5;
-    if (value <= 100) return Math.ceil(value / 10) * 10;
-    if (value <= 500) return Math.ceil(value / 50) * 50;
-    if (value <= 1000) return Math.ceil(value / 100) * 100;
-    if (value <= 5000) return Math.ceil(value / 500) * 500;
+    if (value <= 20) return Math.ceil(value / 5) * 5;      // e.g., 18 -> 20
+    if (value <= 100) return Math.ceil(value / 10) * 10;   // e.g., 85 -> 90
+    if (value <= 200) return Math.ceil(value / 20) * 20;   // e.g., 165 -> 180
+    if (value <= 500) return Math.ceil(value / 50) * 50;   // e.g., 360 -> 400
+    if (value <= 1000) return Math.ceil(value / 100) * 100; // e.g., 750 -> 800
+    if (value <= 2000) return Math.ceil(value / 200) * 200; // e.g., 1580 -> 1600 
+    if (value <= 5000) return Math.ceil(value / 500) * 500; // e.g., 3630 -> 4000
     if (value <= 10000) return Math.ceil(value / 1000) * 1000;
     if (value <= 20000) return Math.ceil(value / 2000) * 2000;
     if (value <= 50000) return Math.ceil(value / 5000) * 5000;
@@ -783,8 +785,8 @@ function renderCharts(){
         if (kpi.match(/(rate|success|%|ratio)/i)) {
 
             // Condition 1: High Range Rate (80% to 100%) - STRICT 100 MAX
-            if (maxValue >= 80 && maxValue <= 100) {
-                yMax = 100;
+            if (maxValue <= 100 && maxValue >= 80) { // Max value is between 80 and 100
+                yMax = 100; // STRICTLY set max to 100
 
                 // Keep aggressive zoom from the bottom when capped at 100
                 if (dataRange < 5 && maxValue > 95) {
@@ -805,7 +807,8 @@ function renderCharts(){
                 
                 // Also clean up Y-Min for large numbers to use a clean floor if possible
                 if (yMin > 100) {
-                     yMin = roundUpToCleanScale(yMin * 0.95); // Round floor down a bit
+                     // Round floor down a bit using the clean scale logic
+                     yMin = roundUpToCleanScale(yMin * 0.95); 
                 }
             }
             
@@ -1096,7 +1099,7 @@ function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
                     yMax_ppt = Math.ceil(targetMax / yStepSize_ppt) * yStepSize_ppt;
 
                     if (kpi.match(/(rate|success|%|ratio)/i)) {
-                        if (maxValue >= 80 && maxValue <= 100) {
+                        if (maxValue <= 100 && maxValue >= 80) {
                             yMax_ppt = 100;
                             if (dataRange < 5 && maxValue > 95) {
                                 let zoomPad = dataRange * 0.15;
@@ -1115,7 +1118,7 @@ function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
                     } else if (maxValue > 100) {
                         yMax_ppt = roundUpToCleanScale(yMax_ppt);
                         if (yMin_ppt > 100) {
-                             yMin_ppt = roundUpToCleanScale(yMin_ppt * 0.95);
+                            yMin_ppt = roundUpToCleanScale(yMin_ppt * 0.95);
                         }
                     }
                     yMin_ppt = Math.max(0, yMin_ppt);
@@ -1272,7 +1275,7 @@ async function downloadPPT() {
                 yMax_ppt = Math.ceil(targetMax / yStepSize_ppt) * yStepSize_ppt;
 
                 if (kpi.match(/(rate|success|%|ratio)/i)) {
-                    if (maxValue >= 80 && maxValue <= 100) {
+                    if (maxValue <= 100 && maxValue >= 80) {
                         yMax_ppt = 100;
                         if (dataRange < 5 && maxValue > 95) {
                             let zoomPad = dataRange * 0.15;
