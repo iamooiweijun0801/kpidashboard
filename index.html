@@ -33,15 +33,26 @@ button.action-btn:hover { background:#1f5ab5; }
 button.ppt-btn { background:#D24726; } /* PowerPoint Orange */
 button.ppt-btn:hover { background:#a8381e; }
 
-/* --- CHART STYLE SELECTOR --- */
-#styleSelect {
-    padding: 8px 12px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    font-size: 14px;
-    outline: none;
-    background-color: white;
+/* --- CHART STYLE SELECTOR (Inside Drawer) --- */
+.style-options { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 5px; 
+    margin-top: 10px;
 }
+.style-options button {
+    background: #f0f0f0;
+    color: #333;
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+.style-options button.active {
+    background: #2F80ED;
+    color: white;
+    border-color: #2F80ED;
+}
+
 
 /* --- GRID LAYOUT (3 Graphs per row) --- */
 .chart-grid { 
@@ -171,8 +182,7 @@ button.ppt-btn:hover { background:#a8381e; }
   <a href="gsm.html" class="nav-btn">GSM</a>
   <a href="index.html" class="nav-btn active">LTE</a>
   <a href="nr.html" class="nav-btn">NR</a>
-  <a href="nsa.html" class="nav-btn">NSA</a>
-</div>
+  </div>
 
 <div class="tabs">
   <button class="tab active" onclick="switchTab('both')">All KPIs (Both)</button> 
@@ -181,16 +191,6 @@ button.ppt-btn:hover { background:#a8381e; }
 </div>
 
 <div class="controls">
-  <div class="control-group">
-    <select id="styleSelect" onchange="updateChartStyle(this.value)">
-      <option value="Default">Chart Style: Default</option>
-      <option value="Minimalist">Chart Style: Minimalist</option>
-      <option value="Bright Dots">Chart Style: Bright Dots</option>
-      <option value="Smooth & Thin">Chart Style: Smooth & Thin</option>
-      <option value="Bold Lines">Chart Style: Bold Lines</option>
-    </select>
-  </div>
-
   <div class="control-group" style="width:200px;">
     <button id="onAirDateDropdownBtn" class="action-btn" style="background:white; color:#333; border:1px solid #ccc; width:100%; text-align:left; display:flex; justify-content:space-between;">
       <span id="onAirDateBtnLabel">All On-Air Dates</span> <span>▼</span>
@@ -222,7 +222,12 @@ button.ppt-btn:hover { background:#a8381e; }
         <button onclick="toggleDrawer()" style="border:none; background:none; font-size:24px; cursor:pointer; color:#777;">✕</button>
     </div>
   </div>
-  <div class="kpi-options-body" id="kpiOptionsList"></div>
+  <div class="kpi-options-body" id="kpiOptionsList">
+    <h4>Chart Display Style</h4>
+    <div id="chartStyleOptions" class="style-options">
+      </div>
+
+    </div>
 </div>
 
 
@@ -303,13 +308,18 @@ let graphsPerSlide = 2;
 let chartExportColor = '#2F80ED'; // Default Line/Dot Color (Dark Blue)
 let chartExportTitleColor = '#333333'; // Default Title Color (Dark Gray/Black)
 
-// NEW: Chart Styles Configuration
+// NEW: Expanded Chart Styles Configuration (10 styles total)
 const chartStyles = {
-  'Default': { border: 2, pointRadius: 3, tension: 0.1, gridColor: '#eee', bgColor: 'white', titleColor: '#333' },
-  'Minimalist': { border: 1, pointRadius: 2, tension: 0.3, gridColor: '#f5f5f5', bgColor: 'white', titleColor: '#555' },
-  'Bright Dots': { border: 3, pointRadius: 4, tension: 0.2, gridColor: '#ddd', bgColor: 'white', titleColor: '#333' },
-  'Smooth & Thin': { border: 1, pointRadius: 0, tension: 0.4, gridColor: '#f0f0f0', bgColor: 'white', titleColor: '#333' },
-  'Bold Lines': { border: 4, pointRadius: 0, tension: 0.1, gridColor: '#eee', bgColor: 'white', titleColor: '#333' }
+  'Default': { border: 2, pointRadius: 3, tension: 0.1, gridColor: '#eee', bgColor: 'white', titleColor: '#333', fill: false, stepped: false },
+  'Minimalist': { border: 1, pointRadius: 2, tension: 0.3, gridColor: '#f5f5f5', bgColor: 'white', titleColor: '#555', fill: false, stepped: false },
+  'Bright Dots': { border: 3, pointRadius: 4, tension: 0.2, gridColor: '#ddd', bgColor: 'white', titleColor: '#333', fill: false, stepped: false },
+  'Smooth & Thin': { border: 1, pointRadius: 0, tension: 0.4, gridColor: '#f0f0f0', bgColor: 'white', titleColor: '#333', fill: false, stepped: false },
+  'Bold Lines': { border: 4, pointRadius: 0, tension: 0.1, gridColor: '#eee', bgColor: 'white', titleColor: '#333', fill: false, stepped: false },
+  'Area Fill (Light)': { border: 2, pointRadius: 3, tension: 0.3, gridColor: '#eee', bgColor: 'white', titleColor: '#333', fill: 'origin', alpha: 0.15, stepped: false },
+  'Shadowed Line': { border: 3, pointRadius: 4, tension: 0.2, gridColor: '#f0f0f0', bgColor: 'white', titleColor: '#333', fill: 'origin', alpha: 0.25, stepped: false },
+  'Stepped Line': { border: 2, pointRadius: 3, tension: 0.0, gridColor: '#eee', bgColor: 'white', titleColor: '#333', fill: false, stepped: true },
+  'High Contrast': { border: 4, pointRadius: 5, tension: 0.0, gridColor: 'rgba(0,0,0,0.1)', bgColor: 'white', titleColor: '#000', fill: false, stepped: false },
+  'Monochromatic': { border: 3, pointRadius: 3, tension: 0.2, gridColor: '#f5f5f5', bgColor: 'white', titleColor: '#333', fill: false, stepped: false }
 };
 let selectedStyle = 'Default'; // Initial style
 
@@ -339,6 +349,13 @@ let selectedKpis = {
  */
 function updateChartStyle(styleName) {
     selectedStyle = styleName;
+    // Visually update the button state
+    document.querySelectorAll('.style-options button').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.style === styleName) {
+            btn.classList.add('active');
+        }
+    });
     renderCharts();
 }
 
@@ -666,16 +683,37 @@ function renderCharts(){
        return isAvg ? sum/vals.length : sum;
     });
 
-    // Dynamic Y-Axis Start Calculation
+    // Dynamic Y-Axis Start Calculation (Enhanced for high percentages)
     const minValue = dataPoints.filter(v => v !== null).length > 0 ? Math.min(...dataPoints.filter(v => v !== null)) : 0;
     let yMin = 0;
     
-    // If KPI is a high-range percentage (Rate, Success, %) and min value is > 80, set a dynamic minimum.
-    if (kpi.match(/(rate|success|%|ratio)/i) && minValue > 80) {
-        // Calculate dynamic minimum: round down to the nearest 10, then subtract 10 for margin (e.g., 90.8 -> 90 -> 80)
-        yMin = Math.max(0, Math.floor(minValue / 10) * 10 - 10); 
+    // If KPI is a high-range percentage (Rate, Success, %) and min value is high
+    if (kpi.match(/(rate|success|%|ratio)/i) && minValue >= 80) {
+        // Calculate dynamic minimum: start 5 units below the minimum, rounded down slightly.
+        let targetMin = Math.floor(minValue) - 5;
+        
+        // Custom logic to make the starting point an "even" number (0, 2, 4, 5, 6, 8, 10)
+        if (targetMin % 10 < 5) {
+             yMin = Math.max(0, Math.floor(targetMin / 10) * 10); // e.g., 85 -> 80
+        } else {
+             yMin = Math.max(0, Math.floor(targetMin / 10) * 10 + 5); // e.g., 90.8 min -> 85.8 target -> 85
+        }
+        // Final check to ensure we don't start too high or too low unexpectedly
+        yMin = Math.max(0, yMin); 
+        yMin = Math.min(yMin, Math.floor(minValue / 10) * 10); // Ensure calculated min is not higher than the nearest 10 below the actual min
     }
     
+    // Determine background color for fill if needed (must be RGB with Alpha)
+    let bColor = 'transparent';
+    let lineC = getRandomColor();
+    if (style.fill) {
+        const hex = lineC.substring(1);
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        bColor = `rgba(${r}, ${g}, ${b}, ${style.alpha || 0.15})`;
+    }
+
 
     // Draw Chart with Animation
     new Chart(canvas.getContext("2d"), {
@@ -685,11 +723,13 @@ function renderCharts(){
         datasets: [{
           label: (finalSiteList.length > 0 && dataPoints.some(p => p !== null)) ? "Aggregate" : "No Data",
           data: dataPoints,
-          borderColor: getRandomColor(),
-          backgroundColor: 'transparent',
+          borderColor: lineC,
+          backgroundColor: bColor, // Used for area fill
+          fill: style.fill,
           borderWidth: style.border,
           pointRadius: style.pointRadius,
           tension: style.tension,
+          stepped: style.stepped,
           spanGaps: true 
         }]
       },
@@ -725,10 +765,8 @@ function renderCharts(){
            },
            y: { 
                beginAtZero: yMin === 0, 
-               min: yMin, // Set the calculated minimum
-               grid: {color: style.gridColor},
-               // If no data points, fix the scale to prevent giant axes
-               min: (finalSiteList.length === 0 || dataPoints.every(p => p === null)) ? 0 : yMin 
+               min: (finalSiteList.length === 0 || dataPoints.every(p => p === null)) ? 0 : yMin, // Set the calculated minimum or 0
+               grid: {color: style.gridColor}
            }
         }
       }
@@ -751,9 +789,40 @@ function toggleDrawer(){
 
 function populateKpiOptions(){
   const list = document.getElementById("kpiOptionsList");
-  list.innerHTML = "";
+  // Clear only the KPI list section, preserve the style list element
+  const kpiSection = list; 
   
-  document.getElementById('drawerHeaderTitle').textContent = 'KPI Settings';
+  // 1. Populate Style Buttons (only needs to be done once, but safe to run)
+  const styleContainer = document.getElementById("chartStyleOptions");
+  styleContainer.innerHTML = '';
+  Object.keys(chartStyles).forEach(styleName => {
+    const button = document.createElement('button');
+    button.textContent = styleName;
+    button.className = 'action-btn';
+    button.setAttribute('data-style', styleName);
+    button.onclick = () => updateChartStyle(styleName);
+    if (selectedStyle === styleName) {
+        button.classList.add('active');
+    }
+    styleContainer.appendChild(button);
+  });
+  
+  // 2. Clear previous KPI list entries (excluding the style section)
+  // Find the h4 element for Acceptance/Monitoring and clear content after the style section
+  let startClearing = false;
+  let nodesToRemove = [];
+  Array.from(kpiSection.children).forEach(child => {
+      // Start clearing after the style section
+      if (child.id === 'chartStyleOptions') {
+          startClearing = true;
+      } else if (startClearing) {
+          nodesToRemove.push(child);
+      }
+  });
+  nodesToRemove.forEach(node => node.remove());
+
+
+  document.getElementById('drawerHeaderTitle').textContent = 'KPI Settings & Style';
 
   const acceptanceSection = currentTab === 'acceptance' || currentTab === 'both';
   const monitoringSection = currentTab === 'monitoring' || currentTab === 'both';
@@ -762,7 +831,7 @@ function populateKpiOptions(){
     const h4 = document.createElement("h4");
     h4.textContent = title;
     h4.style.marginTop = "15px";
-    list.appendChild(h4);
+    kpiSection.appendChild(h4);
     
     sourceArr.forEach(kpi => {
       const div = document.createElement("div");
@@ -775,7 +844,7 @@ function populateKpiOptions(){
         }
         // No auto-apply here, user must click Apply
       };
-      list.appendChild(div);
+      kpiSection.appendChild(div);
     });
   };
 
@@ -952,14 +1021,39 @@ function createPreviewBox(canvas, lineColor, titleColor) {
   let imgData = '';
   
   if (chartInstance) {
-      const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
-      const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
+      // Save original properties
+      const originalDatasetProps = chartInstance.data.datasets.map(d => ({
+          borderColor: d.borderColor,
+          pointBorderColor: d.pointBorderColor,
+          pointBackgroundColor: d.pointBackgroundColor,
+          fill: d.fill,
+          backgroundColor: d.backgroundColor,
+          stepped: d.stepped
+      }));
       const originalTitleColor = chartInstance.options.plugins.title.color;
       
+      // Get the selected style properties
+      const style = chartStyles[selectedStyle];
+      
+      // Override style for PPT export (using export color, but preserving dashboard style attributes)
       chartInstance.data.datasets.forEach(d => { 
         d.borderColor = lineColor; 
         d.pointBorderColor = lineColor; 
         d.pointBackgroundColor = lineColor; 
+        
+        // Re-calculate fill color based on selected export line color
+        let bColor = 'transparent';
+        if (style.fill) {
+            const hex = lineColor.substring(1);
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+            bColor = `rgba(${r}, ${g}, ${b}, ${style.alpha || 0.15})`;
+        }
+        d.backgroundColor = bColor;
+        d.fill = style.fill;
+        d.stepped = style.stepped;
+        
         d.pointRadius = 3; 
         d.pointStyle = 'circle'; 
         d.spanGaps = true; 
@@ -972,9 +1066,9 @@ function createPreviewBox(canvas, lineColor, titleColor) {
       tempCtx.drawImage(canvas, 0, 0);
       imgData = tempCanvas.toDataURL("image/png");
       
+      // Restore original properties
       chartInstance.data.datasets.forEach((d, index) => { 
-        d.borderColor = originalColors[index]; 
-        d.pointBorderColor = originalPointColors[index];
+        Object.assign(d, originalDatasetProps[index]);
       });
       chartInstance.options.plugins.title.color = originalTitleColor;
       chartInstance.update('none');
@@ -1004,14 +1098,14 @@ async function downloadPPT(){
   const titleColor = chartExportTitleColor;
   
   // Define base positions and sizes in inches (for 16x9 slide layout)
-  // NOTE: chartH for 9 graphs reduced from 1.8 to 1.7 to prevent overflow
+  // NOTE: chartH for 9 graphs is 1.7
   const layoutDef = {
     1: { cols: 1, rows: 1, chartW: 9.0, chartH: 5.5, padding: 0.5 },
     2: { cols: 2, rows: 1, chartW: 4.5, chartH: 3.5, padding: 0.4 },
     3: { cols: 3, rows: 1, chartW: 3.0, chartH: 3.0, padding: 0.4 },
     4: { cols: 2, rows: 2, chartW: 4.5, chartH: 2.5, padding: 0.3 },
     6: { cols: 3, rows: 2, chartW: 3.0, chartH: 2.5, padding: 0.2 },
-    9: { cols: 3, rows: 3, chartW: 3.0, chartH: 1.7, padding: 0.1 } // FIXED 9-GRID HEIGHT
+    9: { cols: 3, rows: 3, chartW: 3.0, chartH: 1.7, padding: 0.1 } 
   }[count] || { cols: 2, rows: 1, chartW: 4.5, chartH: 3.5, padding: 0.4 }; 
 
   const layoutPositions = [];
@@ -1042,12 +1136,11 @@ async function downloadPPT(){
       if (layoutPositions.length >= count) break;
   }
   
-  // Recalculate 4-grid positions for perfect centering (using the generic loop logic above for 6 and 9)
+  // Custom 4-grid centering logic
   if (count === 4) {
-      // Custom 2x2 centering logic
       layoutPositions.length = 0; 
       const marginX4 = (maxW - (2 * chartW) - padding) / 2 + startX; 
-      const startY4 = 1.0; // Adjusted for better vertical centering
+      const startY4 = 1.0; 
       
       layoutPositions.push({ x: marginX4, y: startY4, w: chartW, h: chartH });
       layoutPositions.push({ x: marginX4 + chartW + padding, y: startY4, w: chartW, h: chartH });
@@ -1072,23 +1165,43 @@ async function downloadPPT(){
         const chartInstance = Chart.getChart(c.id);
         
         // Save current chart style settings (including dynamic Y-Min)
-        const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
-        const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
+        const originalDatasetProps = chartInstance.data.datasets.map(d => ({
+            borderColor: d.borderColor,
+            pointBorderColor: d.pointBorderColor,
+            pointBackgroundColor: d.pointBackgroundColor,
+            fill: d.fill,
+            backgroundColor: d.backgroundColor,
+            stepped: d.stepped
+        }));
         const originalTitleColor = chartInstance.options.plugins.title.color;
         const originalYMin = chartInstance.options.scales.y.min;
 
+        // Get the selected dashboard style (to preserve fill/step attributes)
+        const style = chartStyles[selectedStyle];
+        
         // Override style for PPT export
         chartInstance.data.datasets.forEach(d => { 
           d.borderColor = lineColor; 
           d.pointBorderColor = lineColor; 
           d.pointBackgroundColor = lineColor; 
-          d.pointRadius = 3;
+
+          // Re-calculate fill color based on export line color
+          let bColor = 'transparent';
+          if (style.fill) {
+              const hex = lineColor.substring(1);
+              const r = parseInt(hex.substring(0, 2), 16);
+              const g = parseInt(hex.substring(2, 4), 16);
+              const b = parseInt(hex.substring(4, 6), 16);
+              bColor = `rgba(${r}, ${g}, ${b}, ${style.alpha || 0.15})`;
+          }
+          d.backgroundColor = bColor;
+          d.fill = style.fill;
+          d.stepped = style.stepped;
+          
+          d.pointRadius = 3; 
           d.spanGaps = true; 
         });
         chartInstance.options.plugins.title.color = titleColor; // Set selected title color
-        // Restore Y-Min for export
-        // Note: For PPT export, we generally don't want the dynamic Y-min, but since the screen render already applied it, we keep it consistent.
-        // If required, we could re-render here to enforce a Y-min of 0 or 80-90 based on user preference, but sticking to displayed settings for consistency.
         
         chartInstance.update('none'); 
         
@@ -1096,9 +1209,7 @@ async function downloadPPT(){
         
         // Restore original styles
         chartInstance.data.datasets.forEach((d, index) => { 
-          d.borderColor = originalColors[index]; 
-          d.pointBorderColor = originalPointColors[index];
-          d.spanGaps = true; 
+            Object.assign(d, originalDatasetProps[index]);
         });
         chartInstance.options.plugins.title.color = originalTitleColor;
         chartInstance.options.scales.y.min = originalYMin; // Restore Y-min
