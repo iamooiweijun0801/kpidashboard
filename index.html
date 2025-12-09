@@ -87,7 +87,15 @@ button.ppt-btn:hover { background:#a8381e; }
     border-bottom: 1px solid #eee; 
 }
 .drawer-header h3 { margin: 0; }
-.drawer-controls { display: flex; gap: 10px; align-items: center; }
+.drawer-controls { 
+    display: flex; 
+    gap: 5px; /* Reduced gap */
+    align-items: center; 
+}
+.drawer-controls .action-btn { 
+    padding: 6px 10px; /* Smaller padding for density */
+    font-size: 13px; /* Smaller font for density */
+}
 .kpi-options-body { flex-grow: 1; overflow-y: auto; padding-right: 5px; padding-bottom: 40px; } 
 
 /* --- PREVIEW MODAL --- */
@@ -188,6 +196,8 @@ button.ppt-btn:hover { background:#a8381e; }
   <div class="drawer-header">
     <h3 id="drawerHeaderTitle">KPI Settings</h3>
     <div class="drawer-controls">
+        <button class="action-btn" onclick="selectVisibleKpis()" style="background:#5cb85c;">Select All</button>
+        <button class="action-btn" onclick="clearVisibleKpis()" style="background:#f0ad4e;">Clear All</button>
         <button class="action-btn" onclick="applyKpis()">Apply</button>
         <button onclick="toggleDrawer()" style="border:none; background:none; font-size:24px; cursor:pointer; color:#777;">✕</button>
     </div>
@@ -425,9 +435,9 @@ function updateSelectedDates() {
     });
     selectedSites = [...activeSites]; 
     
-    // *** FIX: DO NOT CLOSE HERE ***
+    // Do not close dropdown on individual check
     updateDateFilterUI({close: false}); 
-    setupSiteDropdown(); // This will trigger the site update and re-render charts
+    setupSiteDropdown(); 
 }
 
 function updateDateFilterUI(options = {close: true}) {
@@ -513,7 +523,7 @@ function updateSelectedSites() {
     const list = document.getElementById("siteDropdownList");
     // Ensure we only look at the sites currently visible/active in the list
     selectedSites = Array.from(list.querySelectorAll(".site-chk:checked")).map(c => c.value);
-    // *** FIX: DO NOT CLOSE HERE ***
+    // Do not close dropdown on individual check
     updateSiteFilterUI({close: false});
     renderCharts();
 }
@@ -674,7 +684,7 @@ function getRandomColor() {
   return colors[Math.floor(Math.random() * colors.length)];
 }
 
-// --- KPI DRAWER & SITE/DATE DROPDOWN LOGIC (UNCHANGED/REUSED) ---
+// --- KPI DRAWER & UTILITY LOGIC (NEW SELECT/CLEAR ALL) ---
 
 function toggleDrawer(){
   const d = document.getElementById("kpiDrawer");
@@ -701,6 +711,13 @@ function populateKpiOptions(){
       const div = document.createElement("div");
       const checked = selectedKpis[key].includes(kpi) ? "checked" : "";
       div.innerHTML = `<input type='checkbox' class='kpi-chk' data-group='${key}' value='${kpi}' ${checked}> <span style='font-size:13px'>${kpi}</span>`;
+      div.onclick = (e) => {
+        if(e.target.tagName !== "INPUT") {
+            const chk = div.querySelector("input");
+            chk.checked = !chk.checked;
+        }
+        // No auto-apply here, user must click Apply
+      };
       list.appendChild(div);
     });
   };
@@ -709,12 +726,55 @@ function populateKpiOptions(){
   if (monitoringSection) createGroup("Monitoring KPIs", "monitoring", monitoringKpis);
 }
 
+/**
+ * Selects all visible KPI checkboxes and updates the internal state.
+ */
+function selectVisibleKpis() {
+    const chks = document.querySelectorAll(".kpi-chk");
+    
+    // 1. Update Checkboxes Visually
+    chks.forEach(c => {
+        c.checked = true;
+    });
+
+    // 2. Update Internal State
+    if (currentTab === 'acceptance' || currentTab === 'both') {
+        selectedKpis.acceptance = [...acceptanceKpis];
+    }
+    if (currentTab === 'monitoring' || currentTab === 'both') {
+        selectedKpis.monitoring = [...monitoringKpis];
+    }
+}
+
+/**
+ * Clears all visible KPI checkboxes and updates the internal state.
+ */
+function clearVisibleKpis() {
+    const chks = document.querySelectorAll(".kpi-chk");
+    
+    // 1. Update Checkboxes Visually
+    chks.forEach(c => {
+        c.checked = false;
+    });
+
+    // 2. Update Internal State
+    if (currentTab === 'acceptance' || currentTab === 'both') {
+        selectedKpis.acceptance = [];
+    }
+    if (currentTab === 'monitoring' || currentTab === 'both') {
+        selectedKpis.monitoring = [];
+    }
+}
+
+
 function applyKpis(){
   const chks = document.querySelectorAll(".kpi-chk");
   
+  // Start with existing selections for non-visible tabs
   const tempAcceptance = currentTab === 'acceptance' || currentTab === 'both' ? [] : [...selectedKpis.acceptance];
   const tempMonitoring = currentTab === 'monitoring' || currentTab === 'both' ? [] : [...selectedKpis.monitoring];
 
+  // Apply checked status from the UI
   chks.forEach(c => {
     if(c.checked) {
         if(c.dataset.group === 'acceptance') tempAcceptance.push(c.value);
