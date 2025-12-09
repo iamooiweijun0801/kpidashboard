@@ -356,7 +356,7 @@ function renderCharts(){
     const dataPoints = timeline.map(date => {
        const vals = filteredData.filter(d => d["Date"] === date && d[kpi] !== null).map(d => d[kpi]);
        if(vals.length === 0) return null;
-       const isAvg = kpi.match(/(rate|%|ratio|average)/i);
+       const isAvg = kpi.match(/(rate|%|ratio|average|max|avg)/i);
        const sum = vals.reduce((a,b)=>a+b,0);
        return isAvg ? sum/vals.length : sum;
     });
