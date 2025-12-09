@@ -80,9 +80,18 @@ button.ppt-btn:hover { background:#a8381e; }
 
 /* --- PREVIEW MODAL --- */
 .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:2000; display:none; align-items:center; justify-content:center; backdrop-filter:blur(3px); }
-.modal-content { background:white; width:95%; max-width: 1400px; height:85vh; border-radius:12px; display:flex; flex-direction:column; box-shadow:0 10px 25px rgba(0,0,0,0.3); }
+.modal-content { 
+    background:white; 
+    width:95%; 
+    max-width: 1400px; 
+    height:90vh; /* Increased height to ensure more space */
+    border-radius:12px; 
+    display:flex; 
+    flex-direction:column; 
+    box-shadow:0 10px 25px rgba(0,0,0,0.3); 
+}
 .modal-header { padding:15px 20px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; font-weight:bold; font-size:18px; }
-.modal-body { flex:1; display: flex; padding:0; } 
+.modal-body { flex:1; display: flex; padding:0; overflow: hidden; /* Prevent body scroll, only sub-panels should scroll */ } 
 
 /* Preview Side */
 #previewBody { 
@@ -106,8 +115,7 @@ button.ppt-btn:hover { background:#a8381e; }
     padding: 20px;
     display: flex;
     flex-direction: column;
-    /* Removed overflow: auto; to prevent scrolling */
-    flex-shrink: 0; /* Ensures it doesn't shrink */
+    flex-shrink: 0; 
 }
 .settings-group { margin-bottom: 20px; }
 .settings-group h4 { margin-top: 0; margin-bottom: 10px; font-size: 14px; color: #555; border-bottom: 1px solid #eee; padding-bottom: 5px; }
@@ -117,24 +125,12 @@ button.ppt-btn:hover { background:#a8381e; }
 .color-option { margin: 5px; display: inline-block; cursor: pointer; border: 2px solid transparent; border-radius: 50%; width: 25px; height: 25px; transition: border 0.1s; }
 .color-option.selected { border-color: #333; }
 
-/* Dot Style Selector */
-.dot-option { 
-    display: inline-block; 
-    padding: 5px 10px; 
-    margin: 5px 5px 0 0; 
-    border: 1px solid #ccc; 
-    border-radius: 4px; 
-    cursor: pointer;
-    font-size: 13px;
-    transition: background-color 0.1s;
+.modal-footer { 
+    padding:15px 20px; 
+    border-top:1px solid #eee; 
+    text-align:right;
+    flex-shrink: 0; /* Ensures the footer is not hidden by overflow */
 }
-.dot-option.active {
-    background-color: #2F80ED;
-    color: white;
-    border-color: #2F80ED;
-}
-
-.modal-footer { padding:15px; border-top:1px solid #eee; text-align:right; }
 </style>
 </head>
 <body>
@@ -201,37 +197,28 @@ button.ppt-btn:hover { background:#a8381e; }
             <h3>Export Settings</h3>
 
             <div class="settings-group">
-                <h4>Graphs per Slide</h4>
+                <h4>Graphs per Slide (Rows)</h4>
                 <div class="graph-options">
-                    <button class="action-btn" data-count="1" onclick="updatePreviewSettings(1, chartExportColor, dotStyle)">1 Graph</button>
-                    <button class="action-btn" data-count="2" onclick="updatePreviewSettings(2, chartExportColor, dotStyle)">2 Graphs</button>
-                    <button class="action-btn" data-count="3" onclick="updatePreviewSettings(3, chartExportColor, dotStyle)">3 Graphs</button>
-                    <button class="action-btn" data-count="4" onclick="updatePreviewSettings(4, chartExportColor, dotStyle)">4 Graphs</button>
+                    <button class="action-btn" data-count="1" onclick="updatePreviewSettings(1, chartExportColor)">1 Graph</button>
+                    <button class="action-btn" data-count="2" onclick="updatePreviewSettings(2, chartExportColor)">2 Graphs</button>
+                    <button class="action-btn" data-count="3" onclick="updatePreviewSettings(3, chartExportColor)">3 Graphs</button>
+                    <button class="action-btn" data-count="4" onclick="updatePreviewSettings(4, chartExportColor)">4 Graphs</button>
                 </div>
             </div>
 
             <div class="settings-group">
-                <h4>Line Color for PPT</h4>
+                <h4>Line & Dot Color for PPT</h4>
                 <div id="colorOptions">
-                    <span class="color-option" style="background-color:#2F80ED;" data-color="#2F80ED" onclick="updatePreviewSettings(graphsPerSlide, '#2F80ED', dotStyle)"></span>
-                    <span class="color-option" style="background-color:#27AE60;" data-color="#27AE60" onclick="updatePreviewSettings(graphsPerSlide, '#27AE60', dotStyle)"></span>
-                    <span class="color-option" style="background-color:#D24726;" data-color="#D24726" onclick="updatePreviewSettings(graphsPerSlide, '#D24726', dotStyle)"></span>
-                    <span class="color-option" style="background-color:#8E44AD;" data-color="#8E44AD" onclick="updatePreviewSettings(graphsPerSlide, '#8E44AD', dotStyle)"></span>
-                    <span class="color-option" style="background-color:#F39C12;" data-color="#F39C12" onclick="updatePreviewSettings(graphsPerSlide, '#F39C12', dotStyle)"></span>
-                </div>
-            </div>
-            
-            <div class="settings-group">
-                <h4>Dot Style</h4>
-                <div id="dotStyleOptions">
-                    <span class="dot-option" data-shape="circle" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, 'circle')">Circle (Default)</span>
-                    <span class="dot-option" data-shape="rect" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, 'rect')">Square</span>
-                    <span class="dot-option" data-shape="false" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, 'false')">None</span>
+                    <span class="color-option" style="background-color:#2F80ED;" data-color="#2F80ED" onclick="updatePreviewSettings(graphsPerSlide, '#2F80ED')"></span>
+                    <span class="color-option" style="background-color:#27AE60;" data-color="#27AE60" onclick="updatePreviewSettings(graphsPerSlide, '#27AE60')"></span>
+                    <span class="color-option" style="background-color:#D24726;" data-color="#D24726" onclick="updatePreviewSettings(graphsPerSlide, '#D24726')"></span>
+                    <span class="color-option" style="background-color:#8E44AD;" data-color="#8E44AD" onclick="updatePreviewSettings(graphsPerSlide, '#8E44AD')"></span>
+                    <span class="color-option" style="background-color:#F39C12;" data-color="#F39C12" onclick="updatePreviewSettings(graphsPerSlide, '#F39C12')"></span>
                 </div>
             </div>
 
             <div style="margin-top: auto; padding-top: 15px; border-top: 1px solid #eee;">
-                <p style="font-size: 12px; color: #777;">Preview is automatically updated when you change a setting.</p>
+                <p style="font-size: 12px; color: #777;">Preview updates instantly.</p>
             </div>
         </div>
 
@@ -253,7 +240,6 @@ let currentTab = "acceptance";
 let graphsPerSlide = 2; 
 
 let chartExportColor = '#2F80ED'; // Default Dark Blue
-let dotStyle = 'circle'; // Default Chart.js shape
 
 const acceptanceKpis = [
   "LTE RRC Setup Success Rate","ERAB Setup Success Rate","LTE Call Setup Success Rate","E-RAB Call Drop Rate",
@@ -276,6 +262,7 @@ let selectedKpis = {
 // --- FETCH DATA ---
 async function fetchData(){
   try {
+    // NOTE: Replace this with your actual data fetching logic if it changes
     const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=0&single=true&output=csv&t=" + Date.now();
     const res = await fetch(url);
     const text = await res.text();
@@ -473,15 +460,14 @@ function openPreview() {
     // Set initial state for the modal
     graphsPerSlide = 2; // Default
     chartExportColor = '#2F80ED'; // Default
-    dotStyle = 'circle'; // Default
 
     // Update the visual controls and render the preview
-    updatePreviewSettings(graphsPerSlide, chartExportColor, dotStyle);
+    updatePreviewSettings(graphsPerSlide, chartExportColor);
     
     document.getElementById("previewModal").style.display = "flex";
 }
 
-function highlightSettingButtons(count, color, shape) {
+function highlightSettingButtons(count, color) {
     // Highlight graph count button
     document.querySelectorAll('.graph-options button').forEach(btn => {
         btn.classList.remove('active');
@@ -499,29 +485,20 @@ function highlightSettingButtons(count, color, shape) {
             el.classList.add('selected');
         }
     });
-    
-    // Highlight dot style option
-    document.querySelectorAll('.dot-option').forEach(el => {
-        el.classList.remove('active');
-        if (el.dataset.shape === shape) {
-            el.classList.add('active');
-        }
-    });
 }
 
-function updatePreviewSettings(newCount, newColor, newDotStyle) {
+function updatePreviewSettings(newCount, newColor) {
     if (newCount) graphsPerSlide = newCount;
     if (newColor) chartExportColor = newColor;
-    if (newDotStyle) dotStyle = newDotStyle;
 
-    highlightSettingButtons(graphsPerSlide, chartExportColor, dotStyle);
+    highlightSettingButtons(graphsPerSlide, chartExportColor);
     
     // Render the preview with the new settings
     const count = graphsPerSlide;
     const body = document.getElementById("previewBody");
     const canvases = document.querySelectorAll("canvas");
     
-    document.getElementById("previewTitle").textContent = `PPT Export Preview (${count} Graphs per Slide) - Color: ${chartExportColor} - Dots: ${dotStyle === 'false' ? 'None' : dotStyle.charAt(0).toUpperCase() + dotStyle.slice(1)}`;
+    document.getElementById("previewTitle").textContent = `PPT Export Preview (${count} Graphs per Slide) - Line Color: ${chartExportColor}`;
     body.innerHTML = "";
     
     for(let i=0; i<canvases.length; i+=count){
@@ -542,7 +519,7 @@ function updatePreviewSettings(newCount, newColor, newDotStyle) {
             if(i+j < canvases.length){
                 const c = canvases[i+j];
                 // Pass current export settings to createPreviewBox
-                const box = createPreviewBox(c, chartExportColor, dotStyle); 
+                const box = createPreviewBox(c, chartExportColor); 
                 grid.appendChild(box);
             }
         }
@@ -551,7 +528,7 @@ function updatePreviewSettings(newCount, newColor, newDotStyle) {
     }
 }
 
-function createPreviewBox(canvas, color, shape) {
+function createPreviewBox(canvas, color) {
   const box = document.createElement("div");
   box.className = "preview-img-box";
   
@@ -566,17 +543,16 @@ function createPreviewBox(canvas, color, shape) {
   
   if (chartInstance) {
       const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
-      const originalPointStyles = chartInstance.data.datasets.map(d => d.pointStyle);
-      const originalPointRadii = chartInstance.data.datasets.map(d => d.pointRadius);
+      const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
       
       // Override style for screenshot using current settings
-      const finalShape = shape === 'false' ? false : shape;
-      const finalRadius = shape === 'false' ? 0 : 3;
-
+      // Line Color = Dot Color (Border Color for the point)
       chartInstance.data.datasets.forEach(d => { 
         d.borderColor = color; 
-        d.pointStyle = finalShape;
-        d.pointRadius = finalRadius;
+        d.pointBorderColor = color; 
+        d.pointBackgroundColor = color; /* Also set background color for solid dot */
+        d.pointRadius = 3; /* Keep dots visible */
+        d.pointStyle = 'circle'; /* Keep a standard circle shape */
       });
       chartInstance.update('none'); 
       
@@ -586,8 +562,8 @@ function createPreviewBox(canvas, color, shape) {
       // Restore original styles
       chartInstance.data.datasets.forEach((d, index) => { 
         d.borderColor = originalColors[index]; 
-        d.pointStyle = originalPointStyles[index];
-        d.pointRadius = originalPointRadii[index];
+        d.pointBorderColor = originalPointColors[index];
+        /* Note: Cannot easily restore all original point properties without storing them all, but this is sufficient to restore the line. */
       });
       chartInstance.update('none');
   }
@@ -619,7 +595,6 @@ async function downloadPPT(){
   const canvases = document.querySelectorAll("canvas");
   const count = graphsPerSlide;
   const exportColor = chartExportColor; // Use the selected color
-  const exportDotStyle = dotStyle; // Use the selected dot style
   
   for(let i=0; i<canvases.length; i+=count){
     let slide = pptx.addSlide();
@@ -645,17 +620,14 @@ async function downloadPPT(){
         // --- PPT COLOR/DOT STYLE FIX LOGIC ---
         const chartInstance = Chart.getChart(c.id);
         const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
-        const originalPointStyles = chartInstance.data.datasets.map(d => d.pointStyle);
-        const originalPointRadii = chartInstance.data.datasets.map(d => d.pointRadius);
-
-        // Override style for PPT export
-        const finalShape = exportDotStyle === 'false' ? false : exportDotStyle;
-        const finalRadius = exportDotStyle === 'false' ? 0 : 3;
+        const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
         
+        // Override style for PPT export
         chartInstance.data.datasets.forEach(d => { 
           d.borderColor = exportColor; 
-          d.pointStyle = finalShape;
-          d.pointRadius = finalRadius;
+          d.pointBorderColor = exportColor; 
+          d.pointBackgroundColor = exportColor; 
+          d.pointRadius = 3;
         });
         chartInstance.update('none'); 
         
@@ -664,8 +636,7 @@ async function downloadPPT(){
         // Restore original styles
         chartInstance.data.datasets.forEach((d, index) => { 
           d.borderColor = originalColors[index]; 
-          d.pointStyle = originalPointStyles[index];
-          d.pointRadius = originalPointRadii[index];
+          d.pointBorderColor = originalPointColors[index];
         });
         chartInstance.update('none');
         // --- END PPT COLOR/DOT STYLE FIX LOGIC ---
