@@ -33,12 +33,12 @@ button.action-btn:hover { background:#1f5ab5; }
 button.ppt-btn { background:#D24726; } /* PowerPoint Orange */
 button.ppt-btn:hover { background:#a8381e; }
 
-/* --- CHART STYLE SELECTOR (Inside Drawer) --- */
+/* --- CHART STYLE SELECTOR (Inside Style Drawer) --- */
 .style-options { 
     display: flex; 
     flex-direction: column; 
     gap: 5px; 
-    margin-top: 10px;
+    margin-top: 5px;
 }
 .style-options button {
     background: #f0f0f0;
@@ -88,9 +88,31 @@ button.ppt-btn:hover { background:#a8381e; }
 #dropdown div, #siteDropdownList div, #onAirDateDropdownList div { padding:6px 10px; cursor:pointer; font-size:13px; border-bottom:1px solid #eee; }
 #dropdown div:hover, #siteDropdownList div:hover, #onAirDateDropdownList div:hover { background:#f0f7ff; color:#2F80ED; }
 
-/* --- KPI Drawer Fixes --- */
-.kpiDrawerToggle { position:fixed; top:100px; right:0; width:36px; height:36px; background:#2F80ED; color:white; border-radius:6px 0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:20px; z-index:900; }
-.kpiDrawer { 
+/* --- DRAWER STYLES (KPI and Style) --- */
+/* Base Toggle Button Style */
+.drawerToggle { 
+    position:fixed; 
+    top:100px; 
+    width:36px; 
+    height:36px; 
+    background:#2F80ED; 
+    color:white; 
+    border-radius:6px 0 0 6px; 
+    cursor:pointer; 
+    display:flex; 
+    align-items:center; 
+    justify-content:center; 
+    font-size:20px; 
+    z-index:900; 
+    transition: right 0.3s; /* For movement when another is open */
+}
+/* Positioning for KPI button */
+.kpiDrawerToggle { right:0; }
+/* Positioning for Style button (just left of KPI button) */
+.styleDrawerToggle { right:40px; } 
+
+/* Base Drawer Style */
+.drawer { 
   position:fixed; top:0; right:0; 
   width:320px; 
   height:100%; background:white; 
@@ -98,7 +120,18 @@ button.ppt-btn:hover { background:#a8381e; }
   transform:translateX(100%); transition:0.3s; padding:20px; 
   display: flex; flex-direction: column; 
 }
-.kpiDrawer.open { transform:translateX(0); }
+.drawer.open { transform:translateX(0); }
+
+/* Specific KPI Drawer Adjustments */
+#kpiDrawer.open ~ .styleDrawerToggle { right: 360px; } /* Push the style toggle out when KPI drawer is open */
+#kpiDrawer.open ~ .kpiDrawerToggle { right: 320px; } /* Push the KPI toggle out when KPI drawer is open */
+
+/* Specific Style Drawer Adjustments */
+#styleDrawer { z-index: 1001; } /* Keep style drawer on top */
+#styleDrawer.open ~ .kpiDrawerToggle { right: 320px; } /* Push the KPI toggle out when Style drawer is open */
+#styleDrawer.open ~ .styleDrawerToggle { right: 320px; } /* Push the Style toggle out when Style drawer is open */
+
+
 .drawer-header { 
     display: flex; 
     justify-content: space-between; 
@@ -106,18 +139,19 @@ button.ppt-btn:hover { background:#a8381e; }
     margin-bottom: 10px; 
     padding-bottom: 10px; 
     border-bottom: 1px solid #eee; 
+    flex-shrink: 0;
 }
 .drawer-header h3 { margin: 0; }
 .drawer-controls { 
     display: flex; 
-    gap: 5px; /* Reduced gap */
+    gap: 5px; 
     align-items: center; 
 }
 .drawer-controls .action-btn { 
-    padding: 6px 10px; /* Smaller padding for density */
-    font-size: 13px; /* Smaller font for density */
+    padding: 6px 10px; 
+    font-size: 13px; 
 }
-.kpi-options-body { flex-grow: 1; overflow-y: auto; padding-right: 5px; padding-bottom: 40px; } 
+.drawer-body { flex-grow: 1; overflow-y: auto; padding-right: 5px; padding-bottom: 40px; } 
 
 /* --- PREVIEW MODAL --- */
 .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:2000; display:none; align-items:center; justify-content:center; backdrop-filter:blur(3px); }
@@ -182,7 +216,7 @@ button.ppt-btn:hover { background:#a8381e; }
   <a href="gsm.html" class="nav-btn">GSM</a>
   <a href="index.html" class="nav-btn active">LTE</a>
   <a href="nr.html" class="nav-btn">NR</a>
-  </div>
+</div>
 
 <div class="tabs">
   <button class="tab active" onclick="switchTab('both')">All KPIs (Both)</button> 
@@ -211,22 +245,32 @@ button.ppt-btn:hover { background:#a8381e; }
 
 <div class="chart-grid" id="mainChartContainer"></div>
 
-<div class="kpiDrawerToggle" onclick="toggleDrawer()">⚙</div>
-<div id="kpiDrawer" class="kpiDrawer">
+<div class="styleDrawerToggle drawerToggle" onclick="toggleStyleDrawer()">🎨</div>
+<div id="styleDrawer" class="drawer">
   <div class="drawer-header">
-    <h3 id="drawerHeaderTitle">KPI Settings</h3>
+    <h3>Chart Style Settings</h3>
+    <button onclick="toggleStyleDrawer()" style="border:none; background:none; font-size:24px; cursor:pointer; color:#777;">✕</button>
+  </div>
+  <div class="drawer-body">
+    <h4>Chart Display Style (Select one)</h4>
+    <div id="chartStyleOptions" class="style-options">
+      </div>
+    <p style="margin-top:20px; font-size:12px; color:#555;">Styles like 'Area Fill' use the segment painting feature you requested.</p>
+  </div>
+</div>
+
+<div class="kpiDrawerToggle drawerToggle" onclick="toggleKpiDrawer()">⚙</div>
+<div id="kpiDrawer" class="drawer">
+  <div class="drawer-header">
+    <h3>KPI Visibility Settings</h3>
     <div class="drawer-controls">
         <button class="action-btn" onclick="selectVisibleKpis()" style="background:#5cb85c;">Select All</button>
         <button class="action-btn" onclick="clearVisibleKpis()" style="background:#f0ad4e;">Clear All</button>
         <button class="action-btn" onclick="applyKpis()">Apply</button>
-        <button onclick="toggleDrawer()" style="border:none; background:none; font-size:24px; cursor:pointer; color:#777;">✕</button>
+        <button onclick="toggleKpiDrawer()" style="border:none; background:none; font-size:24px; cursor:pointer; color:#777;">✕</button>
     </div>
   </div>
-  <div class="kpi-options-body" id="kpiOptionsList">
-    <h4>Chart Display Style</h4>
-    <div id="chartStyleOptions" class="style-options">
-      </div>
-
+  <div class="drawer-body" id="kpiOptionsList">
     </div>
 </div>
 
@@ -297,16 +341,16 @@ button.ppt-btn:hover { background:#a8381e; }
 let allData = [];
 let fuse = null;
 let allSites = [];
-let siteCutoverMap = {}; // Maps eNodeB Name -> On-Air Date
+let siteCutoverMap = {}; 
 let allOnAirDates = [];
 let selectedOnAirDates = [];
 
 let selectedSites = [];
-let currentTab = "both"; // DEFAULT IS NOW 'BOTH'
+let currentTab = "both"; 
 let graphsPerSlide = 2; 
 
-let chartExportColor = '#2F80ED'; // Default Line/Dot Color (Dark Blue)
-let chartExportTitleColor = '#333333'; // Default Title Color (Dark Gray/Black)
+let chartExportColor = '#2F80ED'; 
+let chartExportTitleColor = '#333333'; 
 
 // NEW: Expanded Chart Styles Configuration (10 styles total)
 const chartStyles = {
@@ -342,6 +386,32 @@ let selectedKpis = {
 };
 
 // --- GLOBAL UTILITY FUNCTIONS ---
+
+/**
+ * Toggles the KPI drawer visibility.
+ */
+function toggleKpiDrawer(){
+  const d = document.getElementById("kpiDrawer");
+  const s = document.getElementById("styleDrawer");
+  d.classList.toggle("open");
+  if(d.classList.contains("open")) {
+     populateKpiOptions();
+     s.classList.remove("open"); // Close style drawer if KPI opens
+  }
+}
+
+/**
+ * Toggles the Chart Style drawer visibility.
+ */
+function toggleStyleDrawer(){
+  const d = document.getElementById("styleDrawer");
+  const k = document.getElementById("kpiDrawer");
+  d.classList.toggle("open");
+  if(d.classList.contains("open")) {
+    populateStyleOptions();
+    k.classList.remove("open"); // Close KPI drawer if Style opens
+  }
+}
 
 /**
  * Updates the selected chart style and re-renders all charts.
@@ -407,7 +477,6 @@ async function fetchData(){
         const siteName = r[cutoverHeaders.indexOf("eNodeB Name")]?.trim();
         const onAirDate = r[cutoverHeaders.indexOf("On-Air Date")]?.trim();
         if (siteName && onAirDate) {
-            // Only map sites that exist in the KPI data to prevent issues
             if (allSites.includes(siteName)) {
                  siteCutoverMap[siteName] = onAirDate;
             }
@@ -416,8 +485,8 @@ async function fetchData(){
 
     // 3. Initialize Date Filter Options and State
     allOnAirDates = [...new Set(Object.values(siteCutoverMap))].filter(d => d).sort();
-    selectedOnAirDates = [...allOnAirDates]; // Default: Select All Dates
-    selectedSites = []; // Reset site selection
+    selectedOnAirDates = [...allOnAirDates]; 
+    selectedSites = []; 
 
     // 4. Update UI
     setupOnAirDateDropdown();
@@ -436,21 +505,17 @@ function setupOnAirDateDropdown(){
   
   const setAll = () => { 
     selectedOnAirDates = [...allOnAirDates]; 
-    // When All Dates are selected, all sites MUST be selected as well
     const allActiveSites = allSites.filter(site => siteCutoverMap[site] && allOnAirDates.includes(siteCutoverMap[site]));
     selectedSites = [...allActiveSites]; 
 
-    // Update UI but DO NOT close the dropdown
     updateDateFilterUI({close: false}); 
-    setupSiteDropdown(); // This re-renders charts
+    setupSiteDropdown(); 
   };
 
   const clearAll = () => { 
     selectedOnAirDates = []; 
-    // When All Dates are cleared, all sites MUST be cleared
     selectedSites = []; 
     
-    // Update UI but DO NOT close the dropdown
     updateDateFilterUI({close: false}); 
     setupSiteDropdown(); 
   };
@@ -469,31 +534,28 @@ function setupOnAirDateDropdown(){
           const chk = d.querySelector("input");
           chk.checked = !chk.checked;
        }
-       updateSelectedDates(); // Individual selection
+       updateSelectedDates(); 
     };
     list.appendChild(d);
   });
   
   btn.onclick = () => list.style.display = list.style.display==="block" ? "none" : "block";
   
-  // Expose helpers globally for inline HTML
   window.dateSetAll = setAll;
   window.dateClearAll = clearAll;
-  updateDateFilterUI({close: true}); // Initial UI update
+  updateDateFilterUI({close: true}); 
 }
 
 function updateSelectedDates() {
     const list = document.getElementById("onAirDateDropdownList");
     selectedOnAirDates = Array.from(list.querySelectorAll(".date-chk:checked")).map(c => c.value);
     
-    // Update the sites based on the new dates (select all sites under the new date scope)
     let activeSites = allSites.filter(site => {
         const date = siteCutoverMap[site];
         return date && selectedOnAirDates.includes(date);
     });
     selectedSites = [...activeSites]; 
     
-    // Do not close dropdown on individual check
     updateDateFilterUI({close: false}); 
     setupSiteDropdown(); 
 }
@@ -505,14 +567,11 @@ function updateDateFilterUI(options = {close: true}) {
     
     span.textContent = selectedOnAirDates.length === 0 ? "No Dates Selected" : (selectedOnAirDates.length === allOnAirDates.length ? "All On-Air Dates" : `Selected (${selectedOnAirDates.length})`);
     
-    // Update checkboxes visually
     list.querySelectorAll(".date-chk").forEach(c => c.checked = selectedOnAirDates.includes(c.value));
     
-    // Close dropdown only if requested
     if (options.close) {
         list.style.display = "none";
     } else {
-        // If not closing, ensure it's open
         list.style.display = "block";
     }
 }
@@ -524,16 +583,13 @@ function setupSiteDropdown(){
   const btn = document.getElementById("siteDropdownBtn");
   list.innerHTML = "";
 
-  // 1. Determine which sites are active based on the date filter
   let activeSites = allSites.filter(site => {
       const date = siteCutoverMap[site];
       return date && selectedOnAirDates.includes(date);
   });
   
-  // 2. Filter selectedSites to only include those that are currently active
   selectedSites = selectedSites.filter(site => activeSites.includes(site));
   
-  // Actions
   const setAll = () => { 
     selectedSites = [...activeSites]; 
     updateSiteFilterUI({close: false}); 
@@ -546,14 +602,11 @@ function setupSiteDropdown(){
     renderCharts(); 
   };
   
-  // Inject setAll/clearAll actions
   list.innerHTML += `<div onclick="window.siteSetAll()"><b>Select All (${activeSites.length})</b></div>`;
   list.innerHTML += `<div onclick="window.siteClearAll()"><b>Clear All</b></div>`;
 
-  // Options
   activeSites.forEach(site => {
     const d = document.createElement("div");
-    // Check if the site is in the current selectedSites list
     const checked = selectedSites.includes(site) ? "checked" : ""; 
     d.innerHTML = `<input type='checkbox' value='${site}' class='site-chk' ${checked}> ${site}`;
     d.onclick = (e) => {
@@ -561,27 +614,23 @@ function setupSiteDropdown(){
           const chk = d.querySelector("input");
           chk.checked = !chk.checked;
        }
-       updateSelectedSites(); // Individual selection
+       updateSelectedSites(); 
     };
     list.appendChild(d);
   });
   
   btn.onclick = () => list.style.display = list.style.display==="block" ? "none" : "block";
 
-  // Expose helpers globally for inline HTML
   window.siteSetAll = setAll;
   window.siteClearAll = clearAll;
   
-  // Initial UI update for site dropdown and rendering
   updateSiteFilterUI({close: true});
   renderCharts();
 }
 
 function updateSelectedSites() {
     const list = document.getElementById("siteDropdownList");
-    // Ensure we only look at the sites currently visible/active in the list
     selectedSites = Array.from(list.querySelectorAll(".site-chk:checked")).map(c => c.value);
-    // Do not close dropdown on individual check
     updateSiteFilterUI({close: false});
     renderCharts();
 }
@@ -601,14 +650,11 @@ function updateSiteFilterUI(options = {close: true}) {
     else if(selectedSites.length === 1) span.textContent = selectedSites[0];
     else span.textContent = `Selected (${selectedSites.length})`;
 
-    // Re-check all site checkboxes to reflect the selectedSites state 
     list.querySelectorAll(".site-chk").forEach(c => c.checked = selectedSites.includes(c.value));
     
-    // Close dropdown only if requested
     if (options.close) {
         list.style.display = "none";
     } else {
-        // If not closing, ensure it's open
         list.style.display = "block";
     }
 }
@@ -624,7 +670,6 @@ function renderCharts(){
   else if(currentTab === "monitoring") kpisToShow = selectedKpis.monitoring;
   else if(currentTab === "both") kpisToShow = [...selectedKpis.acceptance, ...selectedKpis.monitoring];
 
-  // 1. Determine final list of sites based on date filter AND site filter
   let sitesFromDate = allSites.filter(site => {
       const date = siteCutoverMap[site];
       return selectedOnAirDates.includes(date);
@@ -632,17 +677,14 @@ function renderCharts(){
 
   let finalSiteList;
   if (selectedSites.length > 0) {
-      // Use specifically selected sites
       finalSiteList = selectedSites;
   } else {
-      // Use all sites allowed by the date filter (default behavior when no specific site is selected)
       finalSiteList = sitesFromDate;
   }
   
   let filteredData = allData.filter(d => finalSiteList.includes(d["eNodeB Name"]));
 
 
-  // 2. Process Timeline (unchanged)
   const timeline = [...new Set(filteredData.map(d=>d["Date"]))].sort((a,b)=>{
     const [da,ma,ya]=a.split('/').map(Number);
     const [db,mb,yb]=b.split('/').map(Number);
@@ -652,14 +694,12 @@ function renderCharts(){
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const timelineLabels = timeline.map(d => {
       const [day, month] = d.split('/').map(Number);
-      return `${day} ${monthNames[month - 1]}`; // e.g., "5 Jan"
+      return `${day} ${monthNames[month - 1]}`; 
   });
 
-  // Apply selected style
   const style = chartStyles[selectedStyle]; 
   document.querySelectorAll('.chart-card').forEach(card => card.style.backgroundColor = style.bgColor);
 
-  // 3. Generate Charts
   kpisToShow.forEach((kpi, idx) => {
     const card = document.createElement("div");
     card.className = "chart-card";
@@ -674,7 +714,6 @@ function renderCharts(){
     card.appendChild(wrapper);
     container.appendChild(card);
 
-    // Calculate Data
     const dataPoints = timeline.map(date => {
        const vals = filteredData.filter(d => d["Date"] === date && d[kpi] !== null).map(d => d[kpi]);
        if(vals.length === 0) return null;
@@ -684,33 +723,49 @@ function renderCharts(){
     });
 
     // Dynamic Y-Axis Start Calculation (Enhanced for high percentages)
-    const minValue = dataPoints.filter(v => v !== null).length > 0 ? Math.min(...dataPoints.filter(v => v !== null)) : 0;
+    const dataOnly = dataPoints.filter(v => v !== null);
+    const minValue = dataOnly.length > 0 ? Math.min(...dataOnly) : 0;
+    const maxValue = dataOnly.length > 0 ? Math.max(...dataOnly) : 100;
+    const dataRange = maxValue - minValue;
     let yMin = 0;
+    let yMax = 100;
+    let yStepSize = null; 
     
-    // If KPI is a high-range percentage (Rate, Success, %) and min value is high
+    // Logic for tight, dynamic scaling on high-range KPIs
     if (kpi.match(/(rate|success|%|ratio)/i) && minValue >= 80) {
-        // Calculate dynamic minimum: start 5 units below the minimum, rounded down slightly.
-        let targetMin = Math.floor(minValue) - 5;
         
-        // Custom logic to make the starting point an "even" number (0, 2, 4, 5, 6, 8, 10)
-        if (targetMin % 10 < 5) {
-             yMin = Math.max(0, Math.floor(targetMin / 10) * 10); // e.g., 85 -> 80
-        } else {
-             yMin = Math.max(0, Math.floor(targetMin / 10) * 10 + 5); // e.g., 90.8 min -> 85.8 target -> 85
-        }
-        // Final check to ensure we don't start too high or too low unexpectedly
+        // 1. Calculate a dynamic minimum that's visible but tight
+        let targetMin = minValue - 1.5;
+
+        // Round down to the nearest multiple of 0.5 for tighter scaling
+        yMin = Math.floor(targetMin * 2) / 2;
         yMin = Math.max(0, yMin); 
-        yMin = Math.min(yMin, Math.floor(minValue / 10) * 10); // Ensure calculated min is not higher than the nearest 10 below the actual min
+
+        // 2. Set Step Size for tight visualization if the range is small
+        if (dataRange > 0 && dataRange < 5) {
+            yStepSize = 0.5;
+        } else if (dataRange >= 5 && dataRange < 15) {
+            yStepSize = 1.0;
+        }
+        
+        // 3. Set yMax only if the max is not 100 and the range is tight
+        if (maxValue < 100 && yStepSize !== null) {
+            // Round up the max value to the nearest step size
+            yMax = Math.ceil(maxValue / yStepSize) * yStepSize;
+            yMax = Math.min(100, yMax); // Ensure max is not ridiculously high
+        } else if (maxValue === 100) {
+            yMax = 100;
+        }
     }
     
-    // Determine background color for fill if needed (must be RGB with Alpha)
+    // Determine background color for fill if needed 
     let bColor = 'transparent';
     let lineC = getRandomColor();
     if (style.fill) {
         const hex = lineC.substring(1);
         const r = parseInt(hex.substring(0, 2), 16);
         const g = parseInt(hex.substring(2, 4), 16);
-        const b = parseInt(hex.substring(4, 6), 16);
+        b = parseInt(hex.substring(4, 6), 16);
         bColor = `rgba(${r}, ${g}, ${b}, ${style.alpha || 0.15})`;
     }
 
@@ -724,7 +779,7 @@ function renderCharts(){
           label: (finalSiteList.length > 0 && dataPoints.some(p => p !== null)) ? "Aggregate" : "No Data",
           data: dataPoints,
           borderColor: lineC,
-          backgroundColor: bColor, // Used for area fill
+          backgroundColor: bColor, 
           fill: style.fill,
           borderWidth: style.border,
           pointRadius: style.pointRadius,
@@ -748,7 +803,7 @@ function renderCharts(){
         },
         plugins: { 
             legend: { display: false },
-            title: { // Chart.js built-in title
+            title: { 
                 display: true,
                 text: kpi,
                 font: {
@@ -765,7 +820,11 @@ function renderCharts(){
            },
            y: { 
                beginAtZero: yMin === 0, 
-               min: (finalSiteList.length === 0 || dataPoints.every(p => p === null)) ? 0 : yMin, // Set the calculated minimum or 0
+               min: (finalSiteList.length === 0 || dataPoints.every(p => p === null)) ? 0 : yMin,
+               max: yMax,
+               ticks: {
+                   stepSize: yStepSize // Apply the calculated step size
+               },
                grid: {color: style.gridColor}
            }
         }
@@ -781,48 +840,9 @@ function getRandomColor() {
 
 // --- KPI DRAWER & UTILITY LOGIC ---
 
-function toggleDrawer(){
-  const d = document.getElementById("kpiDrawer");
-  d.classList.toggle("open");
-  if(d.classList.contains("open")) populateKpiOptions();
-}
-
 function populateKpiOptions(){
-  const list = document.getElementById("kpiOptionsList");
-  // Clear only the KPI list section, preserve the style list element
-  const kpiSection = list; 
-  
-  // 1. Populate Style Buttons (only needs to be done once, but safe to run)
-  const styleContainer = document.getElementById("chartStyleOptions");
-  styleContainer.innerHTML = '';
-  Object.keys(chartStyles).forEach(styleName => {
-    const button = document.createElement('button');
-    button.textContent = styleName;
-    button.className = 'action-btn';
-    button.setAttribute('data-style', styleName);
-    button.onclick = () => updateChartStyle(styleName);
-    if (selectedStyle === styleName) {
-        button.classList.add('active');
-    }
-    styleContainer.appendChild(button);
-  });
-  
-  // 2. Clear previous KPI list entries (excluding the style section)
-  // Find the h4 element for Acceptance/Monitoring and clear content after the style section
-  let startClearing = false;
-  let nodesToRemove = [];
-  Array.from(kpiSection.children).forEach(child => {
-      // Start clearing after the style section
-      if (child.id === 'chartStyleOptions') {
-          startClearing = true;
-      } else if (startClearing) {
-          nodesToRemove.push(child);
-      }
-  });
-  nodesToRemove.forEach(node => node.remove());
-
-
-  document.getElementById('drawerHeaderTitle').textContent = 'KPI Settings & Style';
+  const kpiSection = document.getElementById("kpiOptionsList");
+  kpiSection.innerHTML = ''; // Clear content for redraw
 
   const acceptanceSection = currentTab === 'acceptance' || currentTab === 'both';
   const monitoringSection = currentTab === 'monitoring' || currentTab === 'both';
@@ -842,7 +862,6 @@ function populateKpiOptions(){
             const chk = div.querySelector("input");
             chk.checked = !chk.checked;
         }
-        // No auto-apply here, user must click Apply
       };
       kpiSection.appendChild(div);
     });
@@ -852,18 +871,26 @@ function populateKpiOptions(){
   if (monitoringSection) createGroup("Monitoring KPIs", "monitoring", monitoringKpis);
 }
 
-/**
- * Selects all visible KPI checkboxes and updates the internal state.
- */
+function populateStyleOptions(){
+  const styleContainer = document.getElementById("chartStyleOptions");
+  styleContainer.innerHTML = '';
+  Object.keys(chartStyles).forEach(styleName => {
+    const button = document.createElement('button');
+    button.textContent = styleName;
+    button.className = 'action-btn';
+    button.setAttribute('data-style', styleName);
+    button.onclick = () => updateChartStyle(styleName);
+    if (selectedStyle === styleName) {
+        button.classList.add('active');
+    }
+    styleContainer.appendChild(button);
+  });
+}
+
 function selectVisibleKpis() {
     const chks = document.querySelectorAll(".kpi-chk");
-    
-    // 1. Update Checkboxes Visually
-    chks.forEach(c => {
-        c.checked = true;
-    });
+    chks.forEach(c => { c.checked = true; });
 
-    // 2. Update Internal State
     if (currentTab === 'acceptance' || currentTab === 'both') {
         selectedKpis.acceptance = [...acceptanceKpis];
     }
@@ -872,18 +899,10 @@ function selectVisibleKpis() {
     }
 }
 
-/**
- * Clears all visible KPI checkboxes and updates the internal state.
- */
 function clearVisibleKpis() {
     const chks = document.querySelectorAll(".kpi-chk");
-    
-    // 1. Update Checkboxes Visually
-    chks.forEach(c => {
-        c.checked = false;
-    });
+    chks.forEach(c => { c.checked = false; });
 
-    // 2. Update Internal State
     if (currentTab === 'acceptance' || currentTab === 'both') {
         selectedKpis.acceptance = [];
     }
@@ -896,11 +915,9 @@ function clearVisibleKpis() {
 function applyKpis(){
   const chks = document.querySelectorAll(".kpi-chk");
   
-  // Start with existing selections for non-visible tabs
   const tempAcceptance = currentTab === 'acceptance' || currentTab === 'both' ? [] : [...selectedKpis.acceptance];
   const tempMonitoring = currentTab === 'monitoring' || currentTab === 'both' ? [] : [...selectedKpis.monitoring];
 
-  // Apply checked status from the UI
   chks.forEach(c => {
     if(c.checked) {
         if(c.dataset.group === 'acceptance') tempAcceptance.push(c.value);
@@ -911,7 +928,7 @@ function applyKpis(){
   selectedKpis.acceptance = tempAcceptance;
   selectedKpis.monitoring = tempMonitoring;
   
-  toggleDrawer();
+  toggleKpiDrawer();
   renderCharts();
 }
 
@@ -969,7 +986,6 @@ function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
     document.getElementById("previewTitle").textContent = `PPT Export Preview (${count} Graphs per Slide) - Line: ${chartExportColor}, Title: ${chartExportTitleColor}`;
     body.innerHTML = "";
 
-    // Determine CSS grid columns based on count
     let gridCols = '1fr';
     let rows = 1;
     if (count === 2) { gridCols = '1fr 1fr'; rows = 1; }
@@ -992,7 +1008,6 @@ function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
         const grid = document.createElement("div");
         grid.className = "preview-grid";
         grid.style.gridTemplateColumns = gridCols;
-        // Use auto for rows to adapt to content height when the number of items doesn't perfectly match the row definition
         grid.style.gridTemplateRows = rows === 1 ? '1fr' : (rows === 2 ? '1fr 1fr' : (rows === 3 ? '1fr 1fr 1fr' : 'repeat(auto-fit, 1fr)'));
 
 
@@ -1021,7 +1036,6 @@ function createPreviewBox(canvas, lineColor, titleColor) {
   let imgData = '';
   
   if (chartInstance) {
-      // Save original properties
       const originalDatasetProps = chartInstance.data.datasets.map(d => ({
           borderColor: d.borderColor,
           pointBorderColor: d.pointBorderColor,
@@ -1031,17 +1045,17 @@ function createPreviewBox(canvas, lineColor, titleColor) {
           stepped: d.stepped
       }));
       const originalTitleColor = chartInstance.options.plugins.title.color;
+      const originalYMin = chartInstance.options.scales.y.min;
+      const originalYMax = chartInstance.options.scales.y.max;
+      const originalYStep = chartInstance.options.scales.y.ticks.stepSize;
       
-      // Get the selected style properties
       const style = chartStyles[selectedStyle];
       
-      // Override style for PPT export (using export color, but preserving dashboard style attributes)
       chartInstance.data.datasets.forEach(d => { 
         d.borderColor = lineColor; 
         d.pointBorderColor = lineColor; 
         d.pointBackgroundColor = lineColor; 
         
-        // Re-calculate fill color based on selected export line color
         let bColor = 'transparent';
         if (style.fill) {
             const hex = lineColor.substring(1);
@@ -1061,6 +1075,41 @@ function createPreviewBox(canvas, lineColor, titleColor) {
 
       chartInstance.options.plugins.title.color = titleColor; 
       
+      // Temporarily use tighter scaling for high-percentage KPIs in the preview if applicable
+      const kpi = chartInstance.options.plugins.title.text;
+      const dataPoints = chartInstance.data.datasets[0].data;
+      const dataOnly = dataPoints.filter(v => v !== null);
+      const minValue = dataOnly.length > 0 ? Math.min(...dataOnly) : 0;
+      const maxValue = dataOnly.length > 0 ? Math.max(...dataOnly) : 100;
+      const dataRange = maxValue - minValue;
+      
+      let previewYMin = originalYMin;
+      let previewYMax = originalYMax;
+      let previewYStep = originalYStep;
+
+      if (kpi.match(/(rate|success|%|ratio)/i) && minValue >= 80) {
+          let targetMin = minValue - 1.5;
+          previewYMin = Math.floor(targetMin * 2) / 2;
+          previewYMin = Math.max(0, previewYMin); 
+          
+          if (dataRange > 0 && dataRange < 5) {
+              previewYStep = 0.5;
+          } else if (dataRange >= 5 && dataRange < 15) {
+              previewYStep = 1.0;
+          }
+          
+          if (maxValue < 100 && previewYStep !== null) {
+              previewYMax = Math.ceil(maxValue / previewYStep) * previewYStep;
+              previewYMax = Math.min(100, previewYMax); 
+          } else if (maxValue === 100) {
+              previewYMax = 100;
+          }
+      }
+      
+      chartInstance.options.scales.y.min = previewYMin;
+      chartInstance.options.scales.y.max = previewYMax;
+      chartInstance.options.scales.y.ticks.stepSize = previewYStep;
+
       chartInstance.update('none'); 
       
       tempCtx.drawImage(canvas, 0, 0);
@@ -1071,6 +1120,9 @@ function createPreviewBox(canvas, lineColor, titleColor) {
         Object.assign(d, originalDatasetProps[index]);
       });
       chartInstance.options.plugins.title.color = originalTitleColor;
+      chartInstance.options.scales.y.min = originalYMin;
+      chartInstance.options.scales.y.max = originalYMax;
+      chartInstance.options.scales.y.ticks.stepSize = originalYStep;
       chartInstance.update('none');
   }
 
@@ -1097,8 +1149,6 @@ async function downloadPPT(){
   const lineColor = chartExportColor; 
   const titleColor = chartExportTitleColor;
   
-  // Define base positions and sizes in inches (for 16x9 slide layout)
-  // NOTE: chartH for 9 graphs is 1.7
   const layoutDef = {
     1: { cols: 1, rows: 1, chartW: 9.0, chartH: 5.5, padding: 0.5 },
     2: { cols: 2, rows: 1, chartW: 4.5, chartH: 3.5, padding: 0.4 },
@@ -1109,9 +1159,9 @@ async function downloadPPT(){
   }[count] || { cols: 2, rows: 1, chartW: 4.5, chartH: 3.5, padding: 0.4 }; 
 
   const layoutPositions = [];
-  const startX = 0.5; // Fixed left margin
-  const startY = 1.2; // Starting Y position after slide header
-  const maxW = 9.5; // Max drawing width (10 inches wide slide, 0.5 margin on each side)
+  const startX = 0.5; 
+  const startY = 1.2; 
+  const maxW = 9.5; 
   
   const numCols = layoutDef.cols;
   const numRows = layoutDef.rows;
@@ -1119,7 +1169,6 @@ async function downloadPPT(){
   const chartH = layoutDef.chartH;
   const padding = layoutDef.padding;
 
-  // Calculate dynamic spacing to center charts horizontally and vertically
   const totalChartWidth = numCols * chartW;
   const totalPaddingWidth = (numCols - 1) * padding;
   const remainingXSpace = maxW - totalChartWidth - totalPaddingWidth;
@@ -1131,12 +1180,11 @@ async function downloadPPT(){
           const x = marginX + (c * chartW) + (c * padding);
           const y = startY + (r * chartH) + (r * padding);
           layoutPositions.push({ x: x, y: y, w: chartW, h: chartH });
-          if (layoutPositions.length >= count) break; // Stop if we've defined all slots for the count
+          if (layoutPositions.length >= count) break; 
       }
       if (layoutPositions.length >= count) break;
   }
   
-  // Custom 4-grid centering logic
   if (count === 4) {
       layoutPositions.length = 0; 
       const marginX4 = (maxW - (2 * chartW) - padding) / 2 + startX; 
@@ -1152,19 +1200,16 @@ async function downloadPPT(){
   for(let i=0; i<canvases.length; i+=count){
     let slide = pptx.addSlide();
     
-    // Slide Title Header
     slide.addText(`KPI Analysis - Slide ${Math.floor(i/count)+1}`, { x:0.5, y:0.2, fontSize:16, color:'D24726', bold:true });
 
-    // Add Charts
     for(let j=0; j<count; j++){
       if(i+j < canvases.length){
         const c = canvases[i+j];
         const params = layoutPositions[j];
         
-        // --- PPT CHART EXPORT LOGIC ---
         const chartInstance = Chart.getChart(c.id);
         
-        // Save current chart style settings (including dynamic Y-Min)
+        // Save current chart style settings 
         const originalDatasetProps = chartInstance.data.datasets.map(d => ({
             borderColor: d.borderColor,
             pointBorderColor: d.pointBorderColor,
@@ -1175,8 +1220,9 @@ async function downloadPPT(){
         }));
         const originalTitleColor = chartInstance.options.plugins.title.color;
         const originalYMin = chartInstance.options.scales.y.min;
+        const originalYMax = chartInstance.options.scales.y.max;
+        const originalYStep = chartInstance.options.scales.y.ticks.stepSize;
 
-        // Get the selected dashboard style (to preserve fill/step attributes)
         const style = chartStyles[selectedStyle];
         
         // Override style for PPT export
@@ -1184,8 +1230,7 @@ async function downloadPPT(){
           d.borderColor = lineColor; 
           d.pointBorderColor = lineColor; 
           d.pointBackgroundColor = lineColor; 
-
-          // Re-calculate fill color based on export line color
+          
           let bColor = 'transparent';
           if (style.fill) {
               const hex = lineColor.substring(1);
@@ -1201,8 +1246,43 @@ async function downloadPPT(){
           d.pointRadius = 3; 
           d.spanGaps = true; 
         });
-        chartInstance.options.plugins.title.color = titleColor; // Set selected title color
+        chartInstance.options.plugins.title.color = titleColor; 
         
+        // Recalculate and apply tighter scaling for PPT export
+        const kpi = chartInstance.options.plugins.title.text;
+        const dataPoints = chartInstance.data.datasets[0].data;
+        const dataOnly = dataPoints.filter(v => v !== null);
+        const minValue = dataOnly.length > 0 ? Math.min(...dataOnly) : 0;
+        const maxValue = dataOnly.length > 0 ? Math.max(...dataOnly) : 100;
+        const dataRange = maxValue - minValue;
+        
+        let pptYMin = originalYMin;
+        let pptYMax = originalYMax;
+        let pptYStep = originalYStep;
+
+        if (kpi.match(/(rate|success|%|ratio)/i) && minValue >= 80) {
+            let targetMin = minValue - 1.5;
+            pptYMin = Math.floor(targetMin * 2) / 2;
+            pptYMin = Math.max(0, pptYMin); 
+            
+            if (dataRange > 0 && dataRange < 5) {
+                pptYStep = 0.5;
+            } else if (dataRange >= 5 && dataRange < 15) {
+                pptYStep = 1.0;
+            }
+            
+            if (maxValue < 100 && pptYStep !== null) {
+                pptYMax = Math.ceil(maxValue / pptYStep) * pptYStep;
+                pptYMax = Math.min(100, pptYMax); 
+            } else if (maxValue === 100) {
+                pptYMax = 100;
+            }
+        }
+        
+        chartInstance.options.scales.y.min = pptYMin;
+        chartInstance.options.scales.y.max = pptYMax;
+        chartInstance.options.scales.y.ticks.stepSize = pptYStep;
+
         chartInstance.update('none'); 
         
         const imgData = c.toDataURL("image/png");
@@ -1212,9 +1292,10 @@ async function downloadPPT(){
             Object.assign(d, originalDatasetProps[index]);
         });
         chartInstance.options.plugins.title.color = originalTitleColor;
-        chartInstance.options.scales.y.min = originalYMin; // Restore Y-min
+        chartInstance.options.scales.y.min = originalYMin;
+        chartInstance.options.scales.y.max = originalYMax;
+        chartInstance.options.scales.y.ticks.stepSize = originalYStep;
         chartInstance.update('none');
-        // --- END PPT CHART EXPORT LOGIC ---
         
         // Chart Image
         slide.addImage({ 
