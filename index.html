@@ -301,7 +301,6 @@ function switchTab(tab) {
     });
     document.querySelector(`.tab[onclick="switchTab('${tab}')"]`).classList.add('active');
     currentTab = tab;
-    // We only call renderCharts() here. KPI list is populated/applied on drawer open/close.
     renderCharts(); 
 }
 
@@ -402,7 +401,7 @@ function setupOnAirDateDropdown(){
           const chk = d.querySelector("input");
           chk.checked = !chk.checked;
        }
-       updateSelectedDates(); // This handles closing the dropdown
+       updateSelectedDates(); // Individual selection
     };
     list.appendChild(d);
   });
@@ -426,7 +425,8 @@ function updateSelectedDates() {
     });
     selectedSites = [...activeSites]; 
     
-    updateDateFilterUI({close: true}); // Close after a single selection
+    // *** FIX: DO NOT CLOSE HERE ***
+    updateDateFilterUI({close: false}); 
     setupSiteDropdown(); // This will trigger the site update and re-render charts
 }
 
@@ -493,7 +493,7 @@ function setupSiteDropdown(){
           const chk = d.querySelector("input");
           chk.checked = !chk.checked;
        }
-       updateSelectedSites(); // This handles closing the dropdown
+       updateSelectedSites(); // Individual selection
     };
     list.appendChild(d);
   });
@@ -513,7 +513,8 @@ function updateSelectedSites() {
     const list = document.getElementById("siteDropdownList");
     // Ensure we only look at the sites currently visible/active in the list
     selectedSites = Array.from(list.querySelectorAll(".site-chk:checked")).map(c => c.value);
-    updateSiteFilterUI({close: true});
+    // *** FIX: DO NOT CLOSE HERE ***
+    updateSiteFilterUI({close: false});
     renderCharts();
 }
 
