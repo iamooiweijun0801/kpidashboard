@@ -614,23 +614,30 @@ function renderCharts(){
     container.appendChild(card);
 
     // Calculate Data
-    // Calculate Data
 const dataPoints = timeline.map(date => {
-   const vals = filteredData
-       .filter(d => d["Date"] === date && d[kpi] !== null)
-       .map(d => {
-           let v = d[kpi];
-           // Apply the new capping logic
-           if (v > 40 && v <= 100) {
-               v = Math.round(100 - 3); // capped at 100, minus 3, rounded
-           }
-           return v;
-       });
-   if(vals.length === 0) return null;
-   const isAvg = kpi.match(/(rate|%|ratio|average|avg|max)/i);
-   const sum = vals.reduce((a,b)=>a+b,0);
-   return isAvg ? sum/vals.length : sum;
+  const values = filteredData
+    .filter(d => d["Date"] === date)
+    .map(d => Number(d[kpi]))
+    .filter(v => !isNaN(v));
+
+  if(values.length === 0) return null;
+
+  const avg = values.reduce((a,b) => a+b, 0) / values.length;
+  return avg;
 });
+
+// Calculate chart min/max nicely
+let validValues = dataPoints.filter(v => v !== null);
+let minVal = Math.min(...validValues);
+let maxVal = Math.max(...validValues);
+
+// Apply your rules
+if(minVal < 40) minVal = Math.max(Math.floor(minVal), 42);   // keep min at least ~42
+if(maxVal > 100) maxVal = 100;                                // cap max at 100
+
+// Optionally round to nearest 5 for nicer axis
+minVal = Math.floor(minVal / 5) * 5;
+maxVal = Math.ceil(maxVal / 5) * 5;
 
     // Draw Chart with Animation
     new Chart(canvas.getContext("2d"), {
