@@ -805,7 +805,7 @@ function renderCharts(){
             // Uses the new hexToRgba utility function
             bColor = hexToRgba(datasetColor, style.alpha || 0.15); 
         }
-
+    }
         // Draw Chart with Animation (Custom Animation Options Preserved)
         new Chart(canvas.getContext("2d"), {
             type: 'line',
