@@ -54,8 +54,8 @@ canvas { background:white; border-radius:12px; padding:16px; width:100% !importa
 
 <!-- Navigation Buttons -->
 <div class="navbar">
-  <button onclick="window.location.href='index.html'">LTE</button>
   <button onclick="window.location.href='gsm.html'">GSM</button>
+  <button onclick="window.location.href='index.html'">LTE</button>
   <button onclick="window.location.href='nr.html'">NR</button>
   <button onclick="window.location.href='nsa.html'">NSA</button>
 </div>
@@ -322,7 +322,7 @@ function drawCharts(kpis,containerId){
         const v=d[kpi]; return (v===""||v==null||isNaN(v))?0:v;
       });
       if(vals.length===0) return 0;
-      if(kpi.toLowerCase().includes("%")||kpi.toLowerCase().includes("rate")||kpi.toLowerCase().includes("average")||kpi.toLowerCase().includes("ratio")){
+      if(kpi.toLowerCase().includes("%")||kpi.toLowerCase().includes("rate")||kpi.toLowerCase().includes("Max RRC Connected Ue")||kpi.toLowerCase().includes("average")||kpi.toLowerCase().includes("ratio")){
         return vals.reduce((a,b)=>a+b,0)/vals.length;
       }else return vals.reduce((a,b)=>a+b,0);
     });
