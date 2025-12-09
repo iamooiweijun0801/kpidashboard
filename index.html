@@ -324,7 +324,10 @@ async function fetchData(){
         const siteName = r[cutoverHeaders.indexOf("eNodeB Name")]?.trim();
         const onAirDate = r[cutoverHeaders.indexOf("On-Air Date")]?.trim();
         if (siteName && onAirDate) {
-            siteCutoverMap[siteName] = onAirDate;
+            // Only map sites that exist in the KPI data to prevent issues
+            if (allSites.includes(siteName)) {
+                 siteCutoverMap[siteName] = onAirDate;
+            }
         }
     });
 
@@ -348,8 +351,14 @@ function setupOnAirDateDropdown(){
   const btn = document.getElementById("onAirDateDropdownBtn");
   list.innerHTML = "";
   
-  const setAll = () => { selectedOnAirDates = [...allOnAirDates]; updateDateFilterUI(); };
-  const clearAll = () => { selectedOnAirDates = []; updateDateFilterUI(); };
+  const setAll = () => { 
+    selectedOnAirDates = [...allOnAirDates]; 
+    updateDateFilterUI(); 
+    // Must also update the checkboxes manually since we bypass updateSelectedDates()
+    list.querySelectorAll(".date-chk").forEach(c => c.checked = true);
+    setupSiteDropdown(); // This re-renders charts
+  };
+  const clearAll = () => { selectedOnAirDates = []; updateDateFilterUI(); setupSiteDropdown(); };
   
   // Actions
   list.innerHTML += `<div onclick="window.dateSetAll()"><b>Select All</b></div>`;
@@ -385,6 +394,7 @@ function updateSelectedDates() {
     list.querySelectorAll(".date-chk").forEach(c => c.checked = selectedOnAirDates.includes(c.value));
     
     updateDateFilterUI();
+    setupSiteDropdown(); // This will trigger the site update and re-render charts
 }
 
 function updateDateFilterUI() {
@@ -392,8 +402,8 @@ function updateDateFilterUI() {
     const span = document.getElementById("onAirDateBtnLabel");
     span.textContent = selectedOnAirDates.length === 0 ? "No Dates Selected" : (selectedOnAirDates.length === allOnAirDates.length ? "All On-Air Dates" : `Selected (${selectedOnAirDates.length})`);
     
-    // Crucial: Update the dependent Site filter and redraw charts
-    setupSiteDropdown();
+    // Close dropdown
+    document.getElementById("onAirDateDropdownList").style.display = "none";
 }
 
 // --- FILTER UI LOGIC (eNodeB NAME) ---
@@ -406,7 +416,8 @@ function setupSiteDropdown(){
   // 1. Determine which sites are active based on the date filter
   let activeSites = allSites.filter(site => {
       const date = siteCutoverMap[site];
-      return selectedOnAirDates.includes(date);
+      // Site must have a mapped date AND that date must be selected
+      return date && selectedOnAirDates.includes(date);
   });
   
   // 2. Filter selectedSites to only include those that are currently active
@@ -414,11 +425,16 @@ function setupSiteDropdown(){
   
   // Actions
   const setAll = () => { selectedSites = [...activeSites]; updateSiteFilterUI(); renderCharts(); };
-  const clearAll = () => { selectedSites = []; updateSiteFilterUI(); renderCharts(); };
+  const clearAll = () => { 
+      selectedSites = []; 
+      // 👇 FIX IMPLEMENTED HERE: If sites are cleared, reset the date filter to ALL.
+      window.dateSetAll(); 
+      updateSiteFilterUI(); // renderCharts will be called by dateSetAll -> setupSiteDropdown
+  };
   
   // Inject setAll/clearAll actions
   list.innerHTML += `<div onclick="window.siteSetAll()"><b>Select All (${activeSites.length})</b></div>`;
-  list.innerHTML += `<div onclick="window.siteClearAll()"><b>Clear All</b></div>`;
+  list.innerHTML += `<div onclick="window.siteClearAll()"><b>Clear All (Reset Dates)</b></div>`;
 
   // Options
   activeSites.forEach(site => {
@@ -441,9 +457,12 @@ function setupSiteDropdown(){
   window.siteSetAll = setAll;
   window.siteClearAll = clearAll;
   
-  // Initial UI update for site dropdown
+  // Initial UI update for site dropdown and rendering
   updateSiteFilterUI();
-  // Call renderCharts only after both filters are set up initially
+  // We only call renderCharts directly here if it hasn't been called by a date filter change
+  if (selectedOnAirDates.length === allOnAirDates.length) {
+     renderCharts(); 
+  }
 }
 
 function updateSelectedSites() {
@@ -470,6 +489,9 @@ function updateSiteFilterUI() {
 
     // Re-check all site checkboxes to reflect the selectedSites state 
     document.getElementById("siteDropdownList").querySelectorAll(".site-chk").forEach(c => c.checked = selectedSites.includes(c.value));
+    
+    // Close dropdown
+    document.getElementById("siteDropdownList").style.display = "none";
 }
 
 // --- CHART RENDERING ---
@@ -494,7 +516,7 @@ function renderCharts(){
       // Use specifically selected sites
       finalSiteList = selectedSites;
   } else {
-      // Use all sites allowed by the date filter (default behavior)
+      // Use all sites allowed by the date filter (default behavior when no specific site is selected)
       finalSiteList = sitesFromDate;
   }
   
