@@ -36,7 +36,7 @@ button.ppt-btn:hover { background:#a8381e; }
 /* --- GRID LAYOUT (3 Graphs per row) --- */
 .chart-grid { 
   display:grid; 
-  grid-template-columns: repeat(3, 1fr); /* Force 3 columns */
+  grid-template-columns: repeat(3, 1fr); 
   gap:20px; 
   padding:0 20px 40px 20px; 
   max-width: 1800px; 
@@ -59,16 +59,24 @@ button.ppt-btn:hover { background:#a8381e; }
 .kpiDrawerToggle { position:fixed; top:100px; right:0; width:36px; height:36px; background:#2F80ED; color:white; border-radius:6px 0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:20px; z-index:900; }
 .kpiDrawer { 
   position:fixed; top:0; right:0; 
-  width:300px; /* Reduced width */
+  width:320px; /* Adjusted width */
   height:100%; background:white; 
   box-shadow:-2px 0 10px rgba(0,0,0,0.1); z-index:1000; 
-  transform:translateX(100%); transition:0.3s; padding:20px; overflow-y:auto; 
-  display: flex; flex-direction: column; /* Use flex to push footer down */
+  transform:translateX(100%); transition:0.3s; padding:20px; 
+  display: flex; flex-direction: column; 
 }
 .kpiDrawer.open { transform:translateX(0); }
-.drawer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid #eee; }
-.kpi-options-body { flex-grow: 1; overflow-y: auto; padding-right: 5px; } /* Allows scroll */
-.drawer-footer { margin-top: auto; padding-top: 15px; border-top: 1px solid #eee; } /* Sticks to bottom */
+.drawer-header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 10px; 
+    padding-bottom: 10px; 
+    border-bottom: 1px solid #eee; 
+}
+.drawer-header h3 { margin: 0; }
+.drawer-controls { display: flex; gap: 10px; align-items: center; }
+.kpi-options-body { flex-grow: 1; overflow-y: auto; padding-right: 5px; } 
 
 /* --- PREVIEW MODALS --- */
 .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:2000; display:none; align-items:center; justify-content:center; backdrop-filter:blur(3px); }
@@ -84,8 +92,8 @@ button.ppt-btn:hover { background:#a8381e; }
 .modal-footer { padding:15px; border-top:1px solid #eee; text-align:right; }
 
 /* Modal for Graph Count Selection */
-.selection-modal-content { width: 350px; height: auto; text-align: center; }
-.graph-options button { margin: 5px; width: 100px; }
+.selection-modal-content { width: 400px; height: auto; text-align: center; }
+.graph-options button { margin: 8px; width: 120px; }
 </style>
 </head>
 <body>
@@ -127,13 +135,13 @@ button.ppt-btn:hover { background:#a8381e; }
 <div class="kpiDrawerToggle" onclick="toggleDrawer()">⚙</div>
 <div id="kpiDrawer" class="kpiDrawer">
   <div class="drawer-header">
-    <span style="font-weight:bold;">KPI Settings</span>
-    <button onclick="toggleDrawer()" style="border:none; background:none; font-size:20px; cursor:pointer; color:#777;">✕</button>
+    <h3 id="drawerHeaderTitle">KPI Settings</h3>
+    <div class="drawer-controls">
+        <button class="action-btn" onclick="applyKpis()">Apply</button>
+        <button onclick="toggleDrawer()" style="border:none; background:none; font-size:24px; cursor:pointer; color:#777;">✕</button>
+    </div>
   </div>
   <div class="kpi-options-body" id="kpiOptionsList"></div>
-  <div class="drawer-footer">
-    <button class="action-btn" style="width:100%;" onclick="applyKpis()">Apply Changes</button>
-  </div>
 </div>
 
 <div id="exportSelectionModal" class="modal">
@@ -142,12 +150,12 @@ button.ppt-btn:hover { background:#a8381e; }
       <span>Select Graphs per Slide</span>
     </div>
     <div class="modal-body" style="background:white; padding: 20px;">
-      <p style="margin-bottom: 20px; color:#555;">Choose how many graphs you want on each PowerPoint slide:</p>
+      <p style="margin-bottom: 20px; color:#555;">Choose how many graphs you want on each PowerPoint slide (will open preview):</p>
       <div class="graph-options">
-        <button class="action-btn" onclick="openPreview(1)">1 Graph / Slide</button>
-        <button class="action-btn" onclick="openPreview(2)">2 Graphs / Slide</button>
-        <button class="action-btn" onclick="openPreview(3)">3 Graphs / Slide</button>
-        <button class="action-btn" onclick="openPreview(4)">4 Graphs / Slide</button>
+        <button class="action-btn" onclick="openPreview(1)">1 Graph</button>
+        <button class="action-btn" onclick="openPreview(2)">2 Graphs</button>
+        <button class="action-btn" onclick="openPreview(3)">3 Graphs</button>
+        <button class="action-btn" onclick="openPreview(4)">4 Graphs</button>
       </div>
     </div>
   </div>
@@ -313,7 +321,7 @@ function renderCharts(){
                 easing: 'linear',
                 duration: 500,
                 from: NaN,
-                delay: (ctx) => ctx.index * 30 // Animation moves left to right
+                delay: (ctx) => ctx.index * 30 
             },
             y: { duration: 0 }
         },
@@ -343,6 +351,13 @@ function populateKpiOptions(){
   const list = document.getElementById("kpiOptionsList");
   list.innerHTML = "";
   
+  const headerTitle = document.getElementById('drawerHeaderTitle');
+  
+  const acceptanceSection = currentTab === 'acceptance' || currentTab === 'both';
+  const monitoringSection = currentTab === 'monitoring' || currentTab === 'both';
+  
+  headerTitle.textContent = currentTab === 'both' ? 'All KPI Settings' : `${currentTab.charAt(0).toUpperCase() + currentTab.slice(1)} KPI Settings`;
+
   const createGroup = (title, key, sourceArr) => {
     const h4 = document.createElement("h4");
     h4.textContent = title;
@@ -357,20 +372,28 @@ function populateKpiOptions(){
     });
   };
 
-  createGroup("Acceptance KPIs", "acceptance", acceptanceKpis);
-  createGroup("Monitoring KPIs", "monitoring", monitoringKpis);
+  if (acceptanceSection) createGroup("Acceptance KPIs", "acceptance", acceptanceKpis);
+  if (monitoringSection) createGroup("Monitoring KPIs", "monitoring", monitoringKpis);
 }
 
 function applyKpis(){
   const chks = document.querySelectorAll(".kpi-chk");
-  selectedKpis.acceptance = [];
-  selectedKpis.monitoring = [];
   
+  // Reset only the current tabs' selection if they are visible in the drawer
+  const tempAcceptance = currentTab === 'acceptance' || currentTab === 'both' ? [] : [...selectedKpis.acceptance];
+  const tempMonitoring = currentTab === 'monitoring' || currentTab === 'both' ? [] : [...selectedKpis.monitoring];
+
   chks.forEach(c => {
-    if(c.checked) selectedKpis[c.dataset.group].push(c.value);
+    if(c.checked) {
+        if(c.dataset.group === 'acceptance') tempAcceptance.push(c.value);
+        if(c.dataset.group === 'monitoring') tempMonitoring.push(c.value);
+    }
   });
+
+  selectedKpis.acceptance = tempAcceptance;
+  selectedKpis.monitoring = tempMonitoring;
   
-  toggleDrawer(); // Use toggle to close
+  toggleDrawer();
   renderCharts();
 }
 
@@ -394,7 +417,6 @@ function openPreview(count) {
     body.innerHTML = "";
     document.getElementById("previewTitle").textContent = `PPT Export Preview (${count} Graphs per Slide)`;
     
-    // Logic: Group 'count' canvases per slide
     for(let i=0; i<canvases.length; i+=count){
         const slideDiv = document.createElement("div");
         slideDiv.className = "preview-slide";
@@ -405,7 +427,6 @@ function openPreview(count) {
         slideDiv.appendChild(slideTitle);
 
         const grid = document.createElement("div");
-        // Adjust grid columns based on count for preview layout
         grid.className = "preview-grid";
         grid.style.gridTemplateColumns = count === 1 ? '1fr' : (count === 2 ? '1fr 1fr' : (count === 3 ? '1fr 1fr 1fr' : 'repeat(2, 1fr)'));
         grid.style.gridTemplateRows = count > 2 ? '1fr 1fr' : '1fr';
@@ -426,8 +447,30 @@ function createPreviewBox(canvas){
   const box = document.createElement("div");
   box.className = "preview-img-box";
   
+  // Temporarily clone the canvas and force the color for the preview image
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = canvas.width;
+  tempCanvas.height = canvas.height;
+  const tempCtx = tempCanvas.getContext('2d');
+  
+  // Redraw the chart onto the temp canvas with the fixed PPT color
+  const chartInstance = Chart.getChart(canvas.id);
+  if (chartInstance) {
+      const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
+      
+      // Override color for screenshot
+      chartInstance.data.datasets.forEach(d => { d.borderColor = CHART_COLOR; });
+      chartInstance.update('none'); // Update without animation
+      
+      tempCtx.drawImage(canvas, 0, 0);
+      
+      // Restore original colors
+      chartInstance.data.datasets.forEach((d, index) => { d.borderColor = originalColors[index]; });
+      chartInstance.update('none');
+  }
+
   const img = document.createElement("img");
-  img.src = canvas.toDataURL("image/png");
+  img.src = tempCanvas.toDataURL("image/png");
   
   const titleText = canvas.closest(".chart-card").querySelector(".chart-title").textContent;
   const label = document.createElement("div");
@@ -451,18 +494,18 @@ async function downloadPPT(){
   slide.addText(`Generated: ${new Date().toLocaleDateString()}`, { x:0.5, y:3, fontSize:14 });
 
   const canvases = document.querySelectorAll("canvas");
-  const count = graphsPerSlide; // Use selected count
+  const count = graphsPerSlide;
   
   for(let i=0; i<canvases.length; i+=count){
     let slide = pptx.addSlide();
     
-    // Define layout parameters based on the count (for image size and position)
+    // Define layout parameters based on the count
     let layout;
     if (count === 1) layout = [{ x:0.5, y:1.5, w:9, h:5 }];
     else if (count === 2) layout = [{ x:0.5, y:1.5, w:4.5, h:3.5 }, { x:5.2, y:1.5, w:4.5, h:3.5 }];
     else if (count === 3) layout = [{ x:0.5, y:1.5, w:3, h:2.5 }, { x:3.8, y:1.5, w:3, h:2.5 }, { x:7.1, y:1.5, w:3, h:2.5 }];
     else if (count === 4) layout = [{ x:0.5, y:1.5, w:4.5, h:2.5 }, { x:5.2, y:1.5, w:4.5, h:2.5 }, { x:0.5, y:4.5, w:4.5, h:2.5 }, { x:5.2, y:4.5, w:4.5, h:2.5 }];
-    else layout = []; // Should not happen
+    else layout = [];
 
     // Slide Title Header
     slide.addText(`KPI Analysis - Slide ${Math.floor(i/count)+1}`, { x:0.5, y:0.2, fontSize:16, color:'D24726', bold:true });
@@ -474,6 +517,21 @@ async function downloadPPT(){
         const params = layout[j];
         const titleText = c.closest(".chart-card").querySelector(".chart-title").textContent;
         
+        // --- PPT COLOR FIX LOGIC ---
+        const chartInstance = Chart.getChart(c.id);
+        const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
+        
+        // Override color for PPT export
+        chartInstance.data.datasets.forEach(d => { d.borderColor = CHART_COLOR; });
+        chartInstance.update('none'); 
+        
+        const imgData = c.toDataURL("image/png");
+        
+        // Restore original colors
+        chartInstance.data.datasets.forEach((d, index) => { d.borderColor = originalColors[index]; });
+        chartInstance.update('none');
+        // --- END PPT COLOR FIX LOGIC ---
+
         // Title Text (Above the graph)
         slide.addText(titleText, { 
           x: params.x, y: params.y - 0.4, w: params.w, 
@@ -482,7 +540,7 @@ async function downloadPPT(){
 
         // Chart Image
         slide.addImage({ 
-          data: c.toDataURL("image/png"), 
+          data: imgData, 
           x: params.x, y: params.y, 
           w: params.w, h: params.h 
         });
