@@ -629,14 +629,19 @@ let validValues = dataPoints.filter(v => v !== null);
 let minVal = Math.min(...validValues);
 let maxVal = Math.max(...validValues);
 
-// Apply your rules
-if(minVal < 40) minVal = Math.max(Math.floor(minVal), 42);   // keep min at least ~42
-if(maxVal > 100) maxVal = 100;                                // cap max at 100
+// Special rule: if min >= 95 and max <= 100, set scale explicitly
+if(minVal >= 95 && maxVal <= 100) {
+    minVal = 95;
+    maxVal = 100;
+} else {
+    // Apply your normal rules
+    if(minVal < 40) minVal = Math.max(Math.floor(minVal), 42);
+    if(maxVal > 100) maxVal = 100;
 
-// Optionally round to nearest 5 for nicer axis
-minVal = Math.floor(minVal / 5) * 5;
-maxVal = Math.ceil(maxVal / 5) * 5;
-
+    // Optionally round to nearest 5 for nicer axis
+    minVal = Math.floor(minVal / 5) * 5;
+    maxVal = Math.ceil(maxVal / 5) * 5;
+}
     // Draw Chart with Animation
     new Chart(canvas.getContext("2d"), {
       type: 'line',
@@ -684,7 +689,7 @@ maxVal = Math.ceil(maxVal / 5) * 5;
                grid: {display:false} 
            },
            y: { 
-               beginAtZero: true, 
+               beginAtZero: false, 
                grid: {color:'#eee'},
                // If no data points, fix the scale to prevent giant axes
                min: (finalSiteList.length === 0 || dataPoints.every(p => p === null)) ? 0 : undefined 
