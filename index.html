@@ -33,27 +33,6 @@ button.action-btn:hover { background:#1f5ab5; }
 button.ppt-btn { background:#D24726; } /* PowerPoint Orange */
 button.ppt-btn:hover { background:#a8381e; }
 
-/* --- CHART STYLE SELECTOR (Inside Style Drawer) --- */
-.style-options { 
-    display: flex; 
-    flex-direction: column; 
-    gap: 5px; 
-    margin-top: 5px;
-}
-.style-options button {
-    background: #f0f0f0;
-    color: #333;
-    padding: 6px 10px;
-    border: 1px solid #ddd;
-    text-align: left;
-}
-.style-options button.active {
-    background: #2F80ED;
-    color: white;
-    border-color: #2F80ED;
-}
-
-
 /* --- GRID LAYOUT (3 Graphs per row) --- */
 .chart-grid { 
   display:grid; 
@@ -88,31 +67,9 @@ button.ppt-btn:hover { background:#a8381e; }
 #dropdown div, #siteDropdownList div, #onAirDateDropdownList div { padding:6px 10px; cursor:pointer; font-size:13px; border-bottom:1px solid #eee; }
 #dropdown div:hover, #siteDropdownList div:hover, #onAirDateDropdownList div:hover { background:#f0f7ff; color:#2F80ED; }
 
-/* --- DRAWER STYLES (KPI and Style) --- */
-/* Base Toggle Button Style */
-.drawerToggle { 
-    position:fixed; 
-    width:36px; 
-    height:36px; 
-    background:#2F80ED; 
-    color:white; 
-    border-radius:6px 0 0 6px; 
-    cursor:pointer; 
-    display:flex; 
-    align-items:center; 
-    justify-content:center; 
-    font-size:20px; 
-    z-index:900; 
-    transition: right 0.3s; 
-}
-/* Positioning for KPI button (bottom) */
-.kpiDrawerToggle { right:0; top:145px; } /* Moved down */
-
-/* Positioning for Style button (top, just above KPI) */
-.styleDrawerToggle { right:0; top:100px; } /* Moved up */ 
-
-/* Base Drawer Style */
-.drawer { 
+/* --- KPI Drawer Fixes --- */
+.kpiDrawerToggle { position:fixed; top:100px; right:0; width:36px; height:36px; background:#2F80ED; color:white; border-radius:6px 0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:20px; z-index:900; }
+.kpiDrawer { 
   position:fixed; top:0; right:0; 
   width:320px; 
   height:100%; background:white; 
@@ -120,18 +77,7 @@ button.ppt-btn:hover { background:#a8381e; }
   transform:translateX(100%); transition:0.3s; padding:20px; 
   display: flex; flex-direction: column; 
 }
-.drawer.open { transform:translateX(0); }
-
-/* Adjustments when drawers are open (both buttons move out of the way) */
-#kpiDrawer.open ~ .styleDrawerToggle { right: 320px; }
-#kpiDrawer.open ~ .kpiDrawerToggle { right: 320px; } 
-
-/* The style drawer opens on top and doesn't need to push the KPI toggle out since it is now below it. */
-#styleDrawer { z-index: 1001; }
-#styleDrawer.open ~ .kpiDrawerToggle { right: 320px; }
-#styleDrawer.open ~ .styleDrawerToggle { right: 320px; }
-
-
+.kpiDrawer.open { transform:translateX(0); }
 .drawer-header { 
     display: flex; 
     justify-content: space-between; 
@@ -139,19 +85,18 @@ button.ppt-btn:hover { background:#a8381e; }
     margin-bottom: 10px; 
     padding-bottom: 10px; 
     border-bottom: 1px solid #eee; 
-    flex-shrink: 0;
 }
 .drawer-header h3 { margin: 0; }
 .drawer-controls { 
     display: flex; 
-    gap: 5px; 
+    gap: 5px; /* Reduced gap */
     align-items: center; 
 }
 .drawer-controls .action-btn { 
-    padding: 6px 10px; 
-    font-size: 13px; 
+    padding: 6px 10px; /* Smaller padding for density */
+    font-size: 13px; /* Smaller font for density */
 }
-.drawer-body { flex-grow: 1; overflow-y: auto; padding-right: 5px; padding-bottom: 40px; } 
+.kpi-options-body { flex-grow: 1; overflow-y: auto; padding-right: 5px; padding-bottom: 40px; } 
 
 /* --- PREVIEW MODAL --- */
 .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:2000; display:none; align-items:center; justify-content:center; backdrop-filter:blur(3px); }
@@ -216,6 +161,7 @@ button.ppt-btn:hover { background:#a8381e; }
   <a href="gsm.html" class="nav-btn">GSM</a>
   <a href="index.html" class="nav-btn active">LTE</a>
   <a href="nr.html" class="nav-btn">NR</a>
+  <a href="nsa.html" class="nav-btn">NSA</a>
 </div>
 
 <div class="tabs">
@@ -245,33 +191,18 @@ button.ppt-btn:hover { background:#a8381e; }
 
 <div class="chart-grid" id="mainChartContainer"></div>
 
-<div class="styleDrawerToggle drawerToggle" onclick="toggleStyleDrawer()">🎨</div>
-<div id="styleDrawer" class="drawer">
+<div class="kpiDrawerToggle" onclick="toggleDrawer()">⚙</div>
+<div id="kpiDrawer" class="kpiDrawer">
   <div class="drawer-header">
-    <h3>Chart Style Settings</h3>
-    <button onclick="toggleStyleDrawer()" style="border:none; background:none; font-size:24px; cursor:pointer; color:#777;">✕</button>
-  </div>
-  <div class="drawer-body">
-    <h4>Chart Display Style (Select one)</h4>
-    <div id="chartStyleOptions" class="style-options">
-      </div>
-    <p style="margin-top:20px; font-size:12px; color:#555;">Styles like 'Area Fill' use the segment painting feature you requested.</p>
-  </div>
-</div>
-
-<div class="kpiDrawerToggle drawerToggle" onclick="toggleKpiDrawer()">⚙</div>
-<div id="kpiDrawer" class="drawer">
-  <div class="drawer-header">
-    <h3>KPI Visibility Settings</h3>
+    <h3 id="drawerHeaderTitle">KPI Settings</h3>
     <div class="drawer-controls">
         <button class="action-btn" onclick="selectVisibleKpis()" style="background:#5cb85c;">Select All</button>
         <button class="action-btn" onclick="clearVisibleKpis()" style="background:#f0ad4e;">Clear All</button>
         <button class="action-btn" onclick="applyKpis()">Apply</button>
-        <button onclick="toggleKpiDrawer()" style="border:none; background:none; font-size:24px; cursor:pointer; color:#777;">✕</button>
+        <button onclick="toggleDrawer()" style="border:none; background:none; font-size:24px; cursor:pointer; color:#777;">✕</button>
     </div>
   </div>
-  <div class="drawer-body" id="kpiOptionsList">
-    </div>
+  <div class="kpi-options-body" id="kpiOptionsList"></div>
 </div>
 
 
@@ -341,424 +272,374 @@ button.ppt-btn:hover { background:#a8381e; }
 let allData = [];
 let fuse = null;
 let allSites = [];
-let siteCutoverMap = {}; 
+let siteCutoverMap = {}; // Maps eNodeB Name -> On-Air Date
 let allOnAirDates = [];
 let selectedOnAirDates = [];
 
 let selectedSites = [];
-let currentTab = "both"; 
-let graphsPerSlide = 2; 
+let currentTab = "both"; // DEFAULT IS NOW 'BOTH'
+let graphsPerSlide = 2; 
 
-let chartExportColor = '#2F80ED'; 
-let chartExportTitleColor = '#333333'; 
-
-// NEW: Expanded Chart Styles Configuration (10 styles total)
-const chartStyles = {
-  'Default': { border: 2, pointRadius: 3, tension: 0.1, gridColor: '#eee', bgColor: 'white', titleColor: '#333', fill: false, stepped: false },
-  'Minimalist': { border: 1, pointRadius: 2, tension: 0.3, gridColor: '#f5f5f5', bgColor: 'white', titleColor: '#555', fill: false, stepped: false },
-  'Bright Dots': { border: 3, pointRadius: 4, tension: 0.2, gridColor: '#ddd', bgColor: 'white', titleColor: '#333', fill: false, stepped: false },
-  'Smooth & Thin': { border: 1, pointRadius: 0, tension: 0.4, gridColor: '#f0f0f0', bgColor: 'white', titleColor: '#333', fill: false, stepped: false },
-  'Bold Lines': { border: 4, pointRadius: 0, tension: 0.1, gridColor: '#eee', bgColor: 'white', titleColor: '#333', fill: false, stepped: false },
-  'Area Fill (Light)': { border: 2, pointRadius: 3, tension: 0.3, gridColor: '#eee', bgColor: 'white', titleColor: '#333', fill: 'origin', alpha: 0.15, stepped: false },
-  'Shadowed Line': { border: 3, pointRadius: 4, tension: 0.2, gridColor: '#f0f0f0', bgColor: 'white', titleColor: '#333', fill: 'origin', alpha: 0.25, stepped: false },
-  'Stepped Line': { border: 2, pointRadius: 3, tension: 0.0, gridColor: '#eee', bgColor: 'white', titleColor: '#333', fill: false, stepped: true },
-  'High Contrast': { border: 4, pointRadius: 5, tension: 0.0, gridColor: 'rgba(0,0,0,0.1)', bgColor: 'white', titleColor: '#000', fill: false, stepped: false },
-  'Monochromatic': { border: 3, pointRadius: 3, tension: 0.2, gridColor: '#f5f5f5', bgColor: 'white', titleColor: '#333', fill: false, stepped: false }
-};
-let selectedStyle = 'Default'; // Initial style
+let chartExportColor = '#2F80ED'; // Default Line/Dot Color (Dark Blue)
+let chartExportTitleColor = '#333333'; // Default Title Color (Dark Gray/Black)
 
 const acceptanceKpis = [
-  "LTE RRC Setup Success Rate","ERAB Setup Success Rate","LTE Call Setup Success Rate","E-RAB Call Drop Rate",
-  "CSFB Access Success Rate","LTE Intra Freq HO Success Rate","Intra-eNB HO Success Rate","Inter-eNBX2HO Success Rate",
-  "Inter-eNBS1HO Success Rate","Max RRC Connected Ue","DL Data Total Volume (Gbyte)","UL Data Total Volume (Gbyte)",
-  "E-RAB Setup Success Rate (VoIP)","Call Drop Rate (VoIP)","Intra-frequency Handover Out Success Rate(VoIP)",
-  "Inter-frequency Handover Out Success Rate(VoIP)","SRVCC Success Rate (L2W)","SRVCC Success Rate (L2G)"
+  "LTE RRC Setup Success Rate","ERAB Setup Success Rate","LTE Call Setup Success Rate","E-RAB Call Drop Rate",
+  "CSFB Access Success Rate","LTE Intra Freq HO Success Rate","Intra-eNB HO Success Rate","Inter-eNBX2HO Success Rate",
+  "Inter-eNBS1HO Success Rate","Max RRC Connected Ue","DL Data Total Volume (Gbyte)","UL Data Total Volume (Gbyte)",
+  "E-RAB Setup Success Rate (VoIP)","Call Drop Rate (VoIP)","Intra-frequency Handover Out Success Rate(VoIP)",
+  "Inter-frequency Handover Out Success Rate(VoIP)","SRVCC Success Rate (L2W)","SRVCC Success Rate (L2G)"
 ];
 const monitoringKpis = [
-  "Cell Availability Ratio","Average Latency Downlink (msecs)","DL PRB Utilization (%)","UL PRB Utilization (%)",
-  "LTE DL - Cell Average Throughput (Mbit/s)","LTE UL - Cell Average Thoughput (Mbit/s)","LTE DL -USER Average Throughput (Mbit/s)",
-  "LTE UL -USER Average Throughput (Mbit/s)","Downlink Packet Loss Rate (VoIP)","Uplink Packet Loss Rate (VoIP)",
-  "VoLTE Traffic Erlang","VoLTE Traffic DL (MB)","VoLTE Traffic UL (MB)","DL BLER QCI1","UL BLER QCI1"
+  "Cell Availability Ratio","Average Latency Downlink (msecs)","DL PRB Utilization (%)","UL PRB Utilization (%)",
+  "LTE DL - Cell Average Throughput (Mbit/s)","LTE UL - Cell Average Thoughput (Mbit/s)","LTE DL -USER Average Throughput (Mbit/s)",
+  "LTE UL -USER Average Throughput (Mbit/s)","Downlink Packet Loss Rate (VoIP)","Uplink Packet Loss Rate (VoIP)",
+  "VoLTE Traffic Erlang","VoLTE Traffic DL (MB)","VoLTE Traffic UL (MB)","DL BLER QCI1","UL BLER QCI1"
 ];
 let selectedKpis = {
-  acceptance: [...acceptanceKpis],
-  monitoring: [...monitoringKpis]
+  acceptance: [...acceptanceKpis],
+  monitoring: [...monitoringKpis]
 };
 
 // --- GLOBAL UTILITY FUNCTIONS ---
-
-/**
- * Toggles the KPI drawer visibility.
- */
-function toggleKpiDrawer(){
-  const d = document.getElementById("kpiDrawer");
-  const s = document.getElementById("styleDrawer");
-  d.classList.toggle("open");
-  if(d.classList.contains("open")) {
-     populateKpiOptions();
-     s.classList.remove("open"); // Close style drawer if KPI opens
-  }
-}
-
-/**
- * Toggles the Chart Style drawer visibility.
- */
-function toggleStyleDrawer(){
-  const d = document.getElementById("styleDrawer");
-  const k = document.getElementById("kpiDrawer");
-  d.classList.toggle("open");
-  if(d.classList.contains("open")) {
-    populateStyleOptions();
-    k.classList.remove("open"); // Close KPI drawer if Style opens
-  }
-}
-
-/**
- * Updates the selected chart style and re-renders all charts.
- * @param {string} styleName - The name of the style from chartStyles.
- */
-function updateChartStyle(styleName) {
-    selectedStyle = styleName;
-    // Visually update the button state
-    document.querySelectorAll('.style-options button').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.dataset.style === styleName) {
-            btn.classList.add('active');
-        }
-    });
-    renderCharts();
-}
 
 /**
  * Switches the active tab (Acceptance, Monitoring, Both).
  * @param {string} tab - The tab identifier ('acceptance', 'monitoring', 'both').
  */
 function switchTab(tab) {
-    document.querySelectorAll('.tab').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    document.querySelector(`.tab[onclick="switchTab('${tab}')"]`).classList.add('active');
-    currentTab = tab;
-    renderCharts(); 
-}
-
-function getRandomColor() {
-  const colors = ['#2F80ED', '#27AE60', '#D24726', '#8E44AD', '#F39C12', '#2980B9'];
-  return colors[Math.floor(Math.random() * colors.length)];
+    document.querySelectorAll('.tab').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelector(`.tab[onclick="switchTab('${tab}')"]`).classList.add('active');
+    currentTab = tab;
+    renderCharts(); 
 }
 
 // --- DATA FETCHING & MAPPING ---
 async function fetchData(){
-  try {
-    // 1. Fetch KPI Data
-    const kpiUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=0&single=true&output=csv&t=" + Date.now();
-    const kpiRes = await fetch(kpiUrl);
-    const kpiText = await kpiRes.text();
-    
-    const kpiRows = kpiText.trim().split('\n').map(r=>r.split(','));
-    const kpiHeaders = kpiRows.shift().map(h=>h.trim());
-    allData = kpiRows.map(r=>{ 
-      const obj={}; 
-      kpiHeaders.forEach((h,i)=>{ 
-        const val=r[i]?r[i].trim():""; 
-        obj[h] = val==="" ? null : (isNaN(val) ? val : parseFloat(val)); 
-      }); 
-      return obj; 
-    });
+  try {
+    // 1. Fetch KPI Data
+    const kpiUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=0&single=true&output=csv&t=" + Date.now();
+    const kpiRes = await fetch(kpiUrl);
+    const kpiText = await kpiRes.text();
+    
+    const kpiRows = kpiText.trim().split('\n').map(r=>r.split(','));
+    const kpiHeaders = kpiRows.shift().map(h=>h.trim());
+    allData = kpiRows.map(r=>{ 
+      const obj={}; 
+      kpiHeaders.forEach((h,i)=>{ 
+        const val=r[i]?r[i].trim():""; 
+        obj[h] = val==="" ? null : (isNaN(val) ? val : parseFloat(val)); 
+      }); 
+      return obj; 
+    });
 
-    // Determine all sites present in the KPI data
-    allSites = [...new Set(allData.map(d=>d["eNodeB Name"]))].filter(s=>s).sort();
+    // Determine all sites present in the KPI data
+    allSites = [...new Set(allData.map(d=>d["eNodeB Name"]))].filter(s=>s).sort();
 
-    // 2. Fetch Cutover Data
-    const cutoverUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=19616562&single=true&output=csv&t=" + Date.now();
-    const cutoverRes = await fetch(cutoverUrl);
-    const cutoverText = await cutoverRes.text();
-    
-    const cutoverRows = cutoverText.trim().split('\n').map(r=>r.split(','));
-    const cutoverHeaders = cutoverRows.shift().map(h=>h.trim());
-    
-    siteCutoverMap = {};
-    cutoverRows.forEach(r => {
-        const siteName = r[cutoverHeaders.indexOf("eNodeB Name")]?.trim();
-        const onAirDate = r[cutoverHeaders.indexOf("On-Air Date")]?.trim();
-        if (siteName && onAirDate) {
-            if (allSites.includes(siteName)) {
-                 siteCutoverMap[siteName] = onAirDate;
-            }
-        }
-    });
+    // 2. Fetch Cutover Data
+    const cutoverUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=19616562&single=true&output=csv&t=" + Date.now();
+    const cutoverRes = await fetch(cutoverUrl);
+    const cutoverText = await cutoverRes.text();
+    
+    const cutoverRows = cutoverText.trim().split('\n').map(r=>r.split(','));
+    const cutoverHeaders = cutoverRows.shift().map(h=>h.trim());
+    
+    siteCutoverMap = {};
+    cutoverRows.forEach(r => {
+        const siteName = r[cutoverHeaders.indexOf("eNodeB Name")]?.trim();
+        const onAirDate = r[cutoverHeaders.indexOf("On-Air Date")]?.trim();
+        if (siteName && onAirDate) {
+            // Only map sites that exist in the KPI data to prevent issues
+            if (allSites.includes(siteName)) {
+                 siteCutoverMap[siteName] = onAirDate;
+            }
+        }
+    });
 
-    // 3. Initialize Date Filter Options and State
-    allOnAirDates = [...new Set(Object.values(siteCutoverMap))].filter(d => d).sort();
-    selectedOnAirDates = [...allOnAirDates]; 
-    selectedSites = []; 
+    // 3. Initialize Date Filter Options and State
+    allOnAirDates = [...new Set(Object.values(siteCutoverMap))].filter(d => d).sort();
+    selectedOnAirDates = [...allOnAirDates]; // Default: Select All Dates
+    selectedSites = []; // Reset site selection
 
-    // 4. Update UI
-    setupOnAirDateDropdown();
-    setupSiteDropdown();
-    renderCharts();
+    // 4. Update UI
+    setupOnAirDateDropdown();
+    setupSiteDropdown();
+    renderCharts();
 
-  } catch(e) { console.error(e); alert("Failed to load data."); }
+  } catch(e) { console.error(e); alert("Failed to load data."); }
 }
 
 // --- FILTER UI LOGIC (ON-AIR DATE) ---
 
 function setupOnAirDateDropdown(){
-  const list = document.getElementById("onAirDateDropdownList");
-  const btn = document.getElementById("onAirDateDropdownBtn");
-  list.innerHTML = "";
-  
-  const setAll = () => { 
-    selectedOnAirDates = [...allOnAirDates]; 
-    const allActiveSites = allSites.filter(site => siteCutoverMap[site] && allOnAirDates.includes(siteCutoverMap[site]));
-    selectedSites = [...allActiveSites]; 
+  const list = document.getElementById("onAirDateDropdownList");
+  const btn = document.getElementById("onAirDateDropdownBtn");
+  list.innerHTML = "";
+  
+  const setAll = () => { 
+    selectedOnAirDates = [...allOnAirDates]; 
+    // When All Dates are selected, all sites MUST be selected as well
+    const allActiveSites = allSites.filter(site => siteCutoverMap[site] && allOnAirDates.includes(siteCutoverMap[site]));
+    selectedSites = [...allActiveSites]; 
 
-    updateDateFilterUI({close: false}); 
-    setupSiteDropdown(); 
-  };
+    // Update UI but DO NOT close the dropdown
+    updateDateFilterUI({close: false}); 
+    setupSiteDropdown(); // This re-renders charts
+  };
 
-  const clearAll = () => { 
-    selectedOnAirDates = []; 
-    selectedSites = []; 
-    
-    updateDateFilterUI({close: false}); 
-    setupSiteDropdown(); 
-  };
-  
-  // Actions
-  list.innerHTML += `<div onclick="window.dateSetAll()"><b>Select All</b></div>`;
-  list.innerHTML += `<div onclick="window.dateClearAll()"><b>Clear All</b></div>`;
+  const clearAll = () => { 
+    selectedOnAirDates = []; 
+    // When All Dates are cleared, all sites MUST be cleared
+    selectedSites = []; 
+    
+    // Update UI but DO NOT close the dropdown
+    updateDateFilterUI({close: false}); 
+    setupSiteDropdown(); 
+  };
+  
+  // Actions
+  list.innerHTML += `<div onclick="window.dateSetAll()"><b>Select All</b></div>`;
+  list.innerHTML += `<div onclick="window.dateClearAll()"><b>Clear All</b></div>`;
 
-  // Options
-  allOnAirDates.forEach(date => {
-    const d = document.createElement("div");
-    const checked = selectedOnAirDates.includes(date) ? "checked" : "";
-    d.innerHTML = `<input type='checkbox' value='${date}' class='date-chk' ${checked}> ${date}`;
-    d.onclick = (e) => {
-       if(e.target.tagName !== "INPUT") {
-          const chk = d.querySelector("input");
-          chk.checked = !chk.checked;
-       }
-       updateSelectedDates(); 
-    };
-    list.appendChild(d);
-  });
-  
-  btn.onclick = () => list.style.display = list.style.display==="block" ? "none" : "block";
-  
-  window.dateSetAll = setAll;
-  window.dateClearAll = clearAll;
-  updateDateFilterUI({close: true}); 
+  // Options
+  allOnAirDates.forEach(date => {
+    const d = document.createElement("div");
+    const checked = selectedOnAirDates.includes(date) ? "checked" : "";
+    d.innerHTML = `<input type='checkbox' value='${date}' class='date-chk' ${checked}> ${date}`;
+    d.onclick = (e) => {
+       if(e.target.tagName !== "INPUT") {
+          const chk = d.querySelector("input");
+          chk.checked = !chk.checked;
+       }
+       updateSelectedDates(); // Individual selection
+    };
+    list.appendChild(d);
+  });
+  
+  btn.onclick = () => list.style.display = list.style.display==="block" ? "none" : "block";
+  
+  // Expose helpers globally for inline HTML
+  window.dateSetAll = setAll;
+  window.dateClearAll = clearAll;
+  updateDateFilterUI({close: true}); // Initial UI update
 }
 
 function updateSelectedDates() {
-    const list = document.getElementById("onAirDateDropdownList");
-    selectedOnAirDates = Array.from(list.querySelectorAll(".date-chk:checked")).map(c => c.value);
-    
-    let activeSites = allSites.filter(site => {
-        const date = siteCutoverMap[site];
-        return date && selectedOnAirDates.includes(date);
-    });
-    selectedSites = [...activeSites]; 
-    
-    updateDateFilterUI({close: false}); 
-    setupSiteDropdown(); 
+    const list = document.getElementById("onAirDateDropdownList");
+    selectedOnAirDates = Array.from(list.querySelectorAll(".date-chk:checked")).map(c => c.value);
+    
+    // Update the sites based on the new dates (select all sites under the new date scope)
+    let activeSites = allSites.filter(site => {
+        const date = siteCutoverMap[site];
+        return date && selectedOnAirDates.includes(date);
+    });
+    selectedSites = [...activeSites]; 
+    
+    // Do not close dropdown on individual check
+    updateDateFilterUI({close: false}); 
+    setupSiteDropdown(); 
 }
 
 function updateDateFilterUI(options = {close: true}) {
-    const btn = document.getElementById("onAirDateDropdownBtn");
-    const span = document.getElementById("onAirDateBtnLabel");
-    const list = document.getElementById("onAirDateDropdownList");
-    
-    span.textContent = selectedOnAirDates.length === 0 ? "No Dates Selected" : (selectedOnAirDates.length === allOnAirDates.length ? "All On-Air Dates" : `Selected (${selectedOnAirDates.length})`);
-    
-    list.querySelectorAll(".date-chk").forEach(c => c.checked = selectedOnAirDates.includes(c.value));
-    
-    if (options.close) {
-        list.style.display = "none";
-    } else {
-        list.style.display = "block";
-    }
+    const btn = document.getElementById("onAirDateDropdownBtn");
+    const span = document.getElementById("onAirDateBtnLabel");
+    const list = document.getElementById("onAirDateDropdownList");
+    
+    span.textContent = selectedOnAirDates.length === 0 ? "No Dates Selected" : (selectedOnAirDates.length === allOnAirDates.length ? "All On-Air Dates" : `Selected (${selectedOnAirDates.length})`);
+    
+    // Update checkboxes visually
+    list.querySelectorAll(".date-chk").forEach(c => c.checked = selectedOnAirDates.includes(c.value));
+    
+    // Close dropdown only if requested
+    if (options.close) {
+        list.style.display = "none";
+    } else {
+        // If not closing, ensure it's open
+        list.style.display = "block";
+    }
 }
 
 // --- FILTER UI LOGIC (eNodeB NAME) ---
 
 function setupSiteDropdown(){
-  const list = document.getElementById("siteDropdownList");
-  const btn = document.getElementById("siteDropdownBtn");
-  list.innerHTML = "";
+  const list = document.getElementById("siteDropdownList");
+  const btn = document.getElementById("siteDropdownBtn");
+  list.innerHTML = "";
 
-  let activeSites = allSites.filter(site => {
-      const date = siteCutoverMap[site];
-      return date && selectedOnAirDates.includes(date);
-  });
-  
-  selectedSites = selectedSites.filter(site => activeSites.includes(site));
-  
-  const setAll = () => { 
-    selectedSites = [...activeSites]; 
-    updateSiteFilterUI({close: false}); 
-    renderCharts();
-  }; 
+  // 1. Determine which sites are active based on the date filter
+  let activeSites = allSites.filter(site => {
+      const date = siteCutoverMap[site];
+      return date && selectedOnAirDates.includes(date);
+  });
+  
+  // 2. Filter selectedSites to only include those that are currently active
+  selectedSites = selectedSites.filter(site => activeSites.includes(site));
+  
+  // Actions
+  const setAll = () => { 
+    selectedSites = [...activeSites]; 
+    updateSiteFilterUI({close: false}); 
+    renderCharts();
+  }; 
 
-  const clearAll = () => { 
-    selectedSites = []; 
-    updateSiteFilterUI({close: false}); 
-    renderCharts(); 
-  };
-  
-  list.innerHTML += `<div onclick="window.siteSetAll()"><b>Select All (${activeSites.length})</b></div>`;
-  list.innerHTML += `<div onclick="window.siteClearAll()"><b>Clear All</b></div>`;
+  const clearAll = () => { 
+    selectedSites = []; 
+    updateSiteFilterUI({close: false}); 
+    renderCharts(); 
+  };
+  
+  // Inject setAll/clearAll actions
+  list.innerHTML += `<div onclick="window.siteSetAll()"><b>Select All (${activeSites.length})</b></div>`;
+  list.innerHTML += `<div onclick="window.siteClearAll()"><b>Clear All</b></div>`;
 
-  activeSites.forEach(site => {
-    const d = document.createElement("div");
-    const checked = selectedSites.includes(site) ? "checked" : ""; 
-    d.innerHTML = `<input type='checkbox' value='${site}' class='site-chk' ${checked}> ${site}`;
-    d.onclick = (e) => {
-       if(e.target.tagName !== "INPUT") {
-          const chk = d.querySelector("input");
-          chk.checked = !chk.checked;
-       }
-       updateSelectedSites(); 
-    };
-    list.appendChild(d);
-  });
-  
-  btn.onclick = () => list.style.display = list.style.display==="block" ? "none" : "block";
+  // Options
+  activeSites.forEach(site => {
+    const d = document.createElement("div");
+    // Check if the site is in the current selectedSites list
+    const checked = selectedSites.includes(site) ? "checked" : ""; 
+    d.innerHTML = `<input type='checkbox' value='${site}' class='site-chk' ${checked}> ${site}`;
+    d.onclick = (e) => {
+       if(e.target.tagName !== "INPUT") {
+          const chk = d.querySelector("input");
+          chk.checked = !chk.checked;
+       }
+       updateSelectedSites(); // Individual selection
+    };
+    list.appendChild(d);
+  });
+  
+  btn.onclick = () => list.style.display = list.style.display==="block" ? "none" : "block";
 
-  window.siteSetAll = setAll;
-  window.siteClearAll = clearAll;
-  
-  updateSiteFilterUI({close: true});
-  renderCharts();
+  // Expose helpers globally for inline HTML
+  window.siteSetAll = setAll;
+  window.siteClearAll = clearAll;
+  
+  // Initial UI update for site dropdown and rendering
+  updateSiteFilterUI({close: true});
+  renderCharts();
 }
 
 function updateSelectedSites() {
-    const list = document.getElementById("siteDropdownList");
-    selectedSites = Array.from(list.querySelectorAll(".site-chk:checked")).map(c => c.value);
-    updateSiteFilterUI({close: false});
-    renderCharts();
+    const list = document.getElementById("siteDropdownList");
+    // Ensure we only look at the sites currently visible/active in the list
+    selectedSites = Array.from(list.querySelectorAll(".site-chk:checked")).map(c => c.value);
+    // Do not close dropdown on individual check
+    updateSiteFilterUI({close: false});
+    renderCharts();
 }
 
 function updateSiteFilterUI(options = {close: true}) {
-    const btn = document.getElementById("siteDropdownBtn");
-    const span = document.getElementById("siteBtnLabel");
-    const list = document.getElementById("siteDropdownList");
-    
-    let activeSites = allSites.filter(site => {
-        const date = siteCutoverMap[site];
-        return selectedOnAirDates.includes(date);
-    });
+    const btn = document.getElementById("siteDropdownBtn");
+    const span = document.getElementById("siteBtnLabel");
+    const list = document.getElementById("siteDropdownList");
+    
+    let activeSites = allSites.filter(site => {
+        const date = siteCutoverMap[site];
+        return selectedOnAirDates.includes(date);
+    });
 
-    if(selectedSites.length === 0) span.textContent = "All Active Sites";
-    else if(selectedSites.length === activeSites.length) span.textContent = `All Active Sites (${selectedSites.length})`;
-    else if(selectedSites.length === 1) span.textContent = selectedSites[0];
-    else span.textContent = `Selected (${selectedSites.length})`;
+    if(selectedSites.length === 0) span.textContent = "All Active Sites";
+    else if(selectedSites.length === activeSites.length) span.textContent = `All Active Sites (${selectedSites.length})`;
+    else if(selectedSites.length === 1) span.textContent = selectedSites[0];
+    else span.textContent = `Selected (${selectedSites.length})`;
 
-    list.querySelectorAll(".site-chk").forEach(c => c.checked = selectedSites.includes(c.value));
-    
-    if (options.close) {
-        list.style.display = "none";
-    } else {
-        list.style.display = "block";
-    }
+    // Re-check all site checkboxes to reflect the selectedSites state 
+    list.querySelectorAll(".site-chk").forEach(c => c.checked = selectedSites.includes(c.value));
+    
+    // Close dropdown only if requested
+    if (options.close) {
+        list.style.display = "none";
+    } else {
+        // If not closing, ensure it's open
+        list.style.display = "block";
+    }
 }
 
 // --- CHART RENDERING ---
 
 function renderCharts(){
-  const container = document.getElementById("mainChartContainer");
-  container.innerHTML = "";
-  
-  let kpisToShow = [];
-  if(currentTab === "acceptance") kpisToShow = selectedKpis.acceptance;
-  else if(currentTab === "monitoring") kpisToShow = selectedKpis.monitoring;
-  else if(currentTab === "both") kpisToShow = [...selectedKpis.acceptance, ...selectedKpis.monitoring];
+  const container = document.getElementById("mainChartContainer");
+  container.innerHTML = "";
+  
+  let kpisToShow = [];
+  if(currentTab === "acceptance") kpisToShow = selectedKpis.acceptance;
+  else if(currentTab === "monitoring") kpisToShow = selectedKpis.monitoring;
+  else if(currentTab === "both") kpisToShow = [...selectedKpis.acceptance, ...selectedKpis.monitoring];
 
-  let sitesFromDate = allSites.filter(site => {
-      const date = siteCutoverMap[site];
-      return selectedOnAirDates.includes(date);
-  });
+  // 1. Determine final list of sites based on date filter AND site filter
+  let sitesFromDate = allSites.filter(site => {
+      const date = siteCutoverMap[site];
+      return selectedOnAirDates.includes(date);
+  });
 
-  let finalSiteList;
-  if (selectedSites.length > 0) {
-      finalSiteList = selectedSites;
-  } else {
-      finalSiteList = sitesFromDate;
-  }
-  
-  let filteredData = allData.filter(d => finalSiteList.includes(d["eNodeB Name"]));
-
-
-  const timeline = [...new Set(filteredData.map(d=>d["Date"]))].sort((a,b)=>{
-    const [da,ma,ya]=a.split('/').map(Number);
-    const [db,mb,yb]=b.split('/').map(Number);
-    return new Date(ya,ma-1,da)-new Date(yb,mb-1,db);
-  });
-
-  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const timelineLabels = timeline.map(d => {
-      const [day, month] = d.split('/').map(Number);
-      return `${day} ${monthNames[month - 1]}`; 
-  });
-
-  const style = chartStyles[selectedStyle]; 
-  document.querySelectorAll('.chart-card').forEach(card => card.style.backgroundColor = style.bgColor);
-
-  kpisToShow.forEach((kpi, idx) => {
-    const card = document.createElement("div");
-    card.className = "chart-card";
-    
-    const wrapper = document.createElement("div");
-    wrapper.className = "chart-container";
-    
-    const canvas = document.createElement("canvas");
-    canvas.id = `chart_${idx}`;
-    
-    wrapper.appendChild(canvas);
-    card.appendChild(wrapper);
-    container.appendChild(card);
-
-    const dataPoints = timeline.map(date => {
-       const vals = filteredData.filter(d => d["Date"] === date && d[kpi] !== null).map(d => d[kpi]);
-       if(vals.length === 0) return null;
-       const isAvg = kpi.match(/(rate|%|ratio|average)/i);
-       const sum = vals.reduce((a,b)=>a+b,0);
-       return isAvg ? sum/vals.length : sum;
-    });
-
-       
-    // Determine background color for fill if needed 
-    let bColor = 'transparent';
-    let lineC = getRandomColor();
-    if (style.fill) {
-        const hex = lineC.substring(1);
-        const r = parseInt(hex.substring(0, 2), 16);
-        const g = parseInt(hex.substring(2, 4), 16);
-        const b = parseInt(hex.substring(4, 6), 16);
-        bColor = `rgba(${r}, ${g}, ${b}, ${style.alpha || 0.15})`;
-    }
+  let finalSiteList;
+  if (selectedSites.length > 0) {
+      // Use specifically selected sites
+      finalSiteList = selectedSites;
+  } else {
+      // Use all sites allowed by the date filter (default behavior when no specific site is selected)
+      finalSiteList = sitesFromDate;
+  }
+  
+  let filteredData = allData.filter(d => finalSiteList.includes(d["eNodeB Name"]));
 
 
-    // Draw Chart with Animation
-    new Chart(canvas.getContext("2d"), {
-    type: 'line',
-    data: {
+  // 2. Process Timeline (unchanged)
+  const timeline = [...new Set(filteredData.map(d=>d["Date"]))].sort((a,b)=>{
+    const [da,ma,ya]=a.split('/').map(Number);
+    const [db,mb,yb]=b.split('/').map(Number);
+    return new Date(ya,ma-1,da)-new Date(yb,mb-1,db);
+  });
+
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const timelineLabels = timeline.map(d => {
+      const [day, month] = d.split('/').map(Number);
+      return `${day} ${monthNames[month - 1]}`; // e.g., "5 Jan"
+  });
+
+  // 3. Generate Charts
+  kpisToShow.forEach((kpi, idx) => {
+    const card = document.createElement("div");
+    card.className = "chart-card";
+    
+    const wrapper = document.createElement("div");
+    wrapper.className = "chart-container";
+    
+    const canvas = document.createElement("canvas");
+    canvas.id = `chart_${idx}`;
+    
+    wrapper.appendChild(canvas);
+    card.appendChild(wrapper);
+    container.appendChild(card);
+
+    // Calculate Data
+    const dataPoints = timeline.map(date => {
+       const vals = filteredData.filter(d => d["Date"] === date && d[kpi] !== null).map(d => d[kpi]);
+       if(vals.length === 0) return null;
+       const isAvg = kpi.match(/(rate|%|ratio|average)/i);
+       const sum = vals.reduce((a,b)=>a+b,0);
+       return isAvg ? sum/vals.length : sum;
+    });
+
+    // Draw Chart with Animation
+    new Chart(canvas.getContext("2d"), {
+      type: 'line',
+      data: {
         labels: timelineLabels,
         datasets: [{
-            label: (finalSiteList.length > 0 && dataPoints.some(p => p !== null)) ? "Aggregate" : "No Data",
-            data: dataPoints,
-            borderColor: lineC,
-            backgroundColor: bColor, 
-            fill: style.fill,
-            borderWidth: style.border,
-            pointRadius: style.pointRadius,
-            tension: style.tension,
-            stepped: style.stepped,
-            spanGaps: true 
+          label: (finalSiteList.length > 0 && dataPoints.some(p => p !== null)) ? "Aggregate" : "No Data",
+          data: dataPoints,
+          borderColor: getRandomColor(),
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          pointRadius: 3,
+          tension: 0.1,
+          spanGaps: true 
         }]
-    },
-    options: {
+      },
+      options: {
         responsive: true,
         maintainAspectRatio: false,
         animation: {
@@ -773,398 +654,406 @@ function renderCharts(){
         },
         plugins: { 
             legend: { display: false },
-            title: { 
+            title: { // Chart.js built-in title
                 display: true,
                 text: kpi,
-                font: { size: 14, weight: 'bold' },
-                color: style.titleColor
+                font: {
+                    size: 14,
+                    weight: 'bold'
+                },
+                color: '#333'
             }
         },
         scales: {
-            x: { 
-                ticks: { font: {size:8} }, 
-                grid: {display:false} 
-            },
-            y: { 
-                beginAtZero: false,
-                grid: { color: style.gridColor }
-            }
-        } // <-- Make sure this closes scales
-    } // <-- Make sure this closes options
-}); // <-- Make sure to close Chart constructor
+           x: { 
+               ticks: { font: {size:8} }, 
+               grid: {display:false} 
+           },
+           y: { 
+               beginAtZero: true, 
+               grid: {color:'#eee'},
+               // If no data points, fix the scale to prevent giant axes
+               min: (finalSiteList.length === 0 || dataPoints.every(p => p === null)) ? 0 : undefined 
+           }
+        }
+      }
+    });
+  });
+}
+
+function getRandomColor() {
+  const colors = ['#2F80ED', '#27AE60', '#D24726', '#8E44AD', '#F39C12', '#2980B9'];
+  return colors[Math.floor(Math.random() * colors.length)];
+}
+
 // --- KPI DRAWER & UTILITY LOGIC ---
 
+function toggleDrawer(){
+  const d = document.getElementById("kpiDrawer");
+  d.classList.toggle("open");
+  if(d.classList.contains("open")) populateKpiOptions();
+}
+
 function populateKpiOptions(){
-  const kpiSection = document.getElementById("kpiOptionsList");
-  kpiSection.innerHTML = ''; // Clear content for redraw
+  const list = document.getElementById("kpiOptionsList");
+  list.innerHTML = "";
+  
+  document.getElementById('drawerHeaderTitle').textContent = 'KPI Settings';
 
-  const acceptanceSection = currentTab === 'acceptance' || currentTab === 'both';
-  const monitoringSection = currentTab === 'monitoring' || currentTab === 'both';
-  
-  const createGroup = (title, key, sourceArr) => {
-    const h4 = document.createElement("h4");
-    h4.textContent = title;
-    h4.style.marginTop = "15px";
-    kpiSection.appendChild(h4);
-    
-    sourceArr.forEach(kpi => {
-      const div = document.createElement("div");
-      const checked = selectedKpis[key].includes(kpi) ? "checked" : "";
-      div.innerHTML = `<input type='checkbox' class='kpi-chk' data-group='${key}' value='${kpi}' ${checked}> <span style='font-size:13px'>${kpi}</span>`;
-      div.onclick = (e) => {
-        if(e.target.tagName !== "INPUT") {
-            const chk = div.querySelector("input");
-            chk.checked = !chk.checked;
-        }
-      };
-      kpiSection.appendChild(div);
-    });
-  };
+  const acceptanceSection = currentTab === 'acceptance' || currentTab === 'both';
+  const monitoringSection = currentTab === 'monitoring' || currentTab === 'both';
+  
+  const createGroup = (title, key, sourceArr) => {
+    const h4 = document.createElement("h4");
+    h4.textContent = title;
+    h4.style.marginTop = "15px";
+    list.appendChild(h4);
+    
+    sourceArr.forEach(kpi => {
+      const div = document.createElement("div");
+      const checked = selectedKpis[key].includes(kpi) ? "checked" : "";
+      div.innerHTML = `<input type='checkbox' class='kpi-chk' data-group='${key}' value='${kpi}' ${checked}> <span style='font-size:13px'>${kpi}</span>`;
+      div.onclick = (e) => {
+        if(e.target.tagName !== "INPUT") {
+            const chk = div.querySelector("input");
+            chk.checked = !chk.checked;
+        }
+        // No auto-apply here, user must click Apply
+      };
+      list.appendChild(div);
+    });
+  };
 
-  if (acceptanceSection) createGroup("Acceptance KPIs", "acceptance", acceptanceKpis);
-  if (monitoringSection) createGroup("Monitoring KPIs", "monitoring", monitoringKpis);
+  if (acceptanceSection) createGroup("Acceptance KPIs", "acceptance", acceptanceKpis);
+  if (monitoringSection) createGroup("Monitoring KPIs", "monitoring", monitoringKpis);
 }
 
-function populateStyleOptions(){
-  const styleContainer = document.getElementById("chartStyleOptions");
-  styleContainer.innerHTML = '';
-  Object.keys(chartStyles).forEach(styleName => {
-    const button = document.createElement('button');
-    button.textContent = styleName;
-    button.className = 'action-btn';
-    button.setAttribute('data-style', styleName);
-    button.onclick = () => updateChartStyle(styleName);
-    if (selectedStyle === styleName) {
-        button.classList.add('active');
-    }
-    styleContainer.appendChild(button);
-  });
-}
-
+/**
+ * Selects all visible KPI checkboxes and updates the internal state.
+ */
 function selectVisibleKpis() {
-    const chks = document.querySelectorAll(".kpi-chk");
-    chks.forEach(c => { c.checked = true; });
+    const chks = document.querySelectorAll(".kpi-chk");
+    
+    // 1. Update Checkboxes Visually
+    chks.forEach(c => {
+        c.checked = true;
+    });
 
-    if (currentTab === 'acceptance' || currentTab === 'both') {
-        selectedKpis.acceptance = [...acceptanceKpis];
-    }
-    if (currentTab === 'monitoring' || currentTab === 'both') {
-        selectedKpis.monitoring = [...monitoringKpis];
-    }
+    // 2. Update Internal State
+    if (currentTab === 'acceptance' || currentTab === 'both') {
+        selectedKpis.acceptance = [...acceptanceKpis];
+    }
+    if (currentTab === 'monitoring' || currentTab === 'both') {
+        selectedKpis.monitoring = [...monitoringKpis];
+    }
 }
 
+/**
+ * Clears all visible KPI checkboxes and updates the internal state.
+ */
 function clearVisibleKpis() {
-    const chks = document.querySelectorAll(".kpi-chk");
-    chks.forEach(c => { c.checked = false; });
+    const chks = document.querySelectorAll(".kpi-chk");
+    
+    // 1. Update Checkboxes Visually
+    chks.forEach(c => {
+        c.checked = false;
+    });
 
-    if (currentTab === 'acceptance' || currentTab === 'both') {
-        selectedKpis.acceptance = [];
-    }
-    if (currentTab === 'monitoring' || currentTab === 'both') {
-        selectedKpis.monitoring = [];
-    }
+    // 2. Update Internal State
+    if (currentTab === 'acceptance' || currentTab === 'both') {
+        selectedKpis.acceptance = [];
+    }
+    if (currentTab === 'monitoring' || currentTab === 'both') {
+        selectedKpis.monitoring = [];
+    }
 }
 
 
 function applyKpis(){
-  const chks = document.querySelectorAll(".kpi-chk");
-  
-  const tempAcceptance = currentTab === 'acceptance' || currentTab === 'both' ? [] : [...selectedKpis.acceptance];
-  const tempMonitoring = currentTab === 'monitoring' || currentTab === 'both' ? [] : [...selectedKpis.monitoring];
+  const chks = document.querySelectorAll(".kpi-chk");
+  
+  // Start with existing selections for non-visible tabs
+  const tempAcceptance = currentTab === 'acceptance' || currentTab === 'both' ? [] : [...selectedKpis.acceptance];
+  const tempMonitoring = currentTab === 'monitoring' || currentTab === 'both' ? [] : [...selectedKpis.monitoring];
 
-  chks.forEach(c => {
-    if(c.checked) {
-        if(c.dataset.group === 'acceptance') tempAcceptance.push(c.value);
-        if(c.dataset.group === 'monitoring') tempMonitoring.push(c.value);
-    }
-  });
+  // Apply checked status from the UI
+  chks.forEach(c => {
+    if(c.checked) {
+        if(c.dataset.group === 'acceptance') tempAcceptance.push(c.value);
+        if(c.dataset.group === 'monitoring') tempMonitoring.push(c.value);
+    }
+  });
 
-  selectedKpis.acceptance = tempAcceptance;
-  selectedKpis.monitoring = tempMonitoring;
-  
-  toggleKpiDrawer();
-  renderCharts();
+  selectedKpis.acceptance = tempAcceptance;
+  selectedKpis.monitoring = tempMonitoring;
+  
+  toggleDrawer();
+  renderCharts();
 }
 
 // --- PPT EXPORT CUSTOMIZATION & PREVIEW ---
 
 function openPreview() {
-    const canvases = document.querySelectorAll("canvas");
-    if(canvases.length === 0) { alert("No charts to export."); return; }
-    
-    graphsPerSlide = 2; 
-    chartExportColor = '#2F80ED'; 
-    chartExportTitleColor = '#333333';
+    const canvases = document.querySelectorAll("canvas");
+    if(canvases.length === 0) { alert("No charts to export."); return; }
+    
+    graphsPerSlide = 2; 
+    chartExportColor = '#2F80ED'; 
+    chartExportTitleColor = '#333333';
 
-    updatePreviewSettings(graphsPerSlide, chartExportColor, chartExportTitleColor);
-    
-    document.getElementById("previewModal").style.display = "flex";
+    updatePreviewSettings(graphsPerSlide, chartExportColor, chartExportTitleColor);
+    
+    document.getElementById("previewModal").style.display = "flex";
 }
 
 function highlightSettingButtons(count, lineColor, titleColor) {
-    document.querySelectorAll('.graph-options button').forEach(btn => {
-        btn.classList.remove('active');
-        btn.style.backgroundColor = '#2F80ED';
-        if (parseInt(btn.dataset.count) === count) {
-            btn.classList.add('active');
-            btn.style.backgroundColor = '#27AE60'; 
-        }
-    });
+    document.querySelectorAll('.graph-options button').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.backgroundColor = '#2F80ED';
+        if (parseInt(btn.dataset.count) === count) {
+            btn.classList.add('active');
+            btn.style.backgroundColor = '#27AE60'; 
+        }
+    });
 
-    document.querySelectorAll('#lineColorOptions .color-option').forEach(el => {
-        el.classList.remove('selected');
-        if (el.dataset.color === lineColor) {
-            el.classList.add('selected');
-        }
-    });
+    document.querySelectorAll('#lineColorOptions .color-option').forEach(el => {
+        el.classList.remove('selected');
+        if (el.dataset.color === lineColor) {
+            el.classList.add('selected');
+        }
+    });
 
-    document.querySelectorAll('#titleColorOptions .color-option').forEach(el => {
-        el.classList.remove('selected');
-        if (el.dataset.color === titleColor) {
-            el.classList.add('selected');
-        }
-    });
+    document.querySelectorAll('#titleColorOptions .color-option').forEach(el => {
+        el.classList.remove('selected');
+        if (el.dataset.color === titleColor) {
+            el.classList.add('selected');
+        }
+    });
 }
 
 function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
-    if (newCount) graphsPerSlide = newCount;
-    if (newLineColor) chartExportColor = newLineColor;
-    if (newTitleColor) chartExportTitleColor = newTitleColor;
+    if (newCount) graphsPerSlide = newCount;
+    if (newLineColor) chartExportColor = newLineColor;
+    if (newTitleColor) chartExportTitleColor = newTitleColor;
 
-    highlightSettingButtons(graphsPerSlide, chartExportColor, chartExportTitleColor);
-    
-    const count = graphsPerSlide;
-    const body = document.getElementById("previewBody");
-    const canvases = document.querySelectorAll("canvas");
-    
-    document.getElementById("previewTitle").textContent = `PPT Export Preview (${count} Graphs per Slide) - Line: ${chartExportColor}, Title: ${chartExportTitleColor}`;
-    body.innerHTML = "";
+    highlightSettingButtons(graphsPerSlide, chartExportColor, chartExportTitleColor);
+    
+    const count = graphsPerSlide;
+    const body = document.getElementById("previewBody");
+    const canvases = document.querySelectorAll("canvas");
+    
+    document.getElementById("previewTitle").textContent = `PPT Export Preview (${count} Graphs per Slide) - Line: ${chartExportColor}, Title: ${chartExportTitleColor}`;
+    body.innerHTML = "";
 
-    let gridCols = '1fr';
-    let rows = 1;
-    if (count === 2) { gridCols = '1fr 1fr'; rows = 1; }
-    else if (count === 3 || count === 6 || count === 9) { gridCols = '1fr 1fr 1fr'; }
-    else if (count === 4) { gridCols = '1fr 1fr'; rows = 2; }
-    
-    if (count === 6) rows = 2;
-    if (count === 9) rows = 3;
-
-
-    for(let i=0; i<canvases.length; i+=count){
-        const slideDiv = document.createElement("div");
-        slideDiv.className = "preview-slide";
-        
-        const slideTitle = document.createElement("div");
-        slideTitle.className = "preview-slide-title";
-        slideTitle.textContent = `Slide ${Math.floor(i/count) + 1}`;
-        slideDiv.appendChild(slideTitle);
-
-        const grid = document.createElement("div");
-        grid.className = "preview-grid";
-        grid.style.gridTemplateColumns = gridCols;
-        grid.style.gridTemplateRows = rows === 1 ? '1fr' : (rows === 2 ? '1fr 1fr' : (rows === 3 ? '1fr 1fr 1fr' : 'repeat(auto-fit, 1fr)'));
+    // Determine CSS grid columns based on count
+    let gridCols = '1fr';
+    let rows = 1;
+    if (count === 2) { gridCols = '1fr 1fr'; rows = 1; }
+    else if (count === 3 || count === 6 || count === 9) { gridCols = '1fr 1fr 1fr'; }
+    else if (count === 4) { gridCols = '1fr 1fr'; rows = 2; }
+    
+    if (count === 6) rows = 2;
+    if (count === 9) rows = 3;
 
 
-        for(let j=0; j<count; j++){
-            if(i+j < canvases.length){
-                const c = canvases[i+j];
-                const box = createPreviewBox(c, chartExportColor, chartExportTitleColor); 
-                grid.appendChild(box);
-            }
-        }
-        slideDiv.appendChild(grid);
-        body.appendChild(slideDiv);
-    }
+    for(let i=0; i<canvases.length; i+=count){
+        const slideDiv = document.createElement("div");
+        slideDiv.className = "preview-slide";
+        
+        const slideTitle = document.createElement("div");
+        slideTitle.className = "preview-slide-title";
+        slideTitle.textContent = `Slide ${Math.floor(i/count) + 1}`;
+        slideDiv.appendChild(slideTitle);
+
+        const grid = document.createElement("div");
+        grid.className = "preview-grid";
+        grid.style.gridTemplateColumns = gridCols;
+        // Use auto for rows to adapt to content height when the number of items doesn't perfectly match the row definition
+        grid.style.gridTemplateRows = rows === 1 ? '1fr' : (rows === 2 ? '1fr 1fr' : (rows === 3 ? '1fr 1fr 1fr' : 'repeat(auto-fit, 1fr)'));
+
+
+        for(let j=0; j<count; j++){
+            if(i+j < canvases.length){
+                const c = canvases[i+j];
+                const box = createPreviewBox(c, chartExportColor, chartExportTitleColor); 
+                grid.appendChild(box);
+            }
+        }
+        slideDiv.appendChild(grid);
+        body.appendChild(slideDiv);
+    }
 }
 
 function createPreviewBox(canvas, lineColor, titleColor) {
-  const box = document.createElement("div");
-  box.className = "preview-img-box";
-  
-  const tempCanvas = document.createElement('canvas');
-  tempCanvas.width = canvas.width;
-  tempCanvas.height = canvas.height;
-  const tempCtx = tempCanvas.getContext('2d');
-  
-  const chartInstance = Chart.getChart(canvas.id);
-  let imgData = '';
-  
-  if (chartInstance) {
-      // 1. Store original chart properties
-      const originalDatasetProps = chartInstance.data.datasets.map(d => ({
-          borderColor: d.borderColor,
-          pointBorderColor: d.pointBorderColor,
-          pointBackgroundColor: d.pointBackgroundColor,
-          fill: d.fill,
-          backgroundColor: d.backgroundColor,
-          stepped: d.stepped
-      }));
-      const originalTitleColor = chartInstance.options.plugins.title.color;
-      const originalYMin = chartInstance.options.scales.y.min;
-      const originalYMax = chartInstance.options.scales.y.max;
-      const originalYStep = chartInstance.options.scales.y.ticks.stepSize;
-      
-      const style = chartStyles[selectedStyle];
-      
-      // 2. Apply PPT visual overrides (Color and Style)
-      chartInstance.data.datasets.forEach(d => { 
-        d.borderColor = lineColor; 
-        d.pointBorderColor = lineColor; 
-        d.pointBackgroundColor = lineColor; 
-        
-        let bColor = 'transparent';
-        if (style.fill) {
-            const hex = lineColor.substring(1);
-            const r = parseInt(hex.substring(0, 2), 16);
-            const g = parseInt(hex.substring(2, 4), 16);
-            const b = parseInt(hex.substring(4, 6), 16);
-            bColor = `rgba(${r}, ${g}, ${b}, ${style.alpha || 0.15})`;
-        }
-        d.backgroundColor = bColor;
-        d.fill = style.fill;
-        d.stepped = style.stepped;
-        
-        d.pointRadius = 3; 
-        d.pointStyle = 'circle'; 
-        d.spanGaps = true; 
-      });
+  const box = document.createElement("div");
+  box.className = "preview-img-box";
+  
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = canvas.width;
+  tempCanvas.height = canvas.height;
+  const tempCtx = tempCanvas.getContext('2d');
+  
+  const chartInstance = Chart.getChart(canvas.id);
+  let imgData = '';
+  
+  if (chartInstance) {
+      const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
+      const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
+      const originalTitleColor = chartInstance.options.plugins.title.color;
+      
+      chartInstance.data.datasets.forEach(d => { 
+        d.borderColor = lineColor; 
+        d.pointBorderColor = lineColor; 
+        d.pointBackgroundColor = lineColor; 
+        d.pointRadius = 3; 
+        d.pointStyle = 'circle'; 
+        d.spanGaps = true; 
+      });
 
-      chartInstance.options.plugins.title.color = titleColor; 
-      
-      chartInstance.options.scales.y = { 
-    beginAtZero: false,       // optional: default auto-scaling
-    grid: { color: style.gridColor } 
-};
+      chartInstance.options.plugins.title.color = titleColor; 
+      
+      chartInstance.update('none'); 
+      
+      tempCtx.drawImage(canvas, 0, 0);
+      imgData = tempCanvas.toDataURL("image/png");
+      
+      chartInstance.data.datasets.forEach((d, index) => { 
+        d.borderColor = originalColors[index]; 
+        d.pointBorderColor = originalPointColors[index];
+      });
+      chartInstance.options.plugins.title.color = originalTitleColor;
+      chartInstance.update('none');
+  }
 
-      chartInstance.update('none'); 
-      
-      // 4. Draw image and restore properties
-      tempCtx.drawImage(canvas, 0, 0);
-      imgData = tempCanvas.toDataURL("image/png");
-      
-      // Restore original properties
-      chartInstance.data.datasets.forEach((d, index) => { 
-        Object.assign(d, originalDatasetProps[index]);
-      });
-      chartInstance.options.plugins.title.color = originalTitleColor;
-      chartInstance.options.scales.y.min = originalYMin;
-      chartInstance.options.scales.y.max = originalYMax;
-      chartInstance.options.scales.y.ticks.stepSize = originalYStep;
-      chartInstance.update('none');
-  }
-
-  const img = document.createElement("img");
-  img.src = imgData;
-  
-  box.appendChild(img);
-  return box;
+  const img = document.createElement("img");
+  img.src = imgData;
+  
+  box.appendChild(img);
+  return box;
 }
 
 function closePreview(){ document.getElementById("previewModal").style.display = "none"; }
 
-async function downloadPPT() {
-    const pptx = new PptxGenJS();
-    pptx.layout = 'LAYOUT_16x9';
+async function downloadPPT(){
+  const pptx = new PptxGenJS();
+  pptx.layout = 'LAYOUT_16x9';
+  
+  // Title Slide
+  let slide = pptx.addSlide();
+  slide.addText("LTE KPI Report", { x:0.5, y:2, fontSize:32, bold:true, color:'2F80ED' });
+  slide.addText(`Generated: ${new Date().toLocaleDateString()}`, { x:0.5, y:3, fontSize:14 });
 
-    const canvases = document.querySelectorAll("canvas");
-    const count = graphsPerSlide;
-    const lineColor = chartExportColor;
-    const titleColor = chartExportTitleColor;
+  const canvases = document.querySelectorAll("canvas");
+  const count = graphsPerSlide;
+  const lineColor = chartExportColor; 
+  const titleColor = chartExportTitleColor;
+  
+  // Define base positions and sizes in inches (for 16x9 slide layout)
+  const layoutDef = {
+    1: { cols: 1, rows: 1, chartW: 9.0, chartH: 5.5, padding: 0.5 },
+    2: { cols: 2, rows: 1, chartW: 4.5, chartH: 3.5, padding: 0.4 },
+    3: { cols: 3, rows: 1, chartW: 3.0, chartH: 3.0, padding: 0.4 },
+    4: { cols: 2, rows: 2, chartW: 4.5, chartH: 2.5, padding: 0.3 },
+    6: { cols: 3, rows: 2, chartW: 3.0, chartH: 2.5, padding: 0.2 }, // New 6-grid: 3 wide, 2 high
+    9: { cols: 3, rows: 3, chartW: 3.0, chartH: 1.8, padding: 0.1 }  // New 9-grid: 3 wide, 3 high
+  }[count] || { cols: 2, rows: 1, chartW: 4.5, chartH: 3.5, padding: 0.4 }; 
 
-    const layoutDef = {
-        1: { cols: 1, rows: 1, chartW: 9.0, chartH: 5.5, padding: 0.5 },
-        2: { cols: 2, rows: 1, chartW: 4.5, chartH: 3.5, padding: 0.4 },
-        3: { cols: 3, rows: 1, chartW: 3.0, chartH: 3.0, padding: 0.4 },
-        4: { cols: 2, rows: 2, chartW: 4.5, chartH: 2.5, padding: 0.3 },
-        6: { cols: 3, rows: 2, chartW: 3.0, chartH: 2.5, padding: 0.2 },
-        9: { cols: 3, rows: 3, chartW: 3.0, chartH: 1.7, padding: 0.1 } 
-    }[count] || { cols: 2, rows: 1, chartW: 4.5, chartH: 3.5, padding: 0.4 };
+  const layoutPositions = [];
+  const startX = 0.5; // Fixed left margin
+  const startY = 1.2; // Starting Y position after slide header
+  const maxW = 9.5; // Max drawing width (10 inches wide slide, 0.5 margin on each side)
+  
+  const numCols = layoutDef.cols;
+  const numRows = layoutDef.rows;
+  const chartW = layoutDef.chartW;
+  const chartH = layoutDef.chartH;
+  const padding = layoutDef.padding;
 
-    const numCols = layoutDef.cols;
-    const numRows = layoutDef.rows;
-    const chartW = layoutDef.chartW;
-    const chartH = layoutDef.chartH;
-    const padding = layoutDef.padding;
-    const startX = 0.5;
-    const startY = 1.0;
-    const maxW = 9.5;
+  // Calculate dynamic spacing to center charts horizontally and vertically
+  const totalChartWidth = numCols * chartW;
+  const totalPaddingWidth = (numCols - 1) * padding;
+  const remainingXSpace = maxW - totalChartWidth - totalPaddingWidth;
+  const marginX = (remainingXSpace / 2) + startX; 
+  
+  // For vertical spacing, keeping Y fixed for now, using calculated H and fixed startY
+  
+  for (let r = 0; r < numRows; r++) {
+      for (let c = 0; c < numCols; c++) {
+          const x = marginX + (c * chartW) + (c * padding);
+          const y = startY + (r * chartH) + (r * padding);
+          layoutPositions.push({ x: x, y: y, w: chartW, h: chartH });
+          if (layoutPositions.length >= count) break; // Stop if we've defined all slots for the count
+      }
+      if (layoutPositions.length >= count) break;
+  }
+  
+  // Handle case where count is 4 (2x2 grid)
+  if (count === 4) {
+      layoutPositions.length = 0; // Reset for custom 2x2 logic
+      layoutPositions.push({ x: marginX, y: startY, w: chartW, h: chartH });
+      layoutPositions.push({ x: marginX + chartW + padding, y: startY, w: chartW, h: chartH });
+      layoutPositions.push({ x: marginX, y: startY + chartH + padding, w: chartW, h: chartH });
+      layoutPositions.push({ x: marginX + chartW + padding, y: startY + chartH + padding, w: chartW, h: chartH });
+  }
 
-    for (let i = 0; i < canvases.length; i += count) {
-        const slide = pptx.addSlide();
 
-        const chartsThisSlide = Math.min(count, canvases.length - i);
-        const layoutPositions = [];
+  for(let i=0; i<canvases.length; i+=count){
+    let slide = pptx.addSlide();
+    
+    // Slide Title Header
+    slide.addText(`KPI Analysis - Slide ${Math.floor(i/count)+1}`, { x:0.5, y:0.2, fontSize:16, color:'D24726', bold:true });
 
-        const totalChartWidth = numCols * chartW;
-        const totalPaddingWidth = (numCols - 1) * padding;
-        const remainingXSpace = maxW - totalChartWidth - totalPaddingWidth;
-        const marginX = (remainingXSpace / 2) + startX;
-
-        for (let r = 0; r < numRows; r++) {
-            for (let c = 0; c < numCols; c++) {
-                if (layoutPositions.length >= chartsThisSlide) break;
-                const x = marginX + c * (chartW + padding);
-                const y = startY + r * (chartH + padding);
-                layoutPositions.push({ x, y, w: chartW, h: chartH });
-            }
-            if (layoutPositions.length >= chartsThisSlide) break;
-        }
-
-        for (let j = 0; j < chartsThisSlide; j++) {
-            const c = canvases[i + j];
-            const chartInstance = Chart.getChart(c.id);
-            if (!chartInstance) continue;
-
-            // === Store original dataset and style properties ===
-            const originalDatasetProps = chartInstance.data.datasets.map(d => ({
-                borderColor: d.borderColor,
-                fill: d.fill,
-                backgroundColor: d.backgroundColor,
-                stepped: d.stepped
-            }));
-            const originalTitleColor = chartInstance.options.plugins.title.color;
-
-            // Apply PPT overrides
-            const style = chartStyles[selectedStyle];
-            chartInstance.data.datasets.forEach(d => {
-                d.borderColor = lineColor;
-                let bColor = 'transparent';
-                if (style.fill) {
-                    const hex = lineColor.substring(1);
-                    const r = parseInt(hex.substring(0,2),16);
-                    const g = parseInt(hex.substring(2,4),16);
-                    const b = parseInt(hex.substring(4,6),16);
-                    bColor = `rgba(${r},${g},${b},${style.alpha||0.15})`;
-                }
-                d.backgroundColor = bColor;
-                d.fill = style.fill;
-                d.stepped = style.stepped;
-            });
-            chartInstance.options.plugins.title.color = titleColor;
-
-            // === Use chart’s existing Y-axis scale (do not recalc) ===
-            chartInstance.update('none');
-
-            const imgData = c.toDataURL("image/png");
-            const { x, y, w, h } = layoutPositions[j];
-            slide.addImage({ data: imgData, x, y, w, h, sizing: { type:'contain', w, h } });
-
-            // === Restore original chart properties ===
-            chartInstance.data.datasets.forEach((d, idx) => {
-                Object.assign(d, originalDatasetProps[idx]);
-            });
-            chartInstance.options.plugins.title.color = originalTitleColor;
-            chartInstance.update('none');
-        }
+    // Add Charts
+    for(let j=0; j<count; j++){
+      if(i+j < canvases.length){
+        const c = canvases[i+j];
+        const params = layoutPositions[j];
+        
+        // --- PPT CHART EXPORT LOGIC ---
+        const chartInstance = Chart.getChart(c.id);
+        const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
+        const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
+        const originalTitleColor = chartInstance.options.plugins.title.color;
+        
+        // Override style for PPT export
+        chartInstance.data.datasets.forEach(d => { 
+          d.borderColor = lineColor; 
+          d.pointBorderColor = lineColor; 
+          d.pointBackgroundColor = lineColor; 
+          d.pointRadius = 3;
+          d.spanGaps = true; 
+        });
+        chartInstance.options.plugins.title.color = titleColor; // Set selected title color
+        chartInstance.update('none'); 
+        
+        const imgData = c.toDataURL("image/png");
+        
+        // Restore original styles
+        chartInstance.data.datasets.forEach((d, index) => { 
+          d.borderColor = originalColors[index]; 
+          d.pointBorderColor = originalPointColors[index];
+          d.spanGaps = true; 
+        });
+        chartInstance.options.plugins.title.color = originalTitleColor;
+        chartInstance.update('none');
+        // --- END PPT CHART EXPORT LOGIC ---
+        
+        // Chart Image
+        slide.addImage({ 
+          data: imgData, 
+          x: params.x, y: params.y, 
+          w: params.w, h: params.h 
+        });
+      }
     }
+  }
 
-    renderCharts(); // restore dashboard charts
-    pptx.writeFile({ fileName: "LTE_KPI_Report.pptx" });
-    closePreview();
+  pptx.writeFile({ fileName: `KPI_Report_${new Date().getTime()}.pptx` });
+  closePreview();
 }
 
-
-document.addEventListener('DOMContentLoaded', fetchData);
+// Init
+fetchData();
 </script>
 </body>
 </html>
