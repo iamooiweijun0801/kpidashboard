@@ -33,27 +33,6 @@ button.action-btn:hover { background:#1f5ab5; }
 button.ppt-btn { background:#D24726; } /* PowerPoint Orange */
 button.ppt-btn:hover { background:#a8381e; }
 
-/* --- CHART STYLE SELECTOR (Inside Drawer) --- */
-.style-options { 
-    display: flex; 
-    flex-direction: column; 
-    gap: 5px; 
-    margin-top: 10px;
-}
-.style-options button {
-    background: #f0f0f0;
-    color: #333;
-    padding: 6px 10px;
-    border: 1px solid #ddd;
-    text-align: left;
-}
-.style-options button.active {
-    background: #2F80ED;
-    color: white;
-    border-color: #2F80ED;
-}
-
-
 /* --- GRID LAYOUT (3 Graphs per row) --- */
 .chart-grid { 
   display:grid; 
@@ -182,7 +161,8 @@ button.ppt-btn:hover { background:#a8381e; }
   <a href="gsm.html" class="nav-btn">GSM</a>
   <a href="index.html" class="nav-btn active">LTE</a>
   <a href="nr.html" class="nav-btn">NR</a>
-  </div>
+  <a href="nsa.html" class="nav-btn">NSA</a>
+</div>
 
 <div class="tabs">
   <button class="tab active" onclick="switchTab('both')">All KPIs (Both)</button> 
@@ -222,12 +202,7 @@ button.ppt-btn:hover { background:#a8381e; }
         <button onclick="toggleDrawer()" style="border:none; background:none; font-size:24px; cursor:pointer; color:#777;">✕</button>
     </div>
   </div>
-  <div class="kpi-options-body" id="kpiOptionsList">
-    <h4>Chart Display Style</h4>
-    <div id="chartStyleOptions" class="style-options">
-      </div>
-
-    </div>
+  <div class="kpi-options-body" id="kpiOptionsList"></div>
 </div>
 
 
@@ -308,21 +283,6 @@ let graphsPerSlide = 2;
 let chartExportColor = '#2F80ED'; // Default Line/Dot Color (Dark Blue)
 let chartExportTitleColor = '#333333'; // Default Title Color (Dark Gray/Black)
 
-// NEW: Expanded Chart Styles Configuration (10 styles total)
-const chartStyles = {
-  'Default': { border: 2, pointRadius: 3, tension: 0.1, gridColor: '#eee', bgColor: 'white', titleColor: '#333', fill: false, stepped: false },
-  'Minimalist': { border: 1, pointRadius: 2, tension: 0.3, gridColor: '#f5f5f5', bgColor: 'white', titleColor: '#555', fill: false, stepped: false },
-  'Bright Dots': { border: 3, pointRadius: 4, tension: 0.2, gridColor: '#ddd', bgColor: 'white', titleColor: '#333', fill: false, stepped: false },
-  'Smooth & Thin': { border: 1, pointRadius: 0, tension: 0.4, gridColor: '#f0f0f0', bgColor: 'white', titleColor: '#333', fill: false, stepped: false },
-  'Bold Lines': { border: 4, pointRadius: 0, tension: 0.1, gridColor: '#eee', bgColor: 'white', titleColor: '#333', fill: false, stepped: false },
-  'Area Fill (Light)': { border: 2, pointRadius: 3, tension: 0.3, gridColor: '#eee', bgColor: 'white', titleColor: '#333', fill: 'origin', alpha: 0.15, stepped: false },
-  'Shadowed Line': { border: 3, pointRadius: 4, tension: 0.2, gridColor: '#f0f0f0', bgColor: 'white', titleColor: '#333', fill: 'origin', alpha: 0.25, stepped: false },
-  'Stepped Line': { border: 2, pointRadius: 3, tension: 0.0, gridColor: '#eee', bgColor: 'white', titleColor: '#333', fill: false, stepped: true },
-  'High Contrast': { border: 4, pointRadius: 5, tension: 0.0, gridColor: 'rgba(0,0,0,0.1)', bgColor: 'white', titleColor: '#000', fill: false, stepped: false },
-  'Monochromatic': { border: 3, pointRadius: 3, tension: 0.2, gridColor: '#f5f5f5', bgColor: 'white', titleColor: '#333', fill: false, stepped: false }
-};
-let selectedStyle = 'Default'; // Initial style
-
 const acceptanceKpis = [
   "LTE RRC Setup Success Rate","ERAB Setup Success Rate","LTE Call Setup Success Rate","E-RAB Call Drop Rate",
   "CSFB Access Success Rate","LTE Intra Freq HO Success Rate","Intra-eNB HO Success Rate","Inter-eNBX2HO Success Rate",
@@ -344,22 +304,6 @@ let selectedKpis = {
 // --- GLOBAL UTILITY FUNCTIONS ---
 
 /**
- * Updates the selected chart style and re-renders all charts.
- * @param {string} styleName - The name of the style from chartStyles.
- */
-function updateChartStyle(styleName) {
-    selectedStyle = styleName;
-    // Visually update the button state
-    document.querySelectorAll('.style-options button').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.dataset.style === styleName) {
-            btn.classList.add('active');
-        }
-    });
-    renderCharts();
-}
-
-/**
  * Switches the active tab (Acceptance, Monitoring, Both).
  * @param {string} tab - The tab identifier ('acceptance', 'monitoring', 'both').
  */
@@ -370,71 +314,6 @@ function switchTab(tab) {
     document.querySelector(`.tab[onclick="switchTab('${tab}')"]`).classList.add('active');
     currentTab = tab;
     renderCharts(); 
-}
-    /**
- * Converts a hex color to an RGBA string with a specified alpha.
- * @param {string} hex - The hex color (e.g., #2F80ED).
- * @param {number} alpha - The opacity (0 to 1).
- * @returns {string} RGBA string (e.g., rgba(47, 128, 237, 0.15)).
- */
-function hexToRgba(hex, alpha) {
-    const cleanHex = hex.startsWith('#') ? hex.slice(1) : hex;
-    const bigint = parseInt(cleanHex, 16);
-    const r = (bigint >> 16) & 255;
-    const g = (bigint >> 8) & 255;
-    const b = bigint & 255;
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-/**
- * Rounds a number up to the nearest clean scale (e.g., 3630 -> 4000, 1580 -> 1600).
- * @param {number} value - The dynamic Ymax value calculated.
- * @returns {number} The cleanly rounded Ymax.
- */
-function roundUpToCleanScale(value) {
-    if (value <= 20) return Math.ceil(value / 5) * 5;
-    if (value <= 100) return Math.ceil(value / 10) * 10;
-    if (value <= 200) return Math.ceil(value / 20) * 20;
-    if (value <= 500) return Math.ceil(value / 50) * 50;
-    if (value <= 1000) return Math.ceil(value / 100) * 100;
-    if (value <= 2000) return Math.ceil(value / 200) * 200;
-    if (value <= 5000) return Math.ceil(value / 500) * 500;
-    if (value <= 10000) return Math.ceil(value / 1000) * 1000;
-    if (value <= 20000) return Math.ceil(value / 2000) * 2000;
-    if (value <= 50000) return Math.ceil(value / 5000) * 5000;
-    return Math.ceil(value / 10000) * 10000;
-}
-
-/**
- * Calculates the largest clean step size (1, 2, 5 * 10^n) for an axis range.
- * @param {number} range - The total range (yMax - yMin).
- * @param {number} minTicks - The minimum number of ticks desired.
- * @returns {number} The calculated clean step size.
- */
-function getIdealTickStep(range, minTicks = 5) {
-    if (range <= 0) return 1; 
-
-    let idealStep = range / (minTicks - 1); 
-    let power = Math.pow(10, Math.floor(Math.log10(idealStep)));
-    
-    const cleanSteps = [5 * power, 2 * power, 1 * power];
-    
-    for (let step of cleanSteps) {
-        if (step <= idealStep * 1.05 && step > 0) { 
-            return step;
-        }
-    }
-    return 1 * power; 
-}
-
-/**
- * Generates a consistent color based on index using HSL for diversity.
- * @param {number} idx - The index of the KPI.
- * @returns {string} The HSL color string.
- */
-function getKpiColor(idx) {
-    const hue = (idx * 36) % 360; 
-    return `hsl(${hue}, 65%, 45%)`; 
 }
 
 // --- DATA FETCHING & MAPPING ---
@@ -681,195 +560,68 @@ function updateSiteFilterUI(options = {close: true}) {
 // --- CHART RENDERING ---
 
 function renderCharts(){
-    const container = document.getElementById("mainChartContainer");
-    container.innerHTML = "";
-    
-    let kpisToShow = [];
-    if(currentTab === "acceptance") kpisToShow = selectedKpis.acceptance;
-    else if(currentTab === "monitoring") kpisToShow = selectedKpis.monitoring;
-    else if(currentTab === "both") kpisToShow = [...selectedKpis.acceptance, ...selectedKpis.monitoring];
+  const container = document.getElementById("mainChartContainer");
+  container.innerHTML = "";
+  
+  let kpisToShow = [];
+  if(currentTab === "acceptance") kpisToShow = selectedKpis.acceptance;
+  else if(currentTab === "monitoring") kpisToShow = selectedKpis.monitoring;
+  else if(currentTab === "both") kpisToShow = [...selectedKpis.acceptance, ...selectedKpis.monitoring];
 
-    // 1. Determine final list of sites based on date filter AND site filter
-    let sitesFromDate = allSites.filter(site => {
-        const date = siteCutoverMap[site];
-        return selectedOnAirDates.includes(date);
-    });
+  // 1. Determine final list of sites based on date filter AND site filter
+  let sitesFromDate = allSites.filter(site => {
+      const date = siteCutoverMap[site];
+      return selectedOnAirDates.includes(date);
+  });
 
-    let finalSiteList;
-    if (selectedSites.length > 0) {
-        // Use specifically selected sites
-        finalSiteList = selectedSites;
-    } else {
-        // Use all sites allowed by the date filter (default behavior when no specific site is selected)
-        finalSiteList = sitesFromDate;
-    }
-    
-    let filteredData = allData.filter(d => finalSiteList.includes(d["eNodeB Name"]));
-
-
-    // 2. Process Timeline
-    const timeline = [...new Set(filteredData.map(d=>d["Date"]))].sort((a,b)=>{
-        const [da,ma,ya]=a.split('/').map(Number);
-        const [db,mb,yb]=b.split('/').map(Number);
-        return new Date(ya,ma-1,da)-new Date(yb,mb-1,db);
-    });
-
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const timelineLabels = timeline.map(d => {
-        const [day, month] = d.split('/').map(Number);
-        return `${day} ${monthNames[month - 1]}`; // e.g., "5 Jan"
-    });
-
-    // Apply selected style
-    const style = chartStyles[selectedStyle]; 
-    document.querySelectorAll('.chart-card').forEach(card => card.style.backgroundColor = style.bgColor);
+  let finalSiteList;
+  if (selectedSites.length > 0) {
+      // Use specifically selected sites
+      finalSiteList = selectedSites;
+  } else {
+      // Use all sites allowed by the date filter (default behavior when no specific site is selected)
+      finalSiteList = sitesFromDate;
+  }
+  
+  let filteredData = allData.filter(d => finalSiteList.includes(d["eNodeB Name"]));
 
 
-    // 3. Generate Charts
-    kpisToShow.forEach((kpi, idx) => {
-        const card = document.createElement("div");
-        card.className = "chart-card";
-        
-        const wrapper = document.createElement("div");
-        wrapper.className = "chart-container";
-        
-        const canvas = document.createElement("canvas");
-        canvas.id = `chart_${idx}`;
-        
-        wrapper.appendChild(canvas);
-        card.appendChild(wrapper);
-        container.appendChild(card);
+  // 2. Process Timeline (unchanged)
+  const timeline = [...new Set(filteredData.map(d=>d["Date"]))].sort((a,b)=>{
+    const [da,ma,ya]=a.split('/').map(Number);
+    const [db,mb,yb]=b.split('/').map(Number);
+    return new Date(ya,ma-1,da)-new Date(yb,mb-1,db);
+  });
 
-        // Calculate Data
-        const dataPoints = timeline.map(date => {
-            const vals = filteredData.filter(d => d["Date"] === date && d[kpi] !== null).map(d => d[kpi]);
-            if(vals.length === 0) return null;
-            const isAvg = kpi.match(/(rate|%|ratio|average)/i);
-            const sum = vals.reduce((a,b)=>a+b,0);
-            return isAvg ? sum/vals.length : sum; // Aggregate average for rates/percentages, sum for volume
-        });
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const timelineLabels = timeline.map(d => {
+      const [day, month] = d.split('/').map(Number);
+      return `${day} ${monthNames[month - 1]}`; // e.g., "5 Jan"
+  });
 
-        // --- DYNAMIC SCALING LOGIC START (Copied from previous response for completeness) ---
-        
-        const allValues = dataPoints.filter(v => v !== null);
-        const minVal = allValues.length > 0 ? Math.min(...allValues) : 0;
-        const maxVal = allValues.length > 0 ? Math.max(...allValues) : 0;
-        const isRateOrSuccess = kpi.match(/(rate|success|%|ratio)/i);
-        
-        // 1. Calculate finalYMin (Dynamic minimum for high percentages)
-        let finalYMin = 0;
-        if (isRateOrSuccess && minVal >= 80 && allValues.length > 0) {
-            // Subtract buffer (5 units) and round down to the nearest 5
-            let targetMin = Math.max(0, minVal - 5); 
-            finalYMin = Math.max(0, Math.floor(targetMin / 5) * 5); 
-        }
-        
-        // 2. Calculate finalYMax (Strict capping for percentage KPIs <= 100)
-        let finalYMax;
-        if (isRateOrSuccess) {
-            if (maxVal <= 100) {
-                // STRICT CAPPING: Max data value 100 or less, Y-axis max is exactly 100.
-                finalYMax = 100;
-            } else {
-                // If max is > 100, use padding (1.05x) and clean rounding (e.g., 110 data -> 120 axis max).
-                let yMaxRaw = maxVal * 1.05;
-                finalYMax = roundUpToCleanScale(yMaxRaw);
-            }
-        } else {
-            // Non-percentage KPIs (Volume, Throughput) always use padding and clean rounding.
-            let yMaxRaw = maxVal * 1.05;
-            // Handle small number edge case for non-percentage KPIs
-            if (maxVal === 0 && allValues.length > 0) yMaxRaw = 10;
-            if (yMaxRaw < 5 && allValues.length > 0) yMaxRaw = 5;
+  // 3. Generate Charts
+  kpisToShow.forEach((kpi, idx) => {
+    const card = document.createElement("div");
+    card.className = "chart-card";
+    
+    const wrapper = document.createElement("div");
+    wrapper.className = "chart-container";
+    
+    const canvas = document.createElement("canvas");
+    canvas.id = `chart_${idx}`;
+    
+    wrapper.appendChild(canvas);
+    card.appendChild(wrapper);
+    container.appendChild(card);
 
-            finalYMax = roundUpToCleanScale(yMaxRaw);
-        }
-
-        // Final check: If calculated min is higher than max (edge case for zero range), reset min.
-        if (finalYMax <= finalYMin) {
-            finalYMin = 0;
-        }
-        
-        // 3. Calculate Step Size (Clean, ideal steps)
-        const range = finalYMax - finalYMin;
-        const stepSize = getIdealTickStep(range);
-        
-        // --- DYNAMIC SCALING LOGIC END ---
-
-        // Determine line color using HSL based on index for consistency
-        const datasetColor = getKpiColor(idx); 
-
-        // Determine background color for fill if needed
-        let bColor = 'transparent';
-        if (style.fill) {
-            // Uses the new hexToRgba utility function
-            bColor = hexToRgba(datasetColor, style.alpha || 0.15); 
-        }
-
-        // Draw Chart with Animation
-        new Chart(canvas.getContext("2d"), {
-            type: 'line',
-            data: {
-                labels: timelineLabels,
-                datasets: [{
-                    label: (finalSiteList.length > 0 && dataPoints.some(p => p !== null)) ? "Aggregate" : "No Data",
-                    data: dataPoints,
-                    borderColor: datasetColor, // Use consistent HSL color
-                    backgroundColor: bColor, 
-                    fill: style.fill,
-                    borderWidth: style.border,
-                    pointRadius: style.pointRadius,
-                    tension: style.tension,
-                    stepped: style.stepped,
-                    spanGaps: true
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                animation: {
-                    x: {
-                        type: 'number',
-                        easing: 'linear',
-                        duration: 500,
-                        from: NaN,
-                        delay: (ctx) => ctx.index * 30 
-                    },
-                    y: { duration: 0 }
-                },
-                plugins: {
-                    title: {
-                        display: true,
-                        text: kpi,
-                        color: style.titleColor,
-                        font: { size: 14, weight: '600' }
-                    },
-                    legend: { display: false }
-                },
-                scales: {
-                    y: {
-                        min: finalYMin, // Applying the calculated minimum
-                        max: finalYMax, // Applying the calculated maximum
-                        ticks: {
-                            stepSize: stepSize, // Applying the calculated clean step
-                            color: style.titleColor,
-                            font: { size: 11 }
-                        },
-                        grid: { color: style.gridColor },
-                    },
-                    x: {
-                        ticks: {
-                            color: style.titleColor,
-                            maxRotation: 45, minRotation: 45,
-                            font: { size: 10 }
-                        },
-                        grid: { display: false },
-                    }
-                }
-            }
-        });
-    });
-}
+    // Calculate Data
+    const dataPoints = timeline.map(date => {
+       const vals = filteredData.filter(d => d["Date"] === date && d[kpi] !== null).map(d => d[kpi]);
+       if(vals.length === 0) return null;
+       const isAvg = kpi.match(/(rate|%|ratio|average)/i);
+       const sum = vals.reduce((a,b)=>a+b,0);
+       return isAvg ? sum/vals.length : sum;
+    });
 
     // Draw Chart with Animation
     new Chart(canvas.getContext("2d"), {
@@ -879,13 +631,11 @@ function renderCharts(){
         datasets: [{
           label: (finalSiteList.length > 0 && dataPoints.some(p => p !== null)) ? "Aggregate" : "No Data",
           data: dataPoints,
-          borderColor: lineC,
-          backgroundColor: bColor, // Used for area fill
-          fill: style.fill,
-          borderWidth: style.border,
-          pointRadius: style.pointRadius,
-          tension: style.tension,
-          stepped: style.stepped,
+          borderColor: getRandomColor(),
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          pointRadius: 3,
+          tension: 0.1,
           spanGaps: true 
         }]
       },
@@ -911,7 +661,7 @@ function renderCharts(){
                     size: 14,
                     weight: 'bold'
                 },
-                color: style.titleColor
+                color: '#333'
             }
         },
         scales: {
@@ -919,15 +669,12 @@ function renderCharts(){
                ticks: { font: {size:8} }, 
                grid: {display:false} 
            },
-           y: { 
-                min: finalYMin, // Use the calculated minimum
-                max: finalYMax, // Use the calculated maximum
-               ticks: {
-                    stepSize: stepSize, // Use the calculated clean step
-                    font: {size:11} // Adjusted font size slightly for readability
-                },
-               grid: {color: style.gridColor}
-           }
+           y: { 
+               beginAtZero: true, 
+               grid: {color:'#eee'},
+               // If no data points, fix the scale to prevent giant axes
+               min: (finalSiteList.length === 0 || dataPoints.every(p => p === null)) ? 0 : undefined 
+           }
         }
       }
     });
@@ -949,40 +696,9 @@ function toggleDrawer(){
 
 function populateKpiOptions(){
   const list = document.getElementById("kpiOptionsList");
-  // Clear only the KPI list section, preserve the style list element
-  const kpiSection = list; 
+  list.innerHTML = "";
   
-  // 1. Populate Style Buttons (only needs to be done once, but safe to run)
-  const styleContainer = document.getElementById("chartStyleOptions");
-  styleContainer.innerHTML = '';
-  Object.keys(chartStyles).forEach(styleName => {
-    const button = document.createElement('button');
-    button.textContent = styleName;
-    button.className = 'action-btn';
-    button.setAttribute('data-style', styleName);
-    button.onclick = () => updateChartStyle(styleName);
-    if (selectedStyle === styleName) {
-        button.classList.add('active');
-    }
-    styleContainer.appendChild(button);
-  });
-  
-  // 2. Clear previous KPI list entries (excluding the style section)
-  // Find the h4 element for Acceptance/Monitoring and clear content after the style section
-  let startClearing = false;
-  let nodesToRemove = [];
-  Array.from(kpiSection.children).forEach(child => {
-      // Start clearing after the style section
-      if (child.id === 'chartStyleOptions') {
-          startClearing = true;
-      } else if (startClearing) {
-          nodesToRemove.push(child);
-      }
-  });
-  nodesToRemove.forEach(node => node.remove());
-
-
-  document.getElementById('drawerHeaderTitle').textContent = 'KPI Settings & Style';
+  document.getElementById('drawerHeaderTitle').textContent = 'KPI Settings';
 
   const acceptanceSection = currentTab === 'acceptance' || currentTab === 'both';
   const monitoringSection = currentTab === 'monitoring' || currentTab === 'both';
@@ -991,7 +707,7 @@ function populateKpiOptions(){
     const h4 = document.createElement("h4");
     h4.textContent = title;
     h4.style.marginTop = "15px";
-    kpiSection.appendChild(h4);
+    list.appendChild(h4);
     
     sourceArr.forEach(kpi => {
       const div = document.createElement("div");
@@ -1004,7 +720,7 @@ function populateKpiOptions(){
         }
         // No auto-apply here, user must click Apply
       };
-      kpiSection.appendChild(div);
+      list.appendChild(div);
     });
   };
 
@@ -1181,39 +897,14 @@ function createPreviewBox(canvas, lineColor, titleColor) {
   let imgData = '';
   
   if (chartInstance) {
-      // Save original properties
-      const originalDatasetProps = chartInstance.data.datasets.map(d => ({
-          borderColor: d.borderColor,
-          pointBorderColor: d.pointBorderColor,
-          pointBackgroundColor: d.pointBackgroundColor,
-          fill: d.fill,
-          backgroundColor: d.backgroundColor,
-          stepped: d.stepped
-      }));
+      const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
+      const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
       const originalTitleColor = chartInstance.options.plugins.title.color;
       
-      // Get the selected style properties
-      const style = chartStyles[selectedStyle];
-      
-      // Override style for PPT export (using export color, but preserving dashboard style attributes)
       chartInstance.data.datasets.forEach(d => { 
         d.borderColor = lineColor; 
         d.pointBorderColor = lineColor; 
         d.pointBackgroundColor = lineColor; 
-        
-        // Re-calculate fill color based on selected export line color
-        let bColor = 'transparent';
-        if (style.fill) {
-            const hex = lineColor.substring(1);
-            const r = parseInt(hex.substring(0, 2), 16);
-            const g = parseInt(hex.substring(2, 4), 16);
-            const b = parseInt(hex.substring(4, 6), 16);
-            bColor = `rgba(${r}, ${g}, ${b}, ${style.alpha || 0.15})`;
-        }
-        d.backgroundColor = bColor;
-        d.fill = style.fill;
-        d.stepped = style.stepped;
-        
         d.pointRadius = 3; 
         d.pointStyle = 'circle'; 
         d.spanGaps = true; 
@@ -1226,9 +917,9 @@ function createPreviewBox(canvas, lineColor, titleColor) {
       tempCtx.drawImage(canvas, 0, 0);
       imgData = tempCanvas.toDataURL("image/png");
       
-      // Restore original properties
       chartInstance.data.datasets.forEach((d, index) => { 
-        Object.assign(d, originalDatasetProps[index]);
+        d.borderColor = originalColors[index]; 
+        d.pointBorderColor = originalPointColors[index];
       });
       chartInstance.options.plugins.title.color = originalTitleColor;
       chartInstance.update('none');
@@ -1258,14 +949,13 @@ async function downloadPPT(){
   const titleColor = chartExportTitleColor;
   
   // Define base positions and sizes in inches (for 16x9 slide layout)
-  // NOTE: chartH for 9 graphs is 1.7
   const layoutDef = {
     1: { cols: 1, rows: 1, chartW: 9.0, chartH: 5.5, padding: 0.5 },
     2: { cols: 2, rows: 1, chartW: 4.5, chartH: 3.5, padding: 0.4 },
     3: { cols: 3, rows: 1, chartW: 3.0, chartH: 3.0, padding: 0.4 },
     4: { cols: 2, rows: 2, chartW: 4.5, chartH: 2.5, padding: 0.3 },
-    6: { cols: 3, rows: 2, chartW: 3.0, chartH: 2.5, padding: 0.2 },
-    9: { cols: 3, rows: 3, chartW: 3.0, chartH: 1.7, padding: 0.1 } 
+    6: { cols: 3, rows: 2, chartW: 3.0, chartH: 2.5, padding: 0.2 }, // New 6-grid: 3 wide, 2 high
+    9: { cols: 3, rows: 3, chartW: 3.0, chartH: 1.8, padding: 0.1 }  // New 9-grid: 3 wide, 3 high
   }[count] || { cols: 2, rows: 1, chartW: 4.5, chartH: 3.5, padding: 0.4 }; 
 
   const layoutPositions = [];
@@ -1285,6 +975,7 @@ async function downloadPPT(){
   const remainingXSpace = maxW - totalChartWidth - totalPaddingWidth;
   const marginX = (remainingXSpace / 2) + startX; 
   
+  // For vertical spacing, keeping Y fixed for now, using calculated H and fixed startY
   
   for (let r = 0; r < numRows; r++) {
       for (let c = 0; c < numCols; c++) {
@@ -1296,16 +987,13 @@ async function downloadPPT(){
       if (layoutPositions.length >= count) break;
   }
   
-  // Custom 4-grid centering logic
+  // Handle case where count is 4 (2x2 grid)
   if (count === 4) {
-      layoutPositions.length = 0; 
-      const marginX4 = (maxW - (2 * chartW) - padding) / 2 + startX; 
-      const startY4 = 1.0; 
-      
-      layoutPositions.push({ x: marginX4, y: startY4, w: chartW, h: chartH });
-      layoutPositions.push({ x: marginX4 + chartW + padding, y: startY4, w: chartW, h: chartH });
-      layoutPositions.push({ x: marginX4, y: startY4 + chartH + padding, w: chartW, h: chartH });
-      layoutPositions.push({ x: marginX4 + chartW + padding, y: startY4 + chartH + padding, w: chartW, h: chartH });
+      layoutPositions.length = 0; // Reset for custom 2x2 logic
+      layoutPositions.push({ x: marginX, y: startY, w: chartW, h: chartH });
+      layoutPositions.push({ x: marginX + chartW + padding, y: startY, w: chartW, h: chartH });
+      layoutPositions.push({ x: marginX, y: startY + chartH + padding, w: chartW, h: chartH });
+      layoutPositions.push({ x: marginX + chartW + padding, y: startY + chartH + padding, w: chartW, h: chartH });
   }
 
 
@@ -1323,56 +1011,30 @@ async function downloadPPT(){
         
         // --- PPT CHART EXPORT LOGIC ---
         const chartInstance = Chart.getChart(c.id);
-        
-        // Save current chart style settings (including dynamic Y-Min)
-        const originalDatasetProps = chartInstance.data.datasets.map(d => ({
-            borderColor: d.borderColor,
-            pointBorderColor: d.pointBorderColor,
-            pointBackgroundColor: d.pointBackgroundColor,
-            fill: d.fill,
-            backgroundColor: d.backgroundColor,
-            stepped: d.stepped
-        }));
+        const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
+        const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
         const originalTitleColor = chartInstance.options.plugins.title.color;
-        const originalYMin = chartInstance.options.scales.y.min;
-
-        // Get the selected dashboard style (to preserve fill/step attributes)
-        const style = chartStyles[selectedStyle];
         
         // Override style for PPT export
         chartInstance.data.datasets.forEach(d => { 
           d.borderColor = lineColor; 
           d.pointBorderColor = lineColor; 
           d.pointBackgroundColor = lineColor; 
-
-          // Re-calculate fill color based on export line color
-          let bColor = 'transparent';
-          if (style.fill) {
-              const hex = lineColor.substring(1);
-              const r = parseInt(hex.substring(0, 2), 16);
-              const g = parseInt(hex.substring(2, 4), 16);
-              const b = parseInt(hex.substring(4, 6), 16);
-              bColor = `rgba(${r}, ${g}, ${b}, ${style.alpha || 0.15})`;
-          }
-          d.backgroundColor = bColor;
-          d.fill = style.fill;
-          d.stepped = style.stepped;
-          
-          d.pointRadius = 3; 
+          d.pointRadius = 3;
           d.spanGaps = true; 
         });
         chartInstance.options.plugins.title.color = titleColor; // Set selected title color
-        
         chartInstance.update('none'); 
         
         const imgData = c.toDataURL("image/png");
         
         // Restore original styles
         chartInstance.data.datasets.forEach((d, index) => { 
-            Object.assign(d, originalDatasetProps[index]);
+          d.borderColor = originalColors[index]; 
+          d.pointBorderColor = originalPointColors[index];
+          d.spanGaps = true; 
         });
         chartInstance.options.plugins.title.color = originalTitleColor;
-        chartInstance.options.scales.y.min = originalYMin; // Restore Y-min
         chartInstance.update('none');
         // --- END PPT CHART EXPORT LOGIC ---
         
@@ -1389,25 +1051,9 @@ async function downloadPPT(){
   pptx.writeFile({ fileName: `KPI_Report_${new Date().getTime()}.pptx` });
   closePreview();
 }
-window.onload = function() {
-    // 1. Generate KPI drawer style options
-    const styleOptionsContainer = document.getElementById('chartStyleOptions');
-    if (styleOptionsContainer) {
-        for (const styleName in chartStyles) {
-            const btn = document.createElement('button');
-            btn.textContent = styleName;
-            btn.dataset.style = styleName;
-            btn.onclick = () => updateChartStyle(styleName);
-            if (styleName === selectedStyle) {
-                btn.classList.add('active');
-            }
-            styleOptionsContainer.appendChild(btn);
-        }
-    }
-    
-    // 2. Initial data load (This calls fetchData() which eventually calls renderCharts())
-    fetchData();
-};
+
+// Init
+fetchData();
 </script>
 </body>
 </html>
