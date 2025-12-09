@@ -388,6 +388,24 @@ let selectedKpis = {
 // --- GLOBAL UTILITY FUNCTIONS ---
 
 /**
+ * Rounds a number up to the nearest clean scale (e.g., 3630 -> 4000).
+ * @param {number} value - The dynamic Ymax value calculated.
+ * @returns {number} The cleanly rounded Ymax.
+ */
+function roundUpToCleanScale(value) {
+    if (value <= 20) return Math.ceil(value / 5) * 5;
+    if (value <= 100) return Math.ceil(value / 10) * 10;
+    if (value <= 500) return Math.ceil(value / 50) * 50;
+    if (value <= 1000) return Math.ceil(value / 100) * 100;
+    if (value <= 5000) return Math.ceil(value / 500) * 500;
+    if (value <= 10000) return Math.ceil(value / 1000) * 1000;
+    if (value <= 20000) return Math.ceil(value / 2000) * 2000;
+    if (value <= 50000) return Math.ceil(value / 5000) * 5000;
+    return Math.ceil(value / 10000) * 10000;
+}
+
+
+/**
  * Toggles the KPI drawer visibility.
  */
 function toggleKpiDrawer(){
@@ -761,10 +779,10 @@ function renderCharts(){
         let targetMax = maxValue + padding;
         yMax = Math.ceil(targetMax / yStepSize) * yStepSize;
         
-        // E. FINAL REVISED Special Rule for Percentage/Rate KPIs
+        // --- NEW/REVISED Y-AXIS SCALING RULES (STEP E) ---
         if (kpi.match(/(rate|success|%|ratio)/i)) {
 
-            // Condition 1: High Range Rate (80% to 100%) - FIXED 100 MAX
+            // Condition 1: High Range Rate (80% to 100%) - STRICT 100 MAX
             if (maxValue >= 80 && maxValue <= 100) {
                 yMax = 100;
 
@@ -778,15 +796,29 @@ function renderCharts(){
             } 
             // Condition 2: Ultra Low Rate (0 < n < 1) - TIGHT SCALE MIN 0
             else if (maxValue > 0 && maxValue < 1) {
-                // For sub-1% rates (like drop rates), fix Y-Min to 0 for proportionality.
                 yMin = 0;
-                // Y-Max uses the dynamic calculation
             } 
-            // Condition 3: Mid/Low Range Rate (n < 80 and n >= 1) or Max > 100
-            // The calculated dynamic yMin and yMax are used.
+            // Condition 3: Max > 100 (Volume/Count KPIs)
+            else if (maxValue > 100) {
+                // Apply clean rounding for non-percentage KPIs that exceed 100
+                yMax = roundUpToCleanScale(yMax);
+                
+                // Also clean up Y-Min for large numbers to use a clean floor if possible
+                if (yMin > 100) {
+                     yMin = roundUpToCleanScale(yMin * 0.95); // Round floor down a bit
+                }
+            }
             
              yMin = Math.max(0, yMin); // Final check to ensure yMin is not negative
+
+        } else if (maxValue > 100) {
+             // Default non-rate KPI check (e.g., if "DL Data Total Volume" wasn't flagged as a rate)
+             yMax = roundUpToCleanScale(yMax);
+             if (yMin > 100) {
+                 yMin = roundUpToCleanScale(yMin * 0.95);
+             }
         }
+        
     }
 
 
@@ -1074,6 +1106,16 @@ function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
                             }
                         } else if (maxValue > 0 && maxValue < 1) {
                             yMin_ppt = 0;
+                        } else if (maxValue > 100) {
+                             yMax_ppt = roundUpToCleanScale(yMax_ppt);
+                             if (yMin_ppt > 100) {
+                                 yMin_ppt = roundUpToCleanScale(yMin_ppt * 0.95);
+                             }
+                        }
+                    } else if (maxValue > 100) {
+                        yMax_ppt = roundUpToCleanScale(yMax_ppt);
+                        if (yMin_ppt > 100) {
+                             yMin_ppt = roundUpToCleanScale(yMin_ppt * 0.95);
                         }
                     }
                     yMin_ppt = Math.max(0, yMin_ppt);
@@ -1205,7 +1247,7 @@ async function downloadPPT() {
             const dataPoints = config.data.datasets[0].data;
             const timelineLabels = config.data.labels;
             
-            // --- RECALCULATE SCALING FOR HIGH-RES PPT EXPORT ---
+            // --- RECALCULATE SCALING FOR HIGH-RES PPT EXPORT (Using final logic) ---
             const kpi = chartData.kpi;
             const dataOnly = dataPoints.filter(v => v !== null);
             let yMin_ppt = 0, yMax_ppt = 100, yStepSize_ppt = null;
@@ -1240,6 +1282,16 @@ async function downloadPPT() {
                         }
                     } else if (maxValue > 0 && maxValue < 1) {
                         yMin_ppt = 0;
+                    } else if (maxValue > 100) {
+                         yMax_ppt = roundUpToCleanScale(yMax_ppt);
+                         if (yMin_ppt > 100) {
+                             yMin_ppt = roundUpToCleanScale(yMin_ppt * 0.95);
+                         }
+                    }
+                } else if (maxValue > 100) {
+                    yMax_ppt = roundUpToCleanScale(yMax_ppt);
+                    if (yMin_ppt > 100) {
+                        yMin_ppt = roundUpToCleanScale(yMin_ppt * 0.95);
                     }
                 }
                 yMin_ppt = Math.max(0, yMin_ppt);
