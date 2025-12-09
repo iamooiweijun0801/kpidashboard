@@ -356,9 +356,17 @@ function setupOnAirDateDropdown(){
     updateDateFilterUI(); 
     // Must also update the checkboxes manually since we bypass updateSelectedDates()
     list.querySelectorAll(".date-chk").forEach(c => c.checked = true);
+    // When All Dates are selected, all sites MUST be selected as well (Requirement A)
+    selectedSites = allSites.filter(site => siteCutoverMap[site] && allOnAirDates.includes(siteCutoverMap[site]));
     setupSiteDropdown(); // This re-renders charts
   };
-  const clearAll = () => { selectedOnAirDates = []; updateDateFilterUI(); setupSiteDropdown(); };
+  const clearAll = () => { 
+    selectedOnAirDates = []; 
+    updateDateFilterUI(); 
+    // When All Dates are cleared, all sites MUST be cleared (Requirement B)
+    selectedSites = []; 
+    setupSiteDropdown(); 
+  };
   
   // Actions
   list.innerHTML += `<div onclick="window.dateSetAll()"><b>Select All</b></div>`;
@@ -393,6 +401,13 @@ function updateSelectedDates() {
     // Ensure UI elements reflect current state
     list.querySelectorAll(".date-chk").forEach(c => c.checked = selectedOnAirDates.includes(c.value));
     
+    // REQUIREMENT C: When dates are selected, all sites falling under that category show up AND are checked.
+    let activeSites = allSites.filter(site => {
+        const date = siteCutoverMap[site];
+        return date && selectedOnAirDates.includes(date);
+    });
+    selectedSites = [...activeSites]; // Select all sites that fall under the selected dates
+    
     updateDateFilterUI();
     setupSiteDropdown(); // This will trigger the site update and re-render charts
 }
@@ -416,30 +431,35 @@ function setupSiteDropdown(){
   // 1. Determine which sites are active based on the date filter
   let activeSites = allSites.filter(site => {
       const date = siteCutoverMap[site];
-      // Site must have a mapped date AND that date must be selected
       return date && selectedOnAirDates.includes(date);
   });
   
   // 2. Filter selectedSites to only include those that are currently active
+  // NOTE: This handles cases where dates are filtered and selectedSites needs to be reduced.
   selectedSites = selectedSites.filter(site => activeSites.includes(site));
   
   // Actions
-  const setAll = () => { selectedSites = [...activeSites]; updateSiteFilterUI(); renderCharts(); };
+  const setAll = () => { 
+    selectedSites = [...activeSites]; 
+    updateSiteFilterUI(); 
+    renderCharts(); // Requirement E
+  }; 
+
   const clearAll = () => { 
-      selectedSites = []; 
-      // 👇 FIX IMPLEMENTED HERE: If sites are cleared, reset the date filter to ALL.
-      window.dateSetAll(); 
-      updateSiteFilterUI(); // renderCharts will be called by dateSetAll -> setupSiteDropdown
+    selectedSites = []; 
+    updateSiteFilterUI(); 
+    renderCharts(); // Requirement D: Dates remain unchanged, so just update sites and re-render
   };
   
   // Inject setAll/clearAll actions
   list.innerHTML += `<div onclick="window.siteSetAll()"><b>Select All (${activeSites.length})</b></div>`;
-  list.innerHTML += `<div onclick="window.siteClearAll()"><b>Clear All (Reset Dates)</b></div>`;
+  list.innerHTML += `<div onclick="window.siteClearAll()"><b>Clear All</b></div>`;
 
   // Options
   activeSites.forEach(site => {
     const d = document.createElement("div");
-    const checked = selectedSites.includes(site) ? "checked" : "";
+    // Check if the site is in the current selectedSites list
+    const checked = selectedSites.includes(site) ? "checked" : ""; 
     d.innerHTML = `<input type='checkbox' value='${site}' class='site-chk' ${checked}> ${site}`;
     d.onclick = (e) => {
        if(e.target.tagName !== "INPUT") {
@@ -459,10 +479,7 @@ function setupSiteDropdown(){
   
   // Initial UI update for site dropdown and rendering
   updateSiteFilterUI();
-  // We only call renderCharts directly here if it hasn't been called by a date filter change
-  if (selectedOnAirDates.length === allOnAirDates.length) {
-     renderCharts(); 
-  }
+  renderCharts();
 }
 
 function updateSelectedSites() {
