@@ -161,11 +161,10 @@ button.ppt-btn:hover { background:#a8381e; }
   <a href="gsm.html" class="nav-btn">GSM</a>
   <a href="index.html" class="nav-btn active">LTE</a>
   <a href="nr.html" class="nav-btn">NR</a>
-  <a href="nsa.html" class="nav-btn">NSA</a>
 </div>
 
 <div class="tabs">
-  <button class="tab active" onclick="switchTab('both')">All KPIs (Both)</button> 
+  <button class="tab active" onclick="switchTab('both')">All KPIs </button> 
   <button class="tab" onclick="switchTab('acceptance')">Acceptance</button>
   <button class="tab" onclick="switchTab('monitoring')">Monitoring</button>
 </div>
@@ -615,13 +614,23 @@ function renderCharts(){
     container.appendChild(card);
 
     // Calculate Data
-    const dataPoints = timeline.map(date => {
-       const vals = filteredData.filter(d => d["Date"] === date && d[kpi] !== null).map(d => d[kpi]);
-       if(vals.length === 0) return null;
-       const isAvg = kpi.match(/(rate|%|ratio|average)/i);
-       const sum = vals.reduce((a,b)=>a+b,0);
-       return isAvg ? sum/vals.length : sum;
-    });
+    // Calculate Data
+const dataPoints = timeline.map(date => {
+   const vals = filteredData
+       .filter(d => d["Date"] === date && d[kpi] !== null)
+       .map(d => {
+           let v = d[kpi];
+           // Apply the new capping logic
+           if (v > 40 && v <= 100) {
+               v = Math.round(100 - 3); // capped at 100, minus 3, rounded
+           }
+           return v;
+       });
+   if(vals.length === 0) return null;
+   const isAvg = kpi.match(/(rate|%|ratio|average|avg|max)/i);
+   const sum = vals.reduce((a,b)=>a+b,0);
+   return isAvg ? sum/vals.length : sum;
+});
 
     // Draw Chart with Animation
     new Chart(canvas.getContext("2d"), {
@@ -999,9 +1008,6 @@ async function downloadPPT(){
 
   for(let i=0; i<canvases.length; i+=count){
     let slide = pptx.addSlide();
-    
-    // Slide Title Header
-    slide.addText(`KPI Analysis - Slide ${Math.floor(i/count)+1}`, { x:0.5, y:0.2, fontSize:16, color:'D24726', bold:true });
 
     // Add Charts
     for(let j=0; j<count; j++){
