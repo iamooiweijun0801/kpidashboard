@@ -117,7 +117,7 @@ const monitoringKpis = [
 ];
 
 async function fetchData(){
-  const res = await fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=0&single=true&output=csv");
+  const res = await fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=1617739873&single=true&output=csv");
   const text = await res.text();
   const rows = text.trim().split('\n').map(r=>r.split(','));
   const headers = rows.shift().map(h=>h.trim());
@@ -183,7 +183,7 @@ function drawCharts(kpis,containerId){
     title.textContent=`${kpi} - ${labelText}`;
     const canvas=document.createElement("canvas"); card.appendChild(title); card.appendChild(canvas); container.appendChild(card);
     let filteredData=allData; if(selectedSites.length>0) filteredData=allData.filter(d=>selectedSites.includes(d["eNodeB Name"]));
-    const dataPoints=timeline.map(date=>{ const vals = filteredData.filter(d=>d["Date"]===date).map(d=>{ const v=d[kpi]; return (v===""||v==null||isNaN(v))?0:v; }); if(vals.length===0) return 0; if(kpi.toLowerCase().includes("%")||kpi.toLowerCase().includes("rate")||kpi.toLowerCase().includes("average")||kpi.toLowerCase().includes("ratio")){ return vals.reduce((a,b)=>a+b,0)/vals.length; }else return vals.reduce((a,b)=>a+b,0); });
+    const dataPoints=timeline.map(date=>{ const vals = filteredData.filter(d=>d["Date"]===date).map(d=>{ const v=d[kpi]; return (v===""||v==null||isNaN(v))?0:v; }); if(vals.length===0) return 0; if(kpi.toLowerCase().includes("%")||kpi.toLowerCase().includes("rate")||kpi.toLowerCase().includes("average")||kpi.toLowerCase().includes("avg")||kpi.toLowerCase().includes("ratio")){ return vals.reduce((a,b)=>a+b,0)/vals.length; }else return vals.reduce((a,b)=>a+b,0); });
     new Chart(canvas.getContext("2d"),{ type:'line', data:{ labels:timelineLabels,datasets:[{label:labelText,data:dataPoints,borderColor:'#'+Math.floor(Math.random()*16777215).toString(16),fill:false,tension:0.3,pointRadius:3}] }, options:{ responsive:true, maintainAspectRatio:false, animation:{ x:{ type:'number', easing:'linear', duration:animationDuration, from:NaN, delay(ctx){ return ctx.index*10; } }, y:{duration:0} }, scales:{x:{display:true},y:{beginAtZero:true,ticks:{maxTicksLimit:6}}}, plugins:{legend:{position:'top'}} } });
   });
 }
