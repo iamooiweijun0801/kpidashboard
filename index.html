@@ -59,7 +59,7 @@ button.ppt-btn:hover { background:#a8381e; }
 .kpiDrawerToggle { position:fixed; top:100px; right:0; width:36px; height:36px; background:#2F80ED; color:white; border-radius:6px 0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:20px; z-index:900; }
 .kpiDrawer { 
   position:fixed; top:0; right:0; 
-  width:320px; /* Adjusted width */
+  width:320px; 
   height:100%; background:white; 
   box-shadow:-2px 0 10px rgba(0,0,0,0.1); z-index:1000; 
   transform:translateX(100%); transition:0.3s; padding:20px; 
@@ -76,9 +76,9 @@ button.ppt-btn:hover { background:#a8381e; }
 }
 .drawer-header h3 { margin: 0; }
 .drawer-controls { display: flex; gap: 10px; align-items: center; }
-.kpi-options-body { flex-grow: 1; overflow-y: auto; padding-right: 5px; } 
+.kpi-options-body { flex-grow: 1; overflow-y: auto; padding-right: 5px; padding-bottom: 40px; } /* Added padding-bottom here */
 
-/* --- PREVIEW MODALS --- */
+/* --- MODALS --- */
 .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:2000; display:none; align-items:center; justify-content:center; backdrop-filter:blur(3px); }
 .modal-content { background:white; width:900px; height:85vh; border-radius:12px; display:flex; flex-direction:column; box-shadow:0 10px 25px rgba(0,0,0,0.3); }
 .modal-header { padding:15px 20px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; font-weight:bold; font-size:18px; }
@@ -91,9 +91,12 @@ button.ppt-btn:hover { background:#a8381e; }
 .preview-label { font-size:12px; margin-top:5px; font-weight:bold; }
 .modal-footer { padding:15px; border-top:1px solid #eee; text-align:right; }
 
-/* Modal for Graph Count Selection */
-.selection-modal-content { width: 400px; height: auto; text-align: center; }
+/* Modal for Graph Count and Color Selection */
+.selection-modal-content { width: 450px; height: auto; text-align: center; }
 .graph-options button { margin: 8px; width: 120px; }
+.color-select-group { margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 6px; }
+.color-option { margin: 5px; display: inline-block; cursor: pointer; border: 2px solid transparent; border-radius: 50%; width: 25px; height: 25px; }
+.color-option.selected { border-color: #333; }
 </style>
 </head>
 <body>
@@ -147,15 +150,28 @@ button.ppt-btn:hover { background:#a8381e; }
 <div id="exportSelectionModal" class="modal">
   <div class="modal-content selection-modal-content">
     <div class="modal-header" style="justify-content: center;">
-      <span>Select Graphs per Slide</span>
+      <span>PPT Export Settings</span>
     </div>
     <div class="modal-body" style="background:white; padding: 20px;">
-      <p style="margin-bottom: 20px; color:#555;">Choose how many graphs you want on each PowerPoint slide (will open preview):</p>
+        
+      <p style="margin-bottom: 15px; font-weight: bold;">1. Graphs per Slide (Default: 2)</p>
       <div class="graph-options">
-        <button class="action-btn" onclick="openPreview(1)">1 Graph</button>
-        <button class="action-btn" onclick="openPreview(2)">2 Graphs</button>
-        <button class="action-btn" onclick="openPreview(3)">3 Graphs</button>
-        <button class="action-btn" onclick="openPreview(4)">4 Graphs</button>
+        <button class="action-btn" onclick="startPreview(1)">1 Graph</button>
+        <button class="action-btn" onclick="startPreview(2)" style="background:#27AE60;">2 Graphs (Default)</button>
+        <button class="action-btn" onclick="startPreview(3)">3 Graphs</button>
+        <button class="action-btn" onclick="startPreview(4)">4 Graphs</button>
+      </div>
+      
+      <div class="color-select-group">
+        <p style="margin-bottom: 15px; font-weight: bold;">2. Export Line Color</p>
+        <div id="colorOptions">
+            <span class="color-option selected" style="background-color:#2F80ED;" data-color="#2F80ED" onclick="selectColor(this)"></span>
+            <span class="color-option" style="background-color:#27AE60;" data-color="#27AE60" onclick="selectColor(this)"></span>
+            <span class="color-option" style="background-color:#D24726;" data-color="#D24726" onclick="selectColor(this)"></span>
+            <span class="color-option" style="background-color:#8E44AD;" data-color="#8E44AD" onclick="selectColor(this)"></span>
+            <span class="color-option" style="background-color:#F39C12;" data-color="#F39C12" onclick="selectColor(this)"></span>
+        </div>
+        <p style="margin-top: 10px; font-size: 12px; color: #777;">Click a number above to start the preview.</p>
       </div>
     </div>
   </div>
@@ -183,9 +199,9 @@ let fuse = null;
 let allSites = [];
 let selectedSites = [];
 let currentTab = "acceptance";
-let graphsPerSlide = 2; // Default for download
+let graphsPerSlide = 2; 
 
-const CHART_COLOR = '#2F80ED'; // Fixed dark blue color for PPT
+let chartExportColor = '#2F80ED'; // Default Dark Blue
 
 const acceptanceKpis = [
   "LTE RRC Setup Success Rate","ERAB Setup Success Rate","LTE Call Setup Success Rate","E-RAB Call Drop Rate",
@@ -208,6 +224,7 @@ let selectedKpis = {
 // --- FETCH DATA ---
 async function fetchData(){
   try {
+    // NOTE: Replace this with your actual data fetching logic if it changes
     const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=0&single=true&output=csv&t=" + Date.now();
     const res = await fetch(url);
     const text = await res.text();
@@ -351,13 +368,12 @@ function populateKpiOptions(){
   const list = document.getElementById("kpiOptionsList");
   list.innerHTML = "";
   
-  const headerTitle = document.getElementById('drawerHeaderTitle');
-  
+  // Title remains fixed
+  document.getElementById('drawerHeaderTitle').textContent = 'KPI Settings';
+
   const acceptanceSection = currentTab === 'acceptance' || currentTab === 'both';
   const monitoringSection = currentTab === 'monitoring' || currentTab === 'both';
   
-  headerTitle.textContent = currentTab === 'both' ? 'All KPI Settings' : `${currentTab.charAt(0).toUpperCase() + currentTab.slice(1)} KPI Settings`;
-
   const createGroup = (title, key, sourceArr) => {
     const h4 = document.createElement("h4");
     h4.textContent = title;
@@ -379,7 +395,7 @@ function populateKpiOptions(){
 function applyKpis(){
   const chks = document.querySelectorAll(".kpi-chk");
   
-  // Reset only the current tabs' selection if they are visible in the drawer
+  // Keep existing selections for tabs not currently displayed
   const tempAcceptance = currentTab === 'acceptance' || currentTab === 'both' ? [] : [...selectedKpis.acceptance];
   const tempMonitoring = currentTab === 'monitoring' || currentTab === 'both' ? [] : [...selectedKpis.monitoring];
 
@@ -399,13 +415,34 @@ function applyKpis(){
 
 // --- PPT EXPORT CUSTOMIZATION & PREVIEW ---
 
+function selectColor(element) {
+    document.querySelectorAll('.color-option').forEach(el => el.classList.remove('selected'));
+    element.classList.add('selected');
+    chartExportColor = element.dataset.color;
+    
+    // Update the button appearance for the default 2 graphs button
+    document.querySelectorAll('.graph-options button').forEach(btn => {
+        btn.style.backgroundColor = btn.textContent.includes('2 Graphs') ? '#27AE60' : '#2F80ED';
+    });
+}
+
 function openExportOptions() {
     const canvases = document.querySelectorAll("canvas");
     if(canvases.length === 0) { alert("No charts to export."); return; }
+    
+    // Default to 2 Graphs selected if not already set
+    const defaultBtn = document.querySelector('.graph-options button:nth-child(2)');
+    document.querySelectorAll('.graph-options button').forEach(btn => {
+        btn.style.backgroundColor = btn === defaultBtn ? '#27AE60' : '#2F80ED';
+    });
+
+    // Ensure default color is selected
+    document.querySelector(`.color-option[data-color="${chartExportColor}"]`)?.classList.add('selected');
+
     document.getElementById("exportSelectionModal").style.display = "flex";
 }
 
-function openPreview(count) {
+function startPreview(count) {
     graphsPerSlide = count;
     document.getElementById("exportSelectionModal").style.display = "none";
 
@@ -447,22 +484,24 @@ function createPreviewBox(canvas){
   const box = document.createElement("div");
   box.className = "preview-img-box";
   
-  // Temporarily clone the canvas and force the color for the preview image
+  // Temporarily clone the canvas and force the selected color for the preview image
   const tempCanvas = document.createElement('canvas');
   tempCanvas.width = canvas.width;
   tempCanvas.height = canvas.height;
   const tempCtx = tempCanvas.getContext('2d');
   
-  // Redraw the chart onto the temp canvas with the fixed PPT color
   const chartInstance = Chart.getChart(canvas.id);
+  let imgData = '';
+  
   if (chartInstance) {
       const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
       
-      // Override color for screenshot
-      chartInstance.data.datasets.forEach(d => { d.borderColor = CHART_COLOR; });
-      chartInstance.update('none'); // Update without animation
+      // Override color for screenshot using the selected chartExportColor
+      chartInstance.data.datasets.forEach(d => { d.borderColor = chartExportColor; });
+      chartInstance.update('none'); 
       
       tempCtx.drawImage(canvas, 0, 0);
+      imgData = tempCanvas.toDataURL("image/png");
       
       // Restore original colors
       chartInstance.data.datasets.forEach((d, index) => { d.borderColor = originalColors[index]; });
@@ -470,14 +509,14 @@ function createPreviewBox(canvas){
   }
 
   const img = document.createElement("img");
-  img.src = tempCanvas.toDataURL("image/png");
+  img.src = imgData;
   
   const titleText = canvas.closest(".chart-card").querySelector(".chart-title").textContent;
   const label = document.createElement("div");
   label.className = "preview-label";
   label.textContent = titleText;
   
-  box.appendChild(label); // Title above image
+  box.appendChild(label); 
   box.appendChild(img);
   return box;
 }
@@ -521,8 +560,8 @@ async function downloadPPT(){
         const chartInstance = Chart.getChart(c.id);
         const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
         
-        // Override color for PPT export
-        chartInstance.data.datasets.forEach(d => { d.borderColor = CHART_COLOR; });
+        // Override color for PPT export using the selected chartExportColor
+        chartInstance.data.datasets.forEach(d => { d.borderColor = chartExportColor; });
         chartInstance.update('none'); 
         
         const imgData = c.toDataURL("image/png");
