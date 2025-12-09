@@ -322,7 +322,7 @@ function drawCharts(kpis,containerId){
         const v=d[kpi]; return (v===""||v==null||isNaN(v))?0:v;
       });
       if(vals.length===0) return 0;
-      if(kpi.toLowerCase().includes("%")||kpi.toLowerCase().includes("rate")||kpi.toLowerCase().includes("Max RRC Connected Ue")||kpi.toLowerCase().includes("average")||kpi.toLowerCase().includes("ratio")){
+      if(kpi.toLowerCase().includes("%")||kpi.toLowerCase().includes("rate")||kpi.toLowerCase().includes("Connected")||kpi.toLowerCase().includes("average")||kpi.toLowerCase().includes("ratio")){
         return vals.reduce((a,b)=>a+b,0)/vals.length;
       }else return vals.reduce((a,b)=>a+b,0);
     });
