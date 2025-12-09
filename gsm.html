@@ -5,110 +5,283 @@
 <title>GSM KPI Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.6.2/fuse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+
 <style>
-body { font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin:0; padding:0; background:#f0f2f5; overflow-x:hidden; }
-header { text-align:center; padding:20px 0; font-size:32px; font-weight:bold; color:#2F80ED; background:white; box-shadow:0 2px 6px rgba(0,0,0,0.1); margin-bottom:16px; }
-.navbar { display:flex; justify-content:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
-.navbar button { padding:8px 16px; cursor:pointer; border:none; background:#2F80ED; color:white; border-radius:6px; font-weight:bold; transition:0.2s; }
-.navbar button:hover { background:#1f5ab5; }
-.tabs { display:flex; justify-content:center; margin-bottom:16px; flex-wrap:wrap; gap:8px; }
-.tab { padding:10px 20px; cursor:pointer; border:1px solid #ccc; border-radius:8px; background:#eee; font-weight:bold; transition:0.3s; }
+/* --- BASE STYLES --- */
+body { font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin:0; padding:0; background:#f4f7f6; overflow-x:hidden; }
+header { text-align:center; padding:15px 0; font-size:28px; font-weight:700; color:#333; background:white; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-bottom:15px; }
+
+/* --- NAVIGATION --- */
+.navbar { display:flex; justify-content:center; gap:12px; margin-bottom:15px; }
+.nav-btn { padding:8px 24px; cursor:pointer; border:1px solid #ccc; background:white; color:#555; border-radius:20px; font-weight:600; text-decoration:none; transition:0.2s; display:inline-block; }
+.nav-btn:hover { background:#f0f0f0; color:#333; }
+.nav-btn.active { background:#2F80ED; color:white; border-color:#2F80ED; }
+
+/* --- TABS --- */
+.tabs { display:flex; justify-content:center; margin-bottom:20px; gap:8px; }
+.tab { padding:8px 20px; cursor:pointer; border-radius:6px; background:#e0e0e0; color:#555; font-weight:bold; border:none; transition:0.2s; }
+.tab:hover { background:#d0d0d0; }
 .tab.active { background:#2F80ED; color:white; }
-.tab:hover:not(.active) { background:#d0e1ff; }
-.controls { display:flex; justify-content:center; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
-#siteFilter { padding:8px; width:250px; border-radius:6px; border:1px solid #ccc; }
-#dropdown { position:absolute; background:white; border:1px solid #ccc; max-height:150px; overflow-y:auto; display:none; z-index:10; width:250px; top:38px; left:0; border-radius:6px; }
-#dropdown div { padding:6px 10px; cursor:pointer; transition:0.2s; }
-#dropdown div:hover { background:#2F80ED; color:white; }
-#siteDropdownBtn { padding:8px 10px; cursor:pointer; border:1px solid #ccc; border-radius:6px; background:white; min-width:250px; text-align:left; position:relative; z-index:5; }
-#siteDropdownList { position:absolute; background:white; border:1px solid #ccc; max-height:200px; overflow-y:auto; display:none; z-index:10; width:250px; border-radius:6px; padding:6px; }
 
-button { padding:10px 18px; cursor:pointer; border:none; background:#2F80ED; color:white; border-radius:6px; font-weight:bold; transition:0.2s; }
-button:hover { background:#1f5ab5; }
+/* --- CONTROLS --- */
+.controls { display:flex; justify-content:center; gap:10px; margin-bottom:20px; flex-wrap:wrap; align-items:center; }
+.control-group { position:relative; }
+input, select { padding:8px; border-radius:6px; border:1px solid #ccc; font-size:14px; outline:none; }
+button.action-btn { padding:8px 16px; cursor:pointer; border:none; background:#2F80ED; color:white; border-radius:6px; font-weight:600; transition:0.2s; }
+button.action-btn:hover { background:#1f5ab5; }
+button.ppt-btn { background:#D24726; } /* PowerPoint Orange */
+button.ppt-btn:hover { background:#a8381e; }
 
-.chart-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(400px,1fr)); gap:20px; padding:0 20px 20px 20px; }
-canvas { background:white; border-radius:12px; padding:16px; width:100% !important; height:250px !important; }
-.chart-card { padding:10px; border-radius:12px; background:white; box-shadow:0 2px 12px rgba(0,0,0,0.1); transition:0.3s; }
-.chart-card:hover { transform:translateY(-4px); box-shadow:0 6px 20px rgba(0,0,0,0.15); }
-.chart-title { text-align:center; font-weight:bold; margin-bottom:10px; color:#333; }
-
-/* Drawer */
-.kpiDrawer { 
-  position:fixed; top:0; right:0; width:320px; height:100%; background:white; 
-  box-shadow:-4px 0 12px rgba(0,0,0,0.15); transition:0.3s; z-index:20; padding:20px; 
-  overflow-y:auto; display:none; 
+/* --- GRID LAYOUT (3 Graphs per row) --- */
+.chart-grid { 
+  display:grid; 
+  grid-template-columns: repeat(3, 1fr); 
+  gap:20px; 
+  padding:0 20px 40px 20px; 
+  max-width: 1800px; 
+  margin: 0 auto; 
 }
-.kpiDrawer.open { display:block; }
-.kpiDrawer h3 { margin-top:0; margin-bottom:12px; color:#2F80ED; }
-.kpiOption { margin-bottom:6px; }
-#applyAcceptanceBtn, #applyMonitoringBtn { margin-top:10px; width:100%; }
+@media (max-width: 1400px) { .chart-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 768px) { .chart-grid { grid-template-columns: 1fr; } }
 
-/* Minimal blue toggle button */
-.kpiDrawerToggle { position:fixed; top:20px; right:0; width:30px; height:80px; background:#2F80ED; border-radius:6px 0 0 6px; cursor:pointer; z-index:25; }
-.kpiDrawerToggle:hover { background:#1f5ab5; }
+/* --- CARDS & CHARTS --- */
+.chart-card { background:white; border-radius:8px; padding:15px; box-shadow:0 2px 8px rgba(0,0,0,0.08); display:flex; flex-direction:column; }
+.chart-title { display:none; } 
+.chart-container { position: relative; height: 280px; width: 100%; }
+
+/* --- DROPDOWNS --- */
+#dropdown, #siteDropdownList, #onAirDateDropdownList { 
+  position:absolute; 
+  background:white; 
+  border:1px solid #ccc; 
+  max-height:200px; 
+  overflow-y:auto; 
+  display:none; 
+  z-index:100; 
+  width:100%; 
+  top:105%; 
+  border-radius:6px; 
+  box-shadow:0 4px 10px rgba(0,0,0,0.1); 
+}
+#dropdown div, #siteDropdownList div, #onAirDateDropdownList div { padding:6px 10px; cursor:pointer; font-size:13px; border-bottom:1px solid #eee; }
+#dropdown div:hover, #siteDropdownList div:hover, #onAirDateDropdownList div:hover { background:#f0f7ff; color:#2F80ED; }
+
+/* --- KPI Drawer Fixes --- */
+.kpiDrawerToggle { position:fixed; top:100px; right:0; width:36px; height:36px; background:#2F80ED; color:white; border-radius:6px 0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:20px; z-index:900; }
+.kpiDrawer { 
+  position:fixed; top:0; right:0; 
+  width:320px; 
+  height:100%; background:white; 
+  box-shadow:-2px 0 10px rgba(0,0,0,0.1); z-index:1000; 
+  transform:translateX(100%); transition:0.3s; padding:20px; 
+  display: flex; flex-direction: column; 
+}
+.kpiDrawer.open { transform:translateX(0); }
+.drawer-header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 10px; 
+    padding-bottom: 10px; 
+    border-bottom: 1px solid #eee; 
+}
+.drawer-header h3 { margin: 0; }
+.drawer-controls { 
+    display: flex; 
+    gap: 5px; /* Reduced gap */
+    align-items: center; 
+}
+.drawer-controls .action-btn { 
+    padding: 6px 10px; /* Smaller padding for density */
+    font-size: 13px; /* Smaller font for density */
+}
+.kpi-options-body { flex-grow: 1; overflow-y: auto; padding-right: 5px; padding-bottom: 40px; } 
+
+/* --- PREVIEW MODAL --- */
+.modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:2000; display:none; align-items:center; justify-content:center; backdrop-filter:blur(3px); }
+.modal-content { 
+    background:white; 
+    width:95%; 
+    max-width: 1400px; 
+    height:90vh; 
+    border-radius:12px; 
+    display:flex; 
+    flex-direction:column; 
+    box-shadow:0 10px 25px rgba(0,0,0,0.3); 
+}
+.modal-header { padding:15px 20px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; font-weight:bold; font-size:18px; }
+.modal-body { flex:1; display: flex; padding:0; overflow: hidden; } 
+
+/* Preview Side */
+#previewBody { 
+    flex: 1; 
+    overflow-y:auto; 
+    padding:20px; 
+    background:#f5f5f5; 
+}
+.preview-slide { background:white; border:1px solid #ddd; margin-bottom:20px; padding:20px; box-shadow:0 2px 5px rgba(0,0,0,0.05); aspect-ratio: 16/9; position:relative; }
+.preview-slide-title { position:absolute; top:10px; left:20px; font-size:16px; font-weight:bold; color:#D24726; }
+.preview-grid { display:grid; height:100%; align-items:center; padding-top:30px; }
+.preview-img-box { text-align:center; padding:5px; height:100%; display:flex; flex-direction:column; justify-content:center; }
+.preview-img-box img { max-width:100%; max-height:calc(100% - 20px); object-fit:contain; border:1px solid #eee; }
+.preview-label { display: none; } 
+
+/* Settings Side (Fixed, not scrollable) */
+#previewSettingsPanel {
+    width: 250px;
+    background: #fff;
+    border-left: 1px solid #eee;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0; 
+}
+.settings-group { margin-bottom: 20px; }
+.settings-group h4 { margin-top: 0; margin-bottom: 10px; font-size: 14px; color: #555; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+.graph-options button { margin: 5px; width: 100px; padding: 6px; font-size: 13px; }
+
+/* Color Selector */
+.color-option { margin: 5px; display: inline-block; cursor: pointer; border: 2px solid transparent; border-radius: 50%; width: 25px; height: 25px; transition: border 0.1s; }
+.color-option.selected { border-color: #333; }
+
+.modal-footer { 
+    padding:15px 20px; 
+    border-top:1px solid #eee; 
+    text-align:right;
+    flex-shrink: 0; 
+}
 </style>
 </head>
 <body>
 
 <header>GSM KPI Dashboard</header>
 
-<!-- Navigation Buttons -->
 <div class="navbar">
-  <button onclick="window.location.href='index.html'">LTE</button>
-  <button onclick="window.location.href='gsm.html'">GSM</button>
-  <button onclick="window.location.href='nr.html'">NR</button>
-  <button onclick="window.location.href='nsa.html'">NSA</button>
+  <a href="gsm.html" class="nav-btn">GSM</a>
+  <a href="index.html" class="nav-btn active">GSM</a>
+  <a href="nr.html" class="nav-btn">NR</a>
 </div>
 
 <div class="tabs">
-  <div class="tab active" data-tab="acceptance">Acceptance KPIs</div>
-  <div class="tab" data-tab="monitoring">Monitoring KPIs</div>
+  <button class="tab active" onclick="switchTab('both')">All KPIs </button> 
+  <button class="tab" onclick="switchTab('acceptance')">Acceptance</button>
+  <button class="tab" onclick="switchTab('monitoring')">Monitoring</button>
 </div>
 
 <div class="controls">
-  <div style="position:relative;">
-    <input type="text" id="siteFilter" placeholder="Search GBSC Name">
-    <div id="dropdown"></div>
+  <div class="control-group" style="width:200px;">
+    <button id="onAirDateDropdownBtn" class="action-btn" style="background:white; color:#333; border:1px solid #ccc; width:100%; text-align:left; display:flex; justify-content:space-between;">
+      <span id="onAirDateBtnLabel">All On-Air Dates</span> <span>▼</span>
+    </button>
+    <div id="onAirDateDropdownList"></div>
   </div>
-  <div style="position:relative;">
-    <button id="siteDropdownBtn">All Sites ▼</button>
+
+  <div class="control-group" style="width:200px;">
+    <button id="siteDropdownBtn" class="action-btn" style="background:white; color:#333; border:1px solid #ccc; width:100%; text-align:left; display:flex; justify-content:space-between;">
+      <span id="siteBtnLabel">All Sites</span> <span>▼</span>
+    </button>
     <div id="siteDropdownList"></div>
   </div>
-  <button id="refreshBtn">Refresh Data</button>
+
+  <button onclick="fetchData()" class="action-btn">Refresh</button>
+  <button onclick="openPreview()" class="action-btn ppt-btn">Export PPT</button>
 </div>
 
-<!-- Pages -->
-<div id="acceptancePage">
-  <div class="chart-grid" id="acceptanceChartContainer"></div>
-</div>
-<div id="monitoringPage" style="display:none;">
-  <div class="chart-grid" id="monitoringChartContainer"></div>
+<div class="chart-grid" id="mainChartContainer"></div>
+
+<div class="kpiDrawerToggle" onclick="toggleDrawer()">⚙</div>
+<div id="kpiDrawer" class="kpiDrawer">
+  <div class="drawer-header">
+    <h3 id="drawerHeaderTitle">KPI Settings</h3>
+    <div class="drawer-controls">
+        <button class="action-btn" onclick="selectVisibleKpis()" style="background:#5cb85c;">Select All</button>
+        <button class="action-btn" onclick="clearVisibleKpis()" style="background:#f0ad4e;">Clear All</button>
+        <button class="action-btn" onclick="applyKpis()">Apply</button>
+        <button onclick="toggleDrawer()" style="border:none; background:none; font-size:24px; cursor:pointer; color:#777;">✕</button>
+    </div>
+  </div>
+  <div class="kpi-options-body" id="kpiOptionsList"></div>
 </div>
 
-<!-- KPI Drawers -->
-<div id="acceptanceDrawer" class="kpiDrawer">
-  <h3>KPIs</h3>
-  <div><input type="checkbox" id="selectAllAcceptance"> <label for="selectAllAcceptance"><b>Select All</b></label></div>
-  <div id="acceptanceKpiOptions"></div>
-  <button id="applyAcceptanceBtn">Apply</button>
-</div>
-<div id="monitoringDrawer" class="kpiDrawer">
-  <h3>KPIs</h3>
-  <div><input type="checkbox" id="selectAllMonitoring"> <label for="selectAllMonitoring"><b>Select All</b></label></div>
-  <div id="monitoringKpiOptions"></div>
-  <button id="applyMonitoringBtn">Apply</button>
-</div>
 
-<div id="drawerToggle" class="kpiDrawerToggle"></div>
+<div id="previewModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span id="previewTitle">PPT Export Preview</span>
+      <button onclick="closePreview()" style="border:none; background:none; font-size:20px; cursor:pointer;">✕</button>
+    </div>
+    <div class="modal-body">
+        
+        <div id="previewBody">
+          </div>
+
+        <div id="previewSettingsPanel">
+            <h3>Export Settings</h3>
+
+            <div class="settings-group">
+                <h4>Graphs per Slide (Rows)</h4>
+                <div class="graph-options">
+                    <button class="action-btn" data-count="1" onclick="updatePreviewSettings(1, chartExportColor, chartExportTitleColor)">1 Graph</button>
+                    <button class="action-btn" data-count="2" onclick="updatePreviewSettings(2, chartExportColor, chartExportTitleColor)">2 Graphs</button>
+                    <button class="action-btn" data-count="3" onclick="updatePreviewSettings(3, chartExportColor, chartExportTitleColor)">3 Graphs</button>
+                    <button class="action-btn" data-count="4" onclick="updatePreviewSettings(4, chartExportColor, chartExportTitleColor)">4 Graphs</button>
+                    <button class="action-btn" data-count="6" onclick="updatePreviewSettings(6, chartExportColor, chartExportTitleColor)">6 Graphs</button>
+                    <button class="action-btn" data-count="9" onclick="updatePreviewSettings(9, chartExportColor, chartExportTitleColor)">9 Graphs</button>
+                </div>
+            </div>
+
+            <div class="settings-group">
+                <h4>Line & Dot Color for PPT</h4>
+                <div id="lineColorOptions">
+                    <span class="color-option" style="background-color:#2F80ED;" data-color="#2F80ED" onclick="updatePreviewSettings(graphsPerSlide, '#2F80ED', chartExportTitleColor)"></span>
+                    <span class="color-option" style="background-color:#27AE60;" data-color="#27AE60" onclick="updatePreviewSettings(graphsPerSlide, '#27AE60', chartExportTitleColor)"></span>
+                    <span class="color-option" style="background-color:#D24726;" data-color="#D24726" onclick="updatePreviewSettings(graphsPerSlide, '#D24726', chartExportTitleColor)"></span>
+                    <span class="color-option" style="background-color:#8E44AD;" data-color="#8E44AD" onclick="updatePreviewSettings(graphsPerSlide, '#8E44AD', chartExportTitleColor)"></span>
+                    <span class="color-option" style="background-color:#F39C12;" data-color="#F39C12" onclick="updatePreviewSettings(graphsPerSlide, '#F39C12', chartExportTitleColor)"></span>
+                </div>
+            </div>
+
+            <div class="settings-group">
+                <h4>Chart Title Color for PPT</h4>
+                <div id="titleColorOptions">
+                    <span class="color-option" style="background-color:#333333;" data-color="#333333" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#333333')"></span>
+                    <span class="color-option" style="background-color:#000000;" data-color="#000000" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#000000')"></span>
+                    <span class="color-option" style="background-color:#2F80ED;" data-color="#2F80ED" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#2F80ED')"></span>
+                    <span class="color-option" style="background-color:#8E44AD;" data-color="#8E44AD" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#8E44AD')"></span>
+                    <span class="color-option" style="background-color:#D24726;" data-color="#D24726" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#D24726')"></span>
+                </div>
+            </div>
+
+            <div style="margin-top: auto; padding-top: 15px; border-top: 1px solid #eee;">
+                <p style="font-size: 12px; color: #777;">Preview updates instantly.</p>
+            </div>
+        </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="action-btn" style="background:#888;" onclick="closePreview()">Cancel</button>
+      <button class="action-btn ppt-btn" onclick="downloadPPT()">Download .PPTX</button>
+    </div>
+  </div>
+</div>
 
 <script>
-let allData=[], fuse=null, allSites=[];
-let selectedSites=[];
-let acceptanceKpisList=[], monitoringKpisList=[];
-let selectedAcceptanceKpis=[], selectedMonitoringKpis=[];
-const animationDuration=150;
+// --- CONFIG & STATE ---
+let allData = [];
+let fuse = null;
+let allSites = [];
+let siteCutoverMap = {}; // Maps GBSC -> On-Air Date
+let allOnAirDates = [];
+let selectedOnAirDates = [];
 
-// GSM KPIs
+let selectedSites = [];
+let currentTab = "both"; // DEFAULT IS NOW 'BOTH'
+let graphsPerSlide = 2; 
+
+let chartExportColor = '#2F80ED'; // Default Line/Dot Color (Dark Blue)
+let chartExportTitleColor = '#333333'; // Default Title Color (Dark Gray/Black)
+
 const acceptanceKpis = [
   "Call setup success rate(%)", "SDCCH Congestion Rate", "TCH Congestion Rate", 
   "UL TBF establishment Suc Rate", "Call drop rate", "DL_TBF_drop_Rate", 
@@ -119,242 +292,779 @@ const monitoringKpis = [
   "Average DL RLC throughput in EGPRS mode (kbit/sec) per TSL", 
   "Average DL RLC throughput in GPRS mode (kbit/sec) Per TSL", "Cell Availability(%)"
 ];
+  
+let selectedKpis = {
+  acceptance: [...acceptanceKpis],
+  monitoring: [...monitoringKpis]
+};
 
-// Fetch GSM Data from Google Sheet (replace with your GSM tab URL)
+// --- GLOBAL UTILITY FUNCTIONS ---
+
+/**
+ * Switches the active tab (Acceptance, Monitoring, Both).
+ * @param {string} tab - The tab identifier ('acceptance', 'monitoring', 'both').
+ */
+function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelector(`.tab[onclick="switchTab('${tab}')"]`).classList.add('active');
+    currentTab = tab;
+    renderCharts(); 
+}
+
+// --- DATA FETCHING & MAPPING ---
 async function fetchData(){
-  const res = await fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=1930867305&single=true&output=csv"); 
-  const text = await res.text();
-  const rows = text.trim().split('\n').map(r=>r.split(','));
-  const headers = rows.shift().map(h=>h.trim());
-  allData = rows.map(r=>{
-    const obj={};
-    headers.forEach((h,i)=>{
-      const val=r[i]?r[i].trim():"0";
-      obj[h]=isNaN(val)?val:parseFloat(val);
+  try {
+    // 1. Fetch KPI Data
+    const kpiUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=1977848975&single=true&output=csv&t=" + Date.now();
+    const kpiRes = await fetch(kpiUrl);
+    const kpiText = await kpiRes.text();
+    
+    const kpiRows = kpiText.trim().split('\n').map(r=>r.split(','));
+    const kpiHeaders = kpiRows.shift().map(h=>h.trim());
+    allData = kpiRows.map(r=>{ 
+      const obj={}; 
+      kpiHeaders.forEach((h,i)=>{ 
+        const val=r[i]?r[i].trim():""; 
+        obj[h] = val==="" ? null : (isNaN(val) ? val : parseFloat(val)); 
+      }); 
+      return obj; 
     });
-    return obj;
-  });
-  fuse = new Fuse(allData,{ keys:['GBSC'], threshold:0.4 });
-  allSites = [...new Set(allData.map(d=>d["GBSC"]))].sort();
-  populateSiteDropdown();
-  populateKpiDrawers();
-  drawAcceptanceCharts();
-}
 
-// SITE DROPDOWN
-function populateSiteDropdown(){
-  const list = document.getElementById("siteDropdownList");
-  list.innerHTML="";
+    // Determine all sites present in the KPI data
+    allSites = [...new Set(allData.map(d=>d["GBSC"]))].filter(s=>s).sort();
 
-  const selectAllDiv = document.createElement("div");
-  selectAllDiv.style.padding="6px 10px";
-  selectAllDiv.style.borderBottom="1px solid #ddd";
-  selectAllDiv.style.cursor="pointer";
-  selectAllDiv.innerHTML = `<b>Select All Sites</b>`;
-  selectAllDiv.onclick = () => {
-    selectedSites = allSites.slice();
-    list.querySelectorAll(".siteOption").forEach(c => c.checked = true);
-    updateSiteButtonLabel();
-    drawCurrentPageCharts();
-  };
-  list.appendChild(selectAllDiv);
-
-  const clearDiv = document.createElement("div");
-  clearDiv.style.padding="6px 10px";
-  clearDiv.style.borderBottom="1px solid #ddd";
-  clearDiv.style.cursor="pointer";
-  clearDiv.innerHTML = `<b>Clear Filter</b>`;
-  clearDiv.onclick = () => {
-    selectedSites = [];
-    list.querySelectorAll(".siteOption").forEach(c => c.checked = false);
-    updateSiteButtonLabel();
-    drawCurrentPageCharts();
-  };
-  list.appendChild(clearDiv);
-
-  allSites.forEach((site,i)=>{
-    const div=document.createElement("div");
-    div.innerHTML= `<input type="checkbox" class="siteOption" id="site_${i}" value="${site}"> <label for="site_${i}">${site}</label>`;
-    div.style.padding="6px 10px";
-    list.appendChild(div);
-  });
-
-  document.getElementById("siteDropdownBtn").onclick = ()=>{ list.style.display = list.style.display==="block" ? "none" : "block"; };
-
-  list.querySelectorAll(".siteOption").forEach(chk=>{
-    chk.addEventListener("change", ()=>{
-      selectedSites = Array.from(list.querySelectorAll(".siteOption:checked")).map(c=>c.value);
-      updateSiteButtonLabel();
-      drawCurrentPageCharts();
+    // 2. Fetch Cutover Data
+    const cutoverUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=19616562&single=true&output=csv&t=" + Date.now();
+    const cutoverRes = await fetch(cutoverUrl);
+    const cutoverText = await cutoverRes.text();
+    
+    const cutoverRows = cutoverText.trim().split('\n').map(r=>r.split(','));
+    const cutoverHeaders = cutoverRows.shift().map(h=>h.trim());
+    
+    siteCutoverMap = {};
+    cutoverRows.forEach(r => {
+        const siteName = r[cutoverHeaders.indexOf("GBSC")]?.trim();
+        const onAirDate = r[cutoverHeaders.indexOf("On-Air Date")]?.trim();
+        if (siteName && onAirDate) {
+            // Only map sites that exist in the KPI data to prevent issues
+            if (allSites.includes(siteName)) {
+                 siteCutoverMap[siteName] = onAirDate;
+            }
+        }
     });
-  });
+
+    // 3. Initialize Date Filter Options and State
+    allOnAirDates = [...new Set(Object.values(siteCutoverMap))].filter(d => d).sort();
+    selectedOnAirDates = [...allOnAirDates]; // Default: Select All Dates
+    selectedSites = []; // Reset site selection
+
+    // 4. Update UI
+    setupOnAirDateDropdown();
+    setupSiteDropdown();
+    renderCharts();
+
+  } catch(e) { console.error(e); alert("Failed to load data."); }
 }
 
-function updateSiteButtonLabel(){
-  const btn=document.getElementById("siteDropdownBtn");
-  if(selectedSites.length===0 || selectedSites.length===allSites.length){ btn.textContent="All Sites ▼"; }
-  else if(selectedSites.length===1){ btn.textContent=selectedSites[0]+" ▼"; }
-  else{ btn.textContent="Multiple Sites ▼"; }
-}
+// --- FILTER UI LOGIC (ON-AIR DATE) ---
 
-// KPI Drawers
-function populateKpiDrawers(){
-  function renderDrawer(kpiArr,idDrawer,idOptions,idSelectAll){
-    const drawer=document.getElementById(idDrawer);
-    const kpiDiv=document.getElementById(idOptions);
-    let tempSelected = kpiArr.slice();
-    const selectAllChk = document.getElementById(idSelectAll);
-    selectAllChk.checked=true;
-    selectAllChk.onchange=()=>{
-      tempSelected = selectAllChk.checked?kpiArr.slice():[];
-      renderOptions();
+function setupOnAirDateDropdown(){
+  const list = document.getElementById("onAirDateDropdownList");
+  const btn = document.getElementById("onAirDateDropdownBtn");
+  list.innerHTML = "";
+  
+  const setAll = () => { 
+    selectedOnAirDates = [...allOnAirDates]; 
+    // When All Dates are selected, all sites MUST be selected as well
+    const allActiveSites = allSites.filter(site => siteCutoverMap[site] && allOnAirDates.includes(siteCutoverMap[site]));
+    selectedSites = [...allActiveSites]; 
+
+    // Update UI but DO NOT close the dropdown
+    updateDateFilterUI({close: false}); 
+    setupSiteDropdown(); // This re-renders charts
+  };
+
+  const clearAll = () => { 
+    selectedOnAirDates = []; 
+    // When All Dates are cleared, all sites MUST be cleared
+    selectedSites = []; 
+    
+    // Update UI but DO NOT close the dropdown
+    updateDateFilterUI({close: false}); 
+    setupSiteDropdown(); 
+  };
+  
+  // Actions
+  list.innerHTML += `<div onclick="window.dateSetAll()"><b>Select All</b></div>`;
+  list.innerHTML += `<div onclick="window.dateClearAll()"><b>Clear All</b></div>`;
+
+  // Options
+  allOnAirDates.forEach(date => {
+    const d = document.createElement("div");
+    const checked = selectedOnAirDates.includes(date) ? "checked" : "";
+    d.innerHTML = `<input type='checkbox' value='${date}' class='date-chk' ${checked}> ${date}`;
+    d.onclick = (e) => {
+       if(e.target.tagName !== "INPUT") {
+          const chk = d.querySelector("input");
+          chk.checked = !chk.checked;
+       }
+       updateSelectedDates(); // Individual selection
     };
-    function renderOptions(){
-      kpiDiv.innerHTML="";
-      kpiArr.forEach(kpi=>{
-        const checked=tempSelected.includes(kpi)?"checked":"";
-        const div=document.createElement("div");
-        div.className="kpiOption";
-        div.innerHTML=`<input type="checkbox" class="kpiCheckbox" value="${kpi}" ${checked}> ${kpi}`;
-        kpiDiv.appendChild(div);
-      });
-      kpiDiv.querySelectorAll(".kpiCheckbox").forEach(chk=>{
-        chk.onchange=()=>{
-          tempSelected=Array.from(kpiDiv.querySelectorAll(".kpiCheckbox:checked")).map(c=>c.value);
-          selectAllChk.checked=tempSelected.length===kpiArr.length;
-        };
-      });
-    }
-    renderOptions();
-    return ()=>tempSelected.slice();
-  }
-  acceptanceKpisList = renderDrawer(acceptanceKpis,"acceptanceDrawer","acceptanceKpiOptions","selectAllAcceptance");
-  monitoringKpisList = renderDrawer(monitoringKpis,"monitoringDrawer","monitoringKpiOptions","selectAllMonitoring");
+    list.appendChild(d);
+  });
+  
+  btn.onclick = () => list.style.display = list.style.display==="block" ? "none" : "block";
+  
+  // Expose helpers globally for inline HTML
+  window.dateSetAll = setAll;
+  window.dateClearAll = clearAll;
+  updateDateFilterUI({close: true}); // Initial UI update
 }
 
-// Drawer toggle
-document.getElementById("drawerToggle").addEventListener("click", ()=>{
-  const drawer = document.getElementById(currentTab+"Drawer");
-  if(drawer.style.display==="block"){
-    drawer.classList.remove("open");
-    setTimeout(()=>drawer.style.display="none",300);
-  } else {
-    drawer.style.display="block";
-    setTimeout(()=>drawer.classList.add("open"),10);
-  }
-});
+function updateSelectedDates() {
+    const list = document.getElementById("onAirDateDropdownList");
+    selectedOnAirDates = Array.from(list.querySelectorAll(".date-chk:checked")).map(c => c.value);
+    
+    // Update the sites based on the new dates (select all sites under the new date scope)
+    let activeSites = allSites.filter(site => {
+        const date = siteCutoverMap[site];
+        return date && selectedOnAirDates.includes(date);
+    });
+    selectedSites = [...activeSites]; 
+    
+    // Do not close dropdown on individual check
+    updateDateFilterUI({close: false}); 
+    setupSiteDropdown(); 
+}
 
-// Apply buttons
-document.getElementById("applyAcceptanceBtn").addEventListener("click",()=>{
-  selectedAcceptanceKpis=acceptanceKpisList();
-  document.getElementById("acceptanceDrawer").classList.remove("open");
-  setTimeout(()=>document.getElementById("acceptanceDrawer").style.display="none",300);
-  drawAcceptanceCharts();
-});
-document.getElementById("applyMonitoringBtn").addEventListener("click",()=>{
-  selectedMonitoringKpis=monitoringKpisList();
-  document.getElementById("monitoringDrawer").classList.remove("open");
-  setTimeout(()=>document.getElementById("monitoringDrawer").style.display="none",300);
-  drawMonitoringCharts();
-});
+function updateDateFilterUI(options = {close: true}) {
+    const btn = document.getElementById("onAirDateDropdownBtn");
+    const span = document.getElementById("onAirDateBtnLabel");
+    const list = document.getElementById("onAirDateDropdownList");
+    
+    span.textContent = selectedOnAirDates.length === 0 ? "No Dates Selected" : (selectedOnAirDates.length === allOnAirDates.length ? "All On-Air Dates" : `Selected (${selectedOnAirDates.length})`);
+    
+    // Update checkboxes visually
+    list.querySelectorAll(".date-chk").forEach(c => c.checked = selectedOnAirDates.includes(c.value));
+    
+    // Close dropdown only if requested
+    if (options.close) {
+        list.style.display = "none";
+    } else {
+        // If not closing, ensure it's open
+        list.style.display = "block";
+    }
+}
 
-// Tabs
-let currentTab="acceptance";
-document.querySelectorAll(".tab").forEach(tab=>{
-  tab.addEventListener("click",()=>{
-    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
-    tab.classList.add("active");
-    const tabName=tab.dataset.tab;
-    document.getElementById("acceptancePage").style.display=tabName==="acceptance"?"block":"none";
-    document.getElementById("monitoringPage").style.display=tabName==="monitoring"?"block":"none";
-    currentTab=tabName;
-    drawCurrentPageCharts();
+// --- FILTER UI LOGIC (GBSC) ---
+
+function setupSiteDropdown(){
+  const list = document.getElementById("siteDropdownList");
+  const btn = document.getElementById("siteDropdownBtn");
+  list.innerHTML = "";
+
+  // 1. Determine which sites are active based on the date filter
+  let activeSites = allSites.filter(site => {
+      const date = siteCutoverMap[site];
+      return date && selectedOnAirDates.includes(date);
   });
-});
+  
+  // 2. Filter selectedSites to only include those that are currently active
+  selectedSites = selectedSites.filter(site => activeSites.includes(site));
+  
+  // Actions
+  const setAll = () => { 
+    selectedSites = [...activeSites]; 
+    updateSiteFilterUI({close: false}); 
+    renderCharts();
+  }; 
 
-function drawCurrentPageCharts(){ if(currentTab==="acceptance") drawAcceptanceCharts(); else drawMonitoringCharts(); }
-function drawAcceptanceCharts(){ drawCharts(selectedAcceptanceKpis.length?selectedAcceptanceKpis:acceptanceKpis,"acceptanceChartContainer"); }
-function drawMonitoringCharts(){ drawCharts(selectedMonitoringKpis.length?selectedMonitoringKpis:monitoringKpis,"monitoringChartContainer"); }
+  const clearAll = () => { 
+    selectedSites = []; 
+    updateSiteFilterUI({close: false}); 
+    renderCharts(); 
+  };
+  
+  // Inject setAll/clearAll actions
+  list.innerHTML += `<div onclick="window.siteSetAll()"><b>Select All (${activeSites.length})</b></div>`;
+  list.innerHTML += `<div onclick="window.siteClearAll()"><b>Clear All</b></div>`;
 
-function drawCharts(kpis,containerId){
-  const container=document.getElementById(containerId);
-  container.innerHTML="";
-  const timeline = [...new Set(allData.map(d=>d["Date"]))];
-  timeline.sort((a,b)=>{
+  // Options
+  activeSites.forEach(site => {
+    const d = document.createElement("div");
+    // Check if the site is in the current selectedSites list
+    const checked = selectedSites.includes(site) ? "checked" : ""; 
+    d.innerHTML = `<input type='checkbox' value='${site}' class='site-chk' ${checked}> ${site}`;
+    d.onclick = (e) => {
+       if(e.target.tagName !== "INPUT") {
+          const chk = d.querySelector("input");
+          chk.checked = !chk.checked;
+       }
+       updateSelectedSites(); // Individual selection
+    };
+    list.appendChild(d);
+  });
+  
+  btn.onclick = () => list.style.display = list.style.display==="block" ? "none" : "block";
+
+  // Expose helpers globally for inline HTML
+  window.siteSetAll = setAll;
+  window.siteClearAll = clearAll;
+  
+  // Initial UI update for site dropdown and rendering
+  updateSiteFilterUI({close: true});
+  renderCharts();
+}
+
+function updateSelectedSites() {
+    const list = document.getElementById("siteDropdownList");
+    // Ensure we only look at the sites currently visible/active in the list
+    selectedSites = Array.from(list.querySelectorAll(".site-chk:checked")).map(c => c.value);
+    // Do not close dropdown on individual check
+    updateSiteFilterUI({close: false});
+    renderCharts();
+}
+
+function updateSiteFilterUI(options = {close: true}) {
+    const btn = document.getElementById("siteDropdownBtn");
+    const span = document.getElementById("siteBtnLabel");
+    const list = document.getElementById("siteDropdownList");
+    
+    let activeSites = allSites.filter(site => {
+        const date = siteCutoverMap[site];
+        return selectedOnAirDates.includes(date);
+    });
+
+    if(selectedSites.length === 0) span.textContent = "All Active Sites";
+    else if(selectedSites.length === activeSites.length) span.textContent = `All Active Sites (${selectedSites.length})`;
+    else if(selectedSites.length === 1) span.textContent = selectedSites[0];
+    else span.textContent = `Selected (${selectedSites.length})`;
+
+    // Re-check all site checkboxes to reflect the selectedSites state 
+    list.querySelectorAll(".site-chk").forEach(c => c.checked = selectedSites.includes(c.value));
+    
+    // Close dropdown only if requested
+    if (options.close) {
+        list.style.display = "none";
+    } else {
+        // If not closing, ensure it's open
+        list.style.display = "block";
+    }
+}
+
+// --- CHART RENDERING ---
+
+function renderCharts(){
+  const container = document.getElementById("mainChartContainer");
+  container.innerHTML = "";
+  
+  let kpisToShow = [];
+  if(currentTab === "acceptance") kpisToShow = selectedKpis.acceptance;
+  else if(currentTab === "monitoring") kpisToShow = selectedKpis.monitoring;
+  else if(currentTab === "both") kpisToShow = [...selectedKpis.acceptance, ...selectedKpis.monitoring];
+
+  // 1. Determine final list of sites based on date filter AND site filter
+  let sitesFromDate = allSites.filter(site => {
+      const date = siteCutoverMap[site];
+      return selectedOnAirDates.includes(date);
+  });
+
+  let finalSiteList;
+  if (selectedSites.length > 0) {
+      // Use specifically selected sites
+      finalSiteList = selectedSites;
+  } else {
+      // Use all sites allowed by the date filter (default behavior when no specific site is selected)
+      finalSiteList = sitesFromDate;
+  }
+  
+  let filteredData = allData.filter(d => finalSiteList.includes(d["GBSC"]));
+
+
+  // 2. Process Timeline (unchanged)
+  const timeline = [...new Set(filteredData.map(d=>d["Date"]))].sort((a,b)=>{
     const [da,ma,ya]=a.split('/').map(Number);
     const [db,mb,yb]=b.split('/').map(Number);
     return new Date(ya,ma-1,da)-new Date(yb,mb-1,db);
   });
-  const timelineLabels = timeline.map(d=>{
-    const [day,month]=d.split('/').map(Number);
-    const monthNames=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    return `${day} ${monthNames[month-1]}`;
+
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const timelineLabels = timeline.map(d => {
+      const [day, month] = d.split('/').map(Number);
+      return `${day} ${monthNames[month - 1]}`; // e.g., "5 Jan"
   });
-  kpis.forEach(kpi=>{
-    const card=document.createElement("div");
-    card.className="chart-card";
-    const title=document.createElement("div");
-    title.className="chart-title";
 
-    let labelText="All Sites";
-    if(selectedSites.length===1) labelText=selectedSites[0];
-    else if(selectedSites.length>1 && selectedSites.length<allSites.length) labelText="Multiple Sites";
-    title.textContent=`${kpi} - ${labelText}`;
-
-    const canvas=document.createElement("canvas");
-    card.appendChild(title);
-    card.appendChild(canvas);
+  // 3. Generate Charts
+  kpisToShow.forEach((kpi, idx) => {
+    const card = document.createElement("div");
+    card.className = "chart-card";
+    
+    const wrapper = document.createElement("div");
+    wrapper.className = "chart-container";
+    
+    const canvas = document.createElement("canvas");
+    canvas.id = `chart_${idx}`;
+    
+    wrapper.appendChild(canvas);
+    card.appendChild(wrapper);
     container.appendChild(card);
 
-    let filteredData = selectedSites.length>0?allData.filter(d=>selectedSites.includes(d["GBSC"])):allData;
+    // Calculate Data
+const dataPoints = timeline.map(date => {
+  const values = filteredData
+    .filter(d => d["Date"] === date)
+    .map(d => Number(d[kpi]))
+    .filter(v => !isNaN(v));
 
-    const dataPoints=timeline.map(date=>{
-      const vals = filteredData.filter(d=>d["Date"]===date).map(d=>{
-        const v=d[kpi]; return (v===""||v==null||isNaN(v))?0:v;
-      });
-      if(vals.length===0) return 0;
-      if(kpi.toLowerCase().includes("%")||kpi.toLowerCase().includes("rate")||kpi.toLowerCase().includes("average")||kpi.toLowerCase().includes("ratio")){
-        return vals.reduce((a,b)=>a+b,0)/vals.length;
-      }else return vals.reduce((a,b)=>a+b,0);
-    });
+  if(values.length === 0) return null;
 
-    new Chart(canvas.getContext("2d"),{
-      type:'line',
-      data:{ labels:timelineLabels,datasets:[{label:labelText,data:dataPoints,borderColor:'#'+Math.floor(Math.random()*16777215).toString(16),fill:false,tension:0.3,pointRadius:3}] },
-      options:{ responsive:true, maintainAspectRatio:false, animation:{ x:{ type:'number', easing:'linear', duration:animationDuration, from:NaN, delay(ctx){ return ctx.index*10; } }, y:{duration:0} }, scales:{x:{display:true},y:{beginAtZero:true,ticks:{maxTicksLimit:6}}}, plugins:{legend:{position:'top'}} }
+  const avg = values.reduce((a,b) => a+b, 0) / values.length;
+  return avg;
+});
+
+// Calculate chart min/max nicely
+let validValues = dataPoints.filter(v => v !== null);
+let minVal = Math.min(...validValues);
+let maxVal = Math.max(...validValues);
+
+// Apply your rules
+if(minVal < 40) minVal = Math.max(Math.floor(minVal), 42);   // keep min at least ~42
+if(maxVal > 100) maxVal = 100;                                // cap max at 100
+
+// Optionally round to nearest 5 for nicer axis
+minVal = Math.floor(minVal / 5) * 5;
+maxVal = Math.ceil(maxVal / 5) * 5;
+
+    // Draw Chart with Animation
+    new Chart(canvas.getContext("2d"), {
+      type: 'line',
+      data: {
+        labels: timelineLabels,
+        datasets: [{
+          label: (finalSiteList.length > 0 && dataPoints.some(p => p !== null)) ? "Aggregate" : "No Data",
+          data: dataPoints,
+          borderColor: getRandomColor(),
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          pointRadius: 3,
+          tension: 0.1,
+          spanGaps: true 
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: {
+            x: {
+                type: 'number',
+                easing: 'linear',
+                duration: 500,
+                from: NaN,
+                delay: (ctx) => ctx.index * 30 
+            },
+            y: { duration: 0 }
+        },
+        plugins: { 
+            legend: { display: false },
+            title: { // Chart.js built-in title
+                display: true,
+                text: kpi,
+                font: {
+                    size: 14,
+                    weight: 'bold'
+                },
+                color: '#333'
+            }
+        },
+        scales: {
+           x: { 
+               ticks: { font: {size:8} }, 
+               grid: {display:false} 
+           },
+           y: { 
+               beginAtZero: true, 
+               grid: {color:'#eee'},
+               // If no data points, fix the scale to prevent giant axes
+               min: (finalSiteList.length === 0 || dataPoints.every(p => p === null)) ? 0 : undefined 
+           }
+        }
+      }
     });
   });
 }
 
-// Fuzzy search
-const siteInput=document.getElementById("siteFilter");
-const dropdown=document.getElementById("dropdown");
-siteInput.addEventListener("input", ()=>{
-  const val=siteInput.value.trim();
-  if(!val || !fuse){ dropdown.style.display="none"; return; }
-  const results=fuse.search(val).slice(0,5).map(r=>r.item["GBSC"]);
-  dropdown.innerHTML="";
-  results.forEach(r=>{
-    const div=document.createElement("div");
-    div.textContent=r;
-    div.onclick=()=>{
-      siteInput.value=r;
-      dropdown.style.display="none";
-      selectedSites=[r];
-      document.querySelectorAll(".siteOption").forEach(c=>c.checked=c.value===r);
-      updateSiteButtonLabel();
-      drawCurrentPageCharts();
-    };
-    dropdown.appendChild(div);
+function getRandomColor() {
+  const colors = ['#2F80ED', '#27AE60', '#D24726', '#8E44AD', '#F39C12', '#2980B9'];
+  return colors[Math.floor(Math.random() * colors.length)];
+}
+
+// --- KPI DRAWER & UTILITY LOGIC ---
+
+function toggleDrawer(){
+  const d = document.getElementById("kpiDrawer");
+  d.classList.toggle("open");
+  if(d.classList.contains("open")) populateKpiOptions();
+}
+
+function populateKpiOptions(){
+  const list = document.getElementById("kpiOptionsList");
+  list.innerHTML = "";
+  
+  document.getElementById('drawerHeaderTitle').textContent = 'KPI Settings';
+
+  const acceptanceSection = currentTab === 'acceptance' || currentTab === 'both';
+  const monitoringSection = currentTab === 'monitoring' || currentTab === 'both';
+  
+  const createGroup = (title, key, sourceArr) => {
+    const h4 = document.createElement("h4");
+    h4.textContent = title;
+    h4.style.marginTop = "15px";
+    list.appendChild(h4);
+    
+    sourceArr.forEach(kpi => {
+      const div = document.createElement("div");
+      const checked = selectedKpis[key].includes(kpi) ? "checked" : "";
+      div.innerHTML = `<input type='checkbox' class='kpi-chk' data-group='${key}' value='${kpi}' ${checked}> <span style='font-size:13px'>${kpi}</span>`;
+      div.onclick = (e) => {
+        if(e.target.tagName !== "INPUT") {
+            const chk = div.querySelector("input");
+            chk.checked = !chk.checked;
+        }
+        // No auto-apply here, user must click Apply
+      };
+      list.appendChild(div);
+    });
+  };
+
+  if (acceptanceSection) createGroup("Acceptance KPIs", "acceptance", acceptanceKpis);
+  if (monitoringSection) createGroup("Monitoring KPIs", "monitoring", monitoringKpis);
+}
+
+/**
+ * Selects all visible KPI checkboxes and updates the internal state.
+ */
+function selectVisibleKpis() {
+    const chks = document.querySelectorAll(".kpi-chk");
+    
+    // 1. Update Checkboxes Visually
+    chks.forEach(c => {
+        c.checked = true;
+    });
+
+    // 2. Update Internal State
+    if (currentTab === 'acceptance' || currentTab === 'both') {
+        selectedKpis.acceptance = [...acceptanceKpis];
+    }
+    if (currentTab === 'monitoring' || currentTab === 'both') {
+        selectedKpis.monitoring = [...monitoringKpis];
+    }
+}
+
+/**
+ * Clears all visible KPI checkboxes and updates the internal state.
+ */
+function clearVisibleKpis() {
+    const chks = document.querySelectorAll(".kpi-chk");
+    
+    // 1. Update Checkboxes Visually
+    chks.forEach(c => {
+        c.checked = false;
+    });
+
+    // 2. Update Internal State
+    if (currentTab === 'acceptance' || currentTab === 'both') {
+        selectedKpis.acceptance = [];
+    }
+    if (currentTab === 'monitoring' || currentTab === 'both') {
+        selectedKpis.monitoring = [];
+    }
+}
+
+
+function applyKpis(){
+  const chks = document.querySelectorAll(".kpi-chk");
+  
+  // Start with existing selections for non-visible tabs
+  const tempAcceptance = currentTab === 'acceptance' || currentTab === 'both' ? [] : [...selectedKpis.acceptance];
+  const tempMonitoring = currentTab === 'monitoring' || currentTab === 'both' ? [] : [...selectedKpis.monitoring];
+
+  // Apply checked status from the UI
+  chks.forEach(c => {
+    if(c.checked) {
+        if(c.dataset.group === 'acceptance') tempAcceptance.push(c.value);
+        if(c.dataset.group === 'monitoring') tempMonitoring.push(c.value);
+    }
   });
-  dropdown.style.display=results.length?"block":"none";
-});
-document.addEventListener("click", e=>{ if(e.target!==siteInput) dropdown.style.display="none"; });
 
-document.getElementById("refreshBtn").addEventListener("click", fetchData);
+  selectedKpis.acceptance = tempAcceptance;
+  selectedKpis.monitoring = tempMonitoring;
+  
+  toggleDrawer();
+  renderCharts();
+}
 
+// --- PPT EXPORT CUSTOMIZATION & PREVIEW ---
+
+function openPreview() {
+    const canvases = document.querySelectorAll("canvas");
+    if(canvases.length === 0) { alert("No charts to export."); return; }
+    
+    graphsPerSlide = 2; 
+    chartExportColor = '#2F80ED'; 
+    chartExportTitleColor = '#333333';
+
+    updatePreviewSettings(graphsPerSlide, chartExportColor, chartExportTitleColor);
+    
+    document.getElementById("previewModal").style.display = "flex";
+}
+
+function highlightSettingButtons(count, lineColor, titleColor) {
+    document.querySelectorAll('.graph-options button').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.backgroundColor = '#2F80ED';
+        if (parseInt(btn.dataset.count) === count) {
+            btn.classList.add('active');
+            btn.style.backgroundColor = '#27AE60'; 
+        }
+    });
+
+    document.querySelectorAll('#lineColorOptions .color-option').forEach(el => {
+        el.classList.remove('selected');
+        if (el.dataset.color === lineColor) {
+            el.classList.add('selected');
+        }
+    });
+
+    document.querySelectorAll('#titleColorOptions .color-option').forEach(el => {
+        el.classList.remove('selected');
+        if (el.dataset.color === titleColor) {
+            el.classList.add('selected');
+        }
+    });
+}
+
+function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
+    if (newCount) graphsPerSlide = newCount;
+    if (newLineColor) chartExportColor = newLineColor;
+    if (newTitleColor) chartExportTitleColor = newTitleColor;
+
+    highlightSettingButtons(graphsPerSlide, chartExportColor, chartExportTitleColor);
+    
+    const count = graphsPerSlide;
+    const body = document.getElementById("previewBody");
+    const canvases = document.querySelectorAll("canvas");
+    
+    document.getElementById("previewTitle").textContent = `PPT Export Preview (${count} Graphs per Slide) - Line: ${chartExportColor}, Title: ${chartExportTitleColor}`;
+    body.innerHTML = "";
+
+    // Determine CSS grid columns based on count
+    let gridCols = '1fr';
+    let rows = 1;
+    if (count === 2) { gridCols = '1fr 1fr'; rows = 1; }
+    else if (count === 3 || count === 6 || count === 9) { gridCols = '1fr 1fr 1fr'; }
+    else if (count === 4) { gridCols = '1fr 1fr'; rows = 2; }
+    
+    if (count === 6) rows = 2;
+    if (count === 9) rows = 3;
+
+
+    for(let i=0; i<canvases.length; i+=count){
+        const slideDiv = document.createElement("div");
+        slideDiv.className = "preview-slide";
+        
+        const slideTitle = document.createElement("div");
+        slideTitle.className = "preview-slide-title";
+        slideTitle.textContent = `Slide ${Math.floor(i/count) + 1}`;
+        slideDiv.appendChild(slideTitle);
+
+        const grid = document.createElement("div");
+        grid.className = "preview-grid";
+        grid.style.gridTemplateColumns = gridCols;
+        // Use auto for rows to adapt to content height when the number of items doesn't perfectly match the row definition
+        grid.style.gridTemplateRows = rows === 1 ? '1fr' : (rows === 2 ? '1fr 1fr' : (rows === 3 ? '1fr 1fr 1fr' : 'repeat(auto-fit, 1fr)'));
+
+
+        for(let j=0; j<count; j++){
+            if(i+j < canvases.length){
+                const c = canvases[i+j];
+                const box = createPreviewBox(c, chartExportColor, chartExportTitleColor); 
+                grid.appendChild(box);
+            }
+        }
+        slideDiv.appendChild(grid);
+        body.appendChild(slideDiv);
+    }
+}
+
+function createPreviewBox(canvas, lineColor, titleColor) {
+  const box = document.createElement("div");
+  box.className = "preview-img-box";
+  
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = canvas.width;
+  tempCanvas.height = canvas.height;
+  const tempCtx = tempCanvas.getContext('2d');
+  
+  const chartInstance = Chart.getChart(canvas.id);
+  let imgData = '';
+  
+  if (chartInstance) {
+      const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
+      const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
+      const originalTitleColor = chartInstance.options.plugins.title.color;
+      
+      chartInstance.data.datasets.forEach(d => { 
+        d.borderColor = lineColor; 
+        d.pointBorderColor = lineColor; 
+        d.pointBackgroundColor = lineColor; 
+        d.pointRadius = 3; 
+        d.pointStyle = 'circle'; 
+        d.spanGaps = true; 
+      });
+
+      chartInstance.options.plugins.title.color = titleColor; 
+      
+      chartInstance.update('none'); 
+      
+      tempCtx.drawImage(canvas, 0, 0);
+      imgData = tempCanvas.toDataURL("image/png");
+      
+      chartInstance.data.datasets.forEach((d, index) => { 
+        d.borderColor = originalColors[index]; 
+        d.pointBorderColor = originalPointColors[index];
+      });
+      chartInstance.options.plugins.title.color = originalTitleColor;
+      chartInstance.update('none');
+  }
+
+  const img = document.createElement("img");
+  img.src = imgData;
+  
+  box.appendChild(img);
+  return box;
+}
+
+function closePreview(){ document.getElementById("previewModal").style.display = "none"; }
+
+async function downloadPPT(){
+  const pptx = new PptxGenJS();
+  pptx.layout = 'LAYOUT_16x9';
+  
+  // Title Slide
+  let slide = pptx.addSlide();
+  slide.addText("GSM KPI Report", { x:0.5, y:2, fontSize:32, bold:true, color:'2F80ED' });
+  slide.addText(`Generated: ${new Date().toLocaleDateString()}`, { x:0.5, y:3, fontSize:14 });
+
+  const canvases = document.querySelectorAll("canvas");
+  const count = graphsPerSlide;
+  const lineColor = chartExportColor; 
+  const titleColor = chartExportTitleColor;
+  
+  // Define base positions and sizes in inches (for 16x9 slide layout)
+  const layoutDef = {
+    1: { cols: 1, rows: 1, chartW: 9.0, chartH: 5.5, padding: 0.5 },
+    2: { cols: 2, rows: 1, chartW: 4.5, chartH: 3.5, padding: 0.4 },
+    3: { cols: 3, rows: 1, chartW: 3.0, chartH: 3.0, padding: 0.4 },
+    4: { cols: 2, rows: 2, chartW: 4.5, chartH: 2.5, padding: 0.3 },
+    6: { cols: 3, rows: 2, chartW: 3.0, chartH: 2.5, padding: 0.2 }, // New 6-grid: 3 wide, 2 high
+    9: { cols: 3, rows: 3, chartW: 3.0, chartH: 1.8, padding: 0.1 }  // New 9-grid: 3 wide, 3 high
+  }[count] || { cols: 2, rows: 1, chartW: 4.5, chartH: 3.5, padding: 0.4 }; 
+
+  const layoutPositions = [];
+  const startX = 0.5; // Fixed left margin
+  const startY = 1.2; // Starting Y position after slide header
+  const maxW = 9.5; // Max drawing width (10 inches wide slide, 0.5 margin on each side)
+  
+  const numCols = layoutDef.cols;
+  const numRows = layoutDef.rows;
+  const chartW = layoutDef.chartW;
+  const chartH = layoutDef.chartH;
+  const padding = layoutDef.padding;
+
+  // Calculate dynamic spacing to center charts horizontally and vertically
+  const totalChartWidth = numCols * chartW;
+  const totalPaddingWidth = (numCols - 1) * padding;
+  const remainingXSpace = maxW - totalChartWidth - totalPaddingWidth;
+  const marginX = (remainingXSpace / 2) + startX; 
+  
+  // For vertical spacing, keeping Y fixed for now, using calculated H and fixed startY
+  
+  for (let r = 0; r < numRows; r++) {
+      for (let c = 0; c < numCols; c++) {
+          const x = marginX + (c * chartW) + (c * padding);
+          const y = startY + (r * chartH) + (r * padding);
+          layoutPositions.push({ x: x, y: y, w: chartW, h: chartH });
+          if (layoutPositions.length >= count) break; // Stop if we've defined all slots for the count
+      }
+      if (layoutPositions.length >= count) break;
+  }
+  
+  // Handle case where count is 4 (2x2 grid)
+  if (count === 4) {
+      layoutPositions.length = 0; // Reset for custom 2x2 logic
+      layoutPositions.push({ x: marginX, y: startY, w: chartW, h: chartH });
+      layoutPositions.push({ x: marginX + chartW + padding, y: startY, w: chartW, h: chartH });
+      layoutPositions.push({ x: marginX, y: startY + chartH + padding, w: chartW, h: chartH });
+      layoutPositions.push({ x: marginX + chartW + padding, y: startY + chartH + padding, w: chartW, h: chartH });
+  }
+
+
+  for(let i=0; i<canvases.length; i+=count){
+    let slide = pptx.addSlide();
+
+    // Add Charts
+    for(let j=0; j<count; j++){
+      if(i+j < canvases.length){
+        const c = canvases[i+j];
+        const params = layoutPositions[j];
+        
+        // --- PPT CHART EXPORT LOGIC ---
+        const chartInstance = Chart.getChart(c.id);
+        const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
+        const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
+        const originalTitleColor = chartInstance.options.plugins.title.color;
+        
+        // Override style for PPT export
+        chartInstance.data.datasets.forEach(d => { 
+          d.borderColor = lineColor; 
+          d.pointBorderColor = lineColor; 
+          d.pointBackgroundColor = lineColor; 
+          d.pointRadius = 3;
+          d.spanGaps = true; 
+        });
+        chartInstance.options.plugins.title.color = titleColor; // Set selected title color
+        chartInstance.update('none'); 
+        
+        const imgData = c.toDataURL("image/png");
+        
+        // Restore original styles
+        chartInstance.data.datasets.forEach((d, index) => { 
+          d.borderColor = originalColors[index]; 
+          d.pointBorderColor = originalPointColors[index];
+          d.spanGaps = true; 
+        });
+        chartInstance.options.plugins.title.color = originalTitleColor;
+        chartInstance.update('none');
+        // --- END PPT CHART EXPORT LOGIC ---
+        
+        // Chart Image
+        slide.addImage({ 
+          data: imgData, 
+          x: params.x, y: params.y, 
+          w: params.w, h: params.h 
+        });
+      }
+    }
+  }
+
+  pptx.writeFile({ fileName: `KPI_Report_${new Date().getTime()}.pptx` });
+  closePreview();
+}
+
+// Init
 fetchData();
 </script>
-
 </body>
 </html>
