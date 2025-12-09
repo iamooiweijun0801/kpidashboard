@@ -289,6 +289,22 @@ let selectedKpis = {
   monitoring: [...monitoringKpis]
 };
 
+// --- GLOBAL UTILITY FUNCTIONS ---
+
+/**
+ * Switches the active tab (Acceptance, Monitoring, Both).
+ * @param {string} tab - The tab identifier ('acceptance', 'monitoring', 'both').
+ */
+function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelector(`.tab[onclick="switchTab('${tab}')"]`).classList.add('active');
+    currentTab = tab;
+    // We only call renderCharts() here. KPI list is populated/applied on drawer open/close.
+    renderCharts(); 
+}
+
 // --- DATA FETCHING & MAPPING ---
 async function fetchData(){
   try {
@@ -353,18 +369,22 @@ function setupOnAirDateDropdown(){
   
   const setAll = () => { 
     selectedOnAirDates = [...allOnAirDates]; 
-    updateDateFilterUI(); 
-    // Must also update the checkboxes manually since we bypass updateSelectedDates()
-    list.querySelectorAll(".date-chk").forEach(c => c.checked = true);
-    // When All Dates are selected, all sites MUST be selected as well (Requirement A)
-    selectedSites = allSites.filter(site => siteCutoverMap[site] && allOnAirDates.includes(siteCutoverMap[site]));
+    // When All Dates are selected, all sites MUST be selected as well
+    const allActiveSites = allSites.filter(site => siteCutoverMap[site] && allOnAirDates.includes(siteCutoverMap[site]));
+    selectedSites = [...allActiveSites]; 
+
+    // Update UI but DO NOT close the dropdown
+    updateDateFilterUI({close: false}); 
     setupSiteDropdown(); // This re-renders charts
   };
+
   const clearAll = () => { 
     selectedOnAirDates = []; 
-    updateDateFilterUI(); 
-    // When All Dates are cleared, all sites MUST be cleared (Requirement B)
+    // When All Dates are cleared, all sites MUST be cleared
     selectedSites = []; 
+    
+    // Update UI but DO NOT close the dropdown
+    updateDateFilterUI({close: false}); 
     setupSiteDropdown(); 
   };
   
@@ -382,7 +402,7 @@ function setupOnAirDateDropdown(){
           const chk = d.querySelector("input");
           chk.checked = !chk.checked;
        }
-       updateSelectedDates();
+       updateSelectedDates(); // This handles closing the dropdown
     };
     list.appendChild(d);
   });
@@ -392,33 +412,41 @@ function setupOnAirDateDropdown(){
   // Expose helpers globally for inline HTML
   window.dateSetAll = setAll;
   window.dateClearAll = clearAll;
+  updateDateFilterUI({close: true}); // Initial UI update
 }
 
 function updateSelectedDates() {
     const list = document.getElementById("onAirDateDropdownList");
     selectedOnAirDates = Array.from(list.querySelectorAll(".date-chk:checked")).map(c => c.value);
     
-    // Ensure UI elements reflect current state
-    list.querySelectorAll(".date-chk").forEach(c => c.checked = selectedOnAirDates.includes(c.value));
-    
-    // REQUIREMENT C: When dates are selected, all sites falling under that category show up AND are checked.
+    // Update the sites based on the new dates (select all sites under the new date scope)
     let activeSites = allSites.filter(site => {
         const date = siteCutoverMap[site];
         return date && selectedOnAirDates.includes(date);
     });
-    selectedSites = [...activeSites]; // Select all sites that fall under the selected dates
+    selectedSites = [...activeSites]; 
     
-    updateDateFilterUI();
+    updateDateFilterUI({close: true}); // Close after a single selection
     setupSiteDropdown(); // This will trigger the site update and re-render charts
 }
 
-function updateDateFilterUI() {
+function updateDateFilterUI(options = {close: true}) {
     const btn = document.getElementById("onAirDateDropdownBtn");
     const span = document.getElementById("onAirDateBtnLabel");
+    const list = document.getElementById("onAirDateDropdownList");
+    
     span.textContent = selectedOnAirDates.length === 0 ? "No Dates Selected" : (selectedOnAirDates.length === allOnAirDates.length ? "All On-Air Dates" : `Selected (${selectedOnAirDates.length})`);
     
-    // Close dropdown
-    document.getElementById("onAirDateDropdownList").style.display = "none";
+    // Update checkboxes visually
+    list.querySelectorAll(".date-chk").forEach(c => c.checked = selectedOnAirDates.includes(c.value));
+    
+    // Close dropdown only if requested
+    if (options.close) {
+        list.style.display = "none";
+    } else {
+        // If not closing, ensure it's open
+        list.style.display = "block";
+    }
 }
 
 // --- FILTER UI LOGIC (eNodeB NAME) ---
@@ -435,20 +463,19 @@ function setupSiteDropdown(){
   });
   
   // 2. Filter selectedSites to only include those that are currently active
-  // NOTE: This handles cases where dates are filtered and selectedSites needs to be reduced.
   selectedSites = selectedSites.filter(site => activeSites.includes(site));
   
   // Actions
   const setAll = () => { 
     selectedSites = [...activeSites]; 
-    updateSiteFilterUI(); 
-    renderCharts(); // Requirement E
+    updateSiteFilterUI({close: false}); 
+    renderCharts();
   }; 
 
   const clearAll = () => { 
     selectedSites = []; 
-    updateSiteFilterUI(); 
-    renderCharts(); // Requirement D: Dates remain unchanged, so just update sites and re-render
+    updateSiteFilterUI({close: false}); 
+    renderCharts(); 
   };
   
   // Inject setAll/clearAll actions
@@ -466,7 +493,7 @@ function setupSiteDropdown(){
           const chk = d.querySelector("input");
           chk.checked = !chk.checked;
        }
-       updateSelectedSites();
+       updateSelectedSites(); // This handles closing the dropdown
     };
     list.appendChild(d);
   });
@@ -478,7 +505,7 @@ function setupSiteDropdown(){
   window.siteClearAll = clearAll;
   
   // Initial UI update for site dropdown and rendering
-  updateSiteFilterUI();
+  updateSiteFilterUI({close: true});
   renderCharts();
 }
 
@@ -486,13 +513,14 @@ function updateSelectedSites() {
     const list = document.getElementById("siteDropdownList");
     // Ensure we only look at the sites currently visible/active in the list
     selectedSites = Array.from(list.querySelectorAll(".site-chk:checked")).map(c => c.value);
-    updateSiteFilterUI();
+    updateSiteFilterUI({close: true});
     renderCharts();
 }
 
-function updateSiteFilterUI() {
+function updateSiteFilterUI(options = {close: true}) {
     const btn = document.getElementById("siteDropdownBtn");
     const span = document.getElementById("siteBtnLabel");
+    const list = document.getElementById("siteDropdownList");
     
     let activeSites = allSites.filter(site => {
         const date = siteCutoverMap[site];
@@ -505,10 +533,15 @@ function updateSiteFilterUI() {
     else span.textContent = `Selected (${selectedSites.length})`;
 
     // Re-check all site checkboxes to reflect the selectedSites state 
-    document.getElementById("siteDropdownList").querySelectorAll(".site-chk").forEach(c => c.checked = selectedSites.includes(c.value));
+    list.querySelectorAll(".site-chk").forEach(c => c.checked = selectedSites.includes(c.value));
     
-    // Close dropdown
-    document.getElementById("siteDropdownList").style.display = "none";
+    // Close dropdown only if requested
+    if (options.close) {
+        list.style.display = "none";
+    } else {
+        // If not closing, ensure it's open
+        list.style.display = "block";
+    }
 }
 
 // --- CHART RENDERING ---
@@ -583,7 +616,7 @@ function renderCharts(){
       data: {
         labels: timelineLabels,
         datasets: [{
-          label: finalSiteList.length > 0 ? "Aggregate" : "No Data",
+          label: (finalSiteList.length > 0 && dataPoints.some(p => p !== null)) ? "Aggregate" : "No Data",
           data: dataPoints,
           borderColor: getRandomColor(),
           backgroundColor: 'transparent',
@@ -623,7 +656,12 @@ function renderCharts(){
                ticks: { font: {size:8} }, 
                grid: {display:false} 
            },
-           y: { beginAtZero: true, grid: {color:'#eee'} }
+           y: { 
+               beginAtZero: true, 
+               grid: {color:'#eee'},
+               // If no data points, fix the scale to prevent giant axes
+               min: (finalSiteList.length === 0 || dataPoints.every(p => p === null)) ? 0 : undefined 
+           }
         }
       }
     });
