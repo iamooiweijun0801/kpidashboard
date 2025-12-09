@@ -339,236 +339,944 @@ button.ppt-btn:hover { background:#a8381e; }
 <script>
 // --- CONFIG & STATE ---
 let allData = [];
+let fuse = null;
 let allSites = [];
-let siteCutoverMap = {}; 
+let siteCutoverMap = {}; 
 let allOnAirDates = [];
 let selectedOnAirDates = [];
 
 let selectedSites = [];
-let currentTab = "both"; 
-let graphsPerSlide = 2; 
+let currentTab = "both"; 
+let graphsPerSlide = 2; 
 
-let chartExportColor = '#2F80ED'; 
-let chartExportTitleColor = '#333333'; 
+let chartExportColor = '#2F80ED'; 
+let chartExportTitleColor = '#333333'; 
 
-// Chart styles
+// NEW: Expanded Chart Styles Configuration (10 styles total)
 const chartStyles = {
-  'Default': { border: 2, pointRadius: 3, tension: 0.1, gridColor: '#eee', bgColor: 'white', titleColor: '#333', fill: false, stepped: false },
-  'Minimalist': { border: 1, pointRadius: 2, tension: 0.3, gridColor: '#f5f5f5', bgColor: 'white', titleColor: '#555', fill: false, stepped: false },
-  'Bright Dots': { border: 3, pointRadius: 4, tension: 0.2, gridColor: '#ddd', bgColor: 'white', titleColor: '#333', fill: false, stepped: false },
-  'Smooth & Thin': { border: 1, pointRadius: 0, tension: 0.4, gridColor: '#f0f0f0', bgColor: 'white', titleColor: '#333', fill: false, stepped: false },
-  'Bold Lines': { border: 4, pointRadius: 0, tension: 0.1, gridColor: '#eee', bgColor: 'white', titleColor: '#333', fill: false, stepped: false },
-  'Area Fill (Light)': { border: 2, pointRadius: 3, tension: 0.3, gridColor: '#eee', bgColor: 'white', titleColor: '#333', fill: 'origin', alpha: 0.15, stepped: false },
-  'Shadowed Line': { border: 3, pointRadius: 4, tension: 0.2, gridColor: '#f0f0f0', bgColor: 'white', titleColor: '#333', fill: 'origin', alpha: 0.25, stepped: false },
-  'Stepped Line': { border: 2, pointRadius: 3, tension: 0.0, gridColor: '#eee', bgColor: 'white', titleColor: '#333', fill: false, stepped: true },
-  'High Contrast': { border: 4, pointRadius: 5, tension: 0.0, gridColor: 'rgba(0,0,0,0.1)', bgColor: 'white', titleColor: '#000', fill: false, stepped: false },
-  'Monochromatic': { border: 3, pointRadius: 3, tension: 0.2, gridColor: '#f5f5f5', bgColor: 'white', titleColor: '#333', fill: false, stepped: false }
+  'Default': { border: 2, pointRadius: 3, tension: 0.1, gridColor: '#eee', bgColor: 'white', titleColor: '#333', fill: false, stepped: false },
+  'Minimalist': { border: 1, pointRadius: 2, tension: 0.3, gridColor: '#f5f5f5', bgColor: 'white', titleColor: '#555', fill: false, stepped: false },
+  'Bright Dots': { border: 3, pointRadius: 4, tension: 0.2, gridColor: '#ddd', bgColor: 'white', titleColor: '#333', fill: false, stepped: false },
+  'Smooth & Thin': { border: 1, pointRadius: 0, tension: 0.4, gridColor: '#f0f0f0', bgColor: 'white', titleColor: '#333', fill: false, stepped: false },
+  'Bold Lines': { border: 4, pointRadius: 0, tension: 0.1, gridColor: '#eee', bgColor: 'white', titleColor: '#333', fill: false, stepped: false },
+  'Area Fill (Light)': { border: 2, pointRadius: 3, tension: 0.3, gridColor: '#eee', bgColor: 'white', titleColor: '#333', fill: 'origin', alpha: 0.15, stepped: false },
+  'Shadowed Line': { border: 3, pointRadius: 4, tension: 0.2, gridColor: '#f0f0f0', bgColor: 'white', titleColor: '#333', fill: 'origin', alpha: 0.25, stepped: false },
+  'Stepped Line': { border: 2, pointRadius: 3, tension: 0.0, gridColor: '#eee', bgColor: 'white', titleColor: '#333', fill: false, stepped: true },
+  'High Contrast': { border: 4, pointRadius: 5, tension: 0.0, gridColor: 'rgba(0,0,0,0.1)', bgColor: 'white', titleColor: '#000', fill: false, stepped: false },
+  'Monochromatic': { border: 3, pointRadius: 3, tension: 0.2, gridColor: '#f5f5f5', bgColor: 'white', titleColor: '#333', fill: false, stepped: false }
 };
-let selectedStyle = 'Default';
+let selectedStyle = 'Default'; // Initial style
 
-// KPI lists
 const acceptanceKpis = [
-  "LTE RRC Setup Success Rate","ERAB Setup Success Rate","LTE Call Setup Success Rate","E-RAB Call Drop Rate",
-  "CSFB Access Success Rate","LTE Intra Freq HO Success Rate","Intra-eNB HO Success Rate","Inter-eNBX2HO Success Rate",
-  "Inter-eNBS1HO Success Rate","Max RRC Connected Ue","DL Data Total Volume (Gbyte)","UL Data Total Volume (Gbyte)",
-  "E-RAB Setup Success Rate (VoIP)","Call Drop Rate (VoIP)","Intra-frequency Handover Out Success Rate(VoIP)",
-  "Inter-frequency Handover Out Success Rate(VoIP)","SRVCC Success Rate (L2W)","SRVCC Success Rate (L2G)"
+  "LTE RRC Setup Success Rate","ERAB Setup Success Rate","LTE Call Setup Success Rate","E-RAB Call Drop Rate",
+  "CSFB Access Success Rate","LTE Intra Freq HO Success Rate","Intra-eNB HO Success Rate","Inter-eNBX2HO Success Rate",
+  "Inter-eNBS1HO Success Rate","Max RRC Connected Ue","DL Data Total Volume (Gbyte)","UL Data Total Volume (Gbyte)",
+  "E-RAB Setup Success Rate (VoIP)","Call Drop Rate (VoIP)","Intra-frequency Handover Out Success Rate(VoIP)",
+  "Inter-frequency Handover Out Success Rate(VoIP)","SRVCC Success Rate (L2W)","SRVCC Success Rate (L2G)"
 ];
 const monitoringKpis = [
-  "Cell Availability Ratio","Average Latency Downlink (msecs)","DL PRB Utilization (%)","UL PRB Utilization (%)",
-  "LTE DL - Cell Average Throughput (Mbit/s)","LTE UL - Cell Average Thoughput (Mbit/s)","LTE DL -USER Average Throughput (Mbit/s)",
-  "LTE UL -USER Average Throughput (Mbit/s)","Downlink Packet Loss Rate (VoIP)","Uplink Packet Loss Rate (VoIP)",
-  "VoLTE Traffic Erlang","VoLTE Traffic DL (MB)","VoLTE Traffic UL (MB)","DL BLER QCI1","UL BLER QCI1"
+  "Cell Availability Ratio","Average Latency Downlink (msecs)","DL PRB Utilization (%)","UL PRB Utilization (%)",
+  "LTE DL - Cell Average Throughput (Mbit/s)","LTE UL - Cell Average Thoughput (Mbit/s)","LTE DL -USER Average Throughput (Mbit/s)",
+  "LTE UL -USER Average Throughput (Mbit/s)","Downlink Packet Loss Rate (VoIP)","Uplink Packet Loss Rate (VoIP)",
+  "VoLTE Traffic Erlang","VoLTE Traffic DL (MB)","VoLTE Traffic UL (MB)","DL BLER QCI1","UL BLER QCI1"
 ];
-let selectedKpis = { acceptance: [...acceptanceKpis], monitoring: [...monitoringKpis] };
+let selectedKpis = {
+  acceptance: [...acceptanceKpis],
+  monitoring: [...monitoringKpis]
+};
 
-// --- UTILITY ---
+// --- GLOBAL UTILITY FUNCTIONS ---
+
+/**
+ * Toggles the KPI drawer visibility.
+ */
+function toggleKpiDrawer(){
+  const d = document.getElementById("kpiDrawer");
+  const s = document.getElementById("styleDrawer");
+  d.classList.toggle("open");
+  if(d.classList.contains("open")) {
+     populateKpiOptions();
+     s.classList.remove("open"); // Close style drawer if KPI opens
+  }
+}
+
+/**
+ * Toggles the Chart Style drawer visibility.
+ */
+function toggleStyleDrawer(){
+  const d = document.getElementById("styleDrawer");
+  const k = document.getElementById("kpiDrawer");
+  d.classList.toggle("open");
+  if(d.classList.contains("open")) {
+    populateStyleOptions();
+    k.classList.remove("open"); // Close KPI drawer if Style opens
+  }
+}
+
+/**
+ * Updates the selected chart style and re-renders all charts.
+ * @param {string} styleName - The name of the style from chartStyles.
+ */
+function updateChartStyle(styleName) {
+    selectedStyle = styleName;
+    // Visually update the button state
+    document.querySelectorAll('.style-options button').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.style === styleName) {
+            btn.classList.add('active');
+        }
+    });
+    renderCharts();
+}
+
+/**
+ * Switches the active tab (Acceptance, Monitoring, Both).
+ * @param {string} tab - The tab identifier ('acceptance', 'monitoring', 'both').
+ */
+function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelector(`.tab[onclick="switchTab('${tab}')"]`).classList.add('active');
+    currentTab = tab;
+    renderCharts(); 
+}
+
 function getRandomColor() {
-  const colors = ['#2F80ED', '#27AE60', '#D24726', '#8E44AD', '#F39C12', '#2980B9'];
-  return colors[Math.floor(Math.random() * colors.length)];
+  const colors = ['#2F80ED', '#27AE60', '#D24726', '#8E44AD', '#F39C12', '#2980B9'];
+  return colors[Math.floor(Math.random() * colors.length)];
 }
 
-// --- FETCH DATA ---
+function getNiceYAxisScale(minValue, maxValue, isRateMetric) {
+    if (minValue === undefined || maxValue === undefined) minValue = 0, maxValue = 0;
+    let range = maxValue - minValue;
+
+    // Handle single value or no variation
+    if (range <= 0) {
+        const max = isRateMetric ? Math.max(100, minValue + 0.1) : minValue + (minValue === 0 ? 10 : minValue * 0.1);
+        const step = isRateMetric ? 20 : (max - 0) / 5;
+        return { yMin: 0, yMax: max, yStepSize: step };
+    }
+
+    let yMin = minValue;
+    let yMax = maxValue;
+
+    // Rate metric handling
+    if (isRateMetric) {
+        yMin = Math.max(0, yMin);
+        yMax = yMax >= 80 ? 100 : yMax; // force 100 if >=80, else leave as is
+    }
+
+    range = yMax - yMin;
+
+    // Define nice steps
+    const niceSteps = [
+        0.001,0.002,0.005,0.01,0.02,0.05,0.1,0.2,0.5,1,2,5,
+        10,20,50,100,200,500,1000,2000,5000,10000,20000,50000,
+        100000,200000,500000,1000000,2000000,5000000,10000000
+    ];
+
+    // Choose a step size ensuring at least 5–6 intervals
+    let roughStep = range / 6;
+    let step = niceSteps.find(s => s >= roughStep) || Math.pow(10, Math.floor(Math.log10(roughStep)));
+
+    yMin = Math.floor(yMin / step) * step;
+    yMax = Math.ceil(yMax / step) * step;
+
+    // Ensure at least 6 intervals
+    let intervals = Math.ceil((yMax - yMin) / step);
+    if (intervals < 6) {
+        step = niceSteps.find(s => s >= (yMax - yMin) / 6) || Math.pow(10, Math.floor(Math.log10((yMax - yMin) / 6)));
+        yMin = Math.floor(minValue / step) * step;
+        yMax = Math.ceil(maxValue / step) * step;
+    }
+
+    // Handle small ranges <1 for precision
+    if (range < 1 && !isRateMetric) {
+        const decimals = Math.max(0, Math.ceil(-Math.log10(step)));
+        yMin = parseFloat(yMin.toFixed(decimals));
+        yMax = parseFloat(yMax.toFixed(decimals));
+        step = parseFloat(step.toFixed(decimals));
+    } else {
+        yMin = Math.round(yMin);
+        yMax = Math.round(yMax);
+        step = Math.round(step);
+    }
+
+    return { yMin, yMax, yStepSize: step };
+}
+
+// --- DATA FETCHING & MAPPING ---
 async function fetchData(){
-  try {
-    const kpiUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=0&single=true&output=csv&t=" + Date.now();
-    const kpiText = await (await fetch(kpiUrl)).text();
-    const kpiRows = kpiText.trim().split('\n').map(r=>r.split(','));
-    const kpiHeaders = kpiRows.shift().map(h=>h.trim());
-    allData = kpiRows.map(r=>{
-      const obj={};
-      kpiHeaders.forEach((h,i)=>{
-        const val=r[i]?r[i].trim():"";
-        obj[h] = val==="" ? null : (isNaN(val) ? val : parseFloat(val));
-      });
-      return obj;
-    });
+  try {
+    // 1. Fetch KPI Data
+    const kpiUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=0&single=true&output=csv&t=" + Date.now();
+    const kpiRes = await fetch(kpiUrl);
+    const kpiText = await kpiRes.text();
+    
+    const kpiRows = kpiText.trim().split('\n').map(r=>r.split(','));
+    const kpiHeaders = kpiRows.shift().map(h=>h.trim());
+    allData = kpiRows.map(r=>{ 
+      const obj={}; 
+      kpiHeaders.forEach((h,i)=>{ 
+        const val=r[i]?r[i].trim():""; 
+        obj[h] = val==="" ? null : (isNaN(val) ? val : parseFloat(val)); 
+      }); 
+      return obj; 
+    });
 
-    allSites = [...new Set(allData.map(d=>d["eNodeB Name"]))].filter(s=>s).sort();
+    // Determine all sites present in the KPI data
+    allSites = [...new Set(allData.map(d=>d["eNodeB Name"]))].filter(s=>s).sort();
 
-    const cutoverUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=19616562&single=true&output=csv&t=" + Date.now();
-    const cutoverText = await (await fetch(cutoverUrl)).text();
-    const cutoverRows = cutoverText.trim().split('\n').map(r=>r.split(','));
-    const cutoverHeaders = cutoverRows.shift().map(h=>h.trim());
+    // 2. Fetch Cutover Data
+    const cutoverUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=19616562&single=true&output=csv&t=" + Date.now();
+    const cutoverRes = await fetch(cutoverUrl);
+    const cutoverText = await cutoverRes.text();
+    
+    const cutoverRows = cutoverText.trim().split('\n').map(r=>r.split(','));
+    const cutoverHeaders = cutoverRows.shift().map(h=>h.trim());
+    
+    siteCutoverMap = {};
+    cutoverRows.forEach(r => {
+        const siteName = r[cutoverHeaders.indexOf("eNodeB Name")]?.trim();
+        const onAirDate = r[cutoverHeaders.indexOf("On-Air Date")]?.trim();
+        if (siteName && onAirDate) {
+            if (allSites.includes(siteName)) {
+                 siteCutoverMap[siteName] = onAirDate;
+            }
+        }
+    });
 
-    siteCutoverMap = {};
-    cutoverRows.forEach(r=>{
-      const siteName = r[cutoverHeaders.indexOf("eNodeB Name")]?.trim();
-      const onAirDate = r[cutoverHeaders.indexOf("On-Air Date")]?.trim();
-      if(siteName && onAirDate && allSites.includes(siteName)) siteCutoverMap[siteName] = onAirDate;
-    });
+    // 3. Initialize Date Filter Options and State
+    allOnAirDates = [...new Set(Object.values(siteCutoverMap))].filter(d => d).sort();
+    selectedOnAirDates = [...allOnAirDates]; 
+    selectedSites = []; 
 
-    allOnAirDates = [...new Set(Object.values(siteCutoverMap))].filter(d => d).sort();
-    selectedOnAirDates = [...allOnAirDates];
-    selectedSites = [];
+    // 4. Update UI
+    setupOnAirDateDropdown();
+    setupSiteDropdown();
+    renderCharts();
 
-    setupOnAirDateDropdown();
-    setupSiteDropdown();
-    renderCharts();
-  } catch(e){ console.error(e); alert("Failed to load data."); }
+  } catch(e) { console.error(e); alert("Failed to load data."); }
 }
 
-// --- DROPDOWNS & FILTERS ---
-function setupOnAirDateDropdown(){ /* same as your original, unchanged */ }
-function setupSiteDropdown(){ /* same as your original, unchanged */ }
-function updateSelectedDates(){ /* same as original */ }
-function updateSelectedSites(){ /* same as original */ }
+// --- FILTER UI LOGIC (ON-AIR DATE) ---
 
-// --- RENDER CHARTS ---
+function setupOnAirDateDropdown(){
+  const list = document.getElementById("onAirDateDropdownList");
+  const btn = document.getElementById("onAirDateDropdownBtn");
+  list.innerHTML = "";
+  
+  const setAll = () => { 
+    selectedOnAirDates = [...allOnAirDates]; 
+    const allActiveSites = allSites.filter(site => siteCutoverMap[site] && allOnAirDates.includes(siteCutoverMap[site]));
+    selectedSites = [...allActiveSites]; 
+
+    updateDateFilterUI({close: false}); 
+    setupSiteDropdown(); 
+  };
+
+  const clearAll = () => { 
+    selectedOnAirDates = []; 
+    selectedSites = []; 
+    
+    updateDateFilterUI({close: false}); 
+    setupSiteDropdown(); 
+  };
+  
+  // Actions
+  list.innerHTML += `<div onclick="window.dateSetAll()"><b>Select All</b></div>`;
+  list.innerHTML += `<div onclick="window.dateClearAll()"><b>Clear All</b></div>`;
+
+  // Options
+  allOnAirDates.forEach(date => {
+    const d = document.createElement("div");
+    const checked = selectedOnAirDates.includes(date) ? "checked" : "";
+    d.innerHTML = `<input type='checkbox' value='${date}' class='date-chk' ${checked}> ${date}`;
+    d.onclick = (e) => {
+       if(e.target.tagName !== "INPUT") {
+          const chk = d.querySelector("input");
+          chk.checked = !chk.checked;
+       }
+       updateSelectedDates(); 
+    };
+    list.appendChild(d);
+  });
+  
+  btn.onclick = () => list.style.display = list.style.display==="block" ? "none" : "block";
+  
+  window.dateSetAll = setAll;
+  window.dateClearAll = clearAll;
+  updateDateFilterUI({close: true}); 
+}
+
+function updateSelectedDates() {
+    const list = document.getElementById("onAirDateDropdownList");
+    selectedOnAirDates = Array.from(list.querySelectorAll(".date-chk:checked")).map(c => c.value);
+    
+    let activeSites = allSites.filter(site => {
+        const date = siteCutoverMap[site];
+        return date && selectedOnAirDates.includes(date);
+    });
+    selectedSites = [...activeSites]; 
+    
+    updateDateFilterUI({close: false}); 
+    setupSiteDropdown(); 
+}
+
+function updateDateFilterUI(options = {close: true}) {
+    const btn = document.getElementById("onAirDateDropdownBtn");
+    const span = document.getElementById("onAirDateBtnLabel");
+    const list = document.getElementById("onAirDateDropdownList");
+    
+    span.textContent = selectedOnAirDates.length === 0 ? "No Dates Selected" : (selectedOnAirDates.length === allOnAirDates.length ? "All On-Air Dates" : `Selected (${selectedOnAirDates.length})`);
+    
+    list.querySelectorAll(".date-chk").forEach(c => c.checked = selectedOnAirDates.includes(c.value));
+    
+    if (options.close) {
+        list.style.display = "none";
+    } else {
+        list.style.display = "block";
+    }
+}
+
+// --- FILTER UI LOGIC (eNodeB NAME) ---
+
+function setupSiteDropdown(){
+  const list = document.getElementById("siteDropdownList");
+  const btn = document.getElementById("siteDropdownBtn");
+  list.innerHTML = "";
+
+  let activeSites = allSites.filter(site => {
+      const date = siteCutoverMap[site];
+      return date && selectedOnAirDates.includes(date);
+  });
+  
+  selectedSites = selectedSites.filter(site => activeSites.includes(site));
+  
+  const setAll = () => { 
+    selectedSites = [...activeSites]; 
+    updateSiteFilterUI({close: false}); 
+    renderCharts();
+  }; 
+
+  const clearAll = () => { 
+    selectedSites = []; 
+    updateSiteFilterUI({close: false}); 
+    renderCharts(); 
+  };
+  
+  list.innerHTML += `<div onclick="window.siteSetAll()"><b>Select All (${activeSites.length})</b></div>`;
+  list.innerHTML += `<div onclick="window.siteClearAll()"><b>Clear All</b></div>`;
+
+  activeSites.forEach(site => {
+    const d = document.createElement("div");
+    const checked = selectedSites.includes(site) ? "checked" : ""; 
+    d.innerHTML = `<input type='checkbox' value='${site}' class='site-chk' ${checked}> ${site}`;
+    d.onclick = (e) => {
+       if(e.target.tagName !== "INPUT") {
+          const chk = d.querySelector("input");
+          chk.checked = !chk.checked;
+       }
+       updateSelectedSites(); 
+    };
+    list.appendChild(d);
+  });
+  
+  btn.onclick = () => list.style.display = list.style.display==="block" ? "none" : "block";
+
+  window.siteSetAll = setAll;
+  window.siteClearAll = clearAll;
+  
+  updateSiteFilterUI({close: true});
+  renderCharts();
+}
+
+function updateSelectedSites() {
+    const list = document.getElementById("siteDropdownList");
+    selectedSites = Array.from(list.querySelectorAll(".site-chk:checked")).map(c => c.value);
+    updateSiteFilterUI({close: false});
+    renderCharts();
+}
+
+function updateSiteFilterUI(options = {close: true}) {
+    const btn = document.getElementById("siteDropdownBtn");
+    const span = document.getElementById("siteBtnLabel");
+    const list = document.getElementById("siteDropdownList");
+    
+    let activeSites = allSites.filter(site => {
+        const date = siteCutoverMap[site];
+        return selectedOnAirDates.includes(date);
+    });
+
+    if(selectedSites.length === 0) span.textContent = "All Active Sites";
+    else if(selectedSites.length === activeSites.length) span.textContent = `All Active Sites (${selectedSites.length})`;
+    else if(selectedSites.length === 1) span.textContent = selectedSites[0];
+    else span.textContent = `Selected (${selectedSites.length})`;
+
+    list.querySelectorAll(".site-chk").forEach(c => c.checked = selectedSites.includes(c.value));
+    
+    if (options.close) {
+        list.style.display = "none";
+    } else {
+        list.style.display = "block";
+    }
+}
+
+// --- CHART RENDERING ---
+
 function renderCharts(){
-  const container = document.getElementById("mainChartContainer");
-  container.innerHTML = "";
+  const container = document.getElementById("mainChartContainer");
+  container.innerHTML = "";
+  
+  let kpisToShow = [];
+  if(currentTab === "acceptance") kpisToShow = selectedKpis.acceptance;
+  else if(currentTab === "monitoring") kpisToShow = selectedKpis.monitoring;
+  else if(currentTab === "both") kpisToShow = [...selectedKpis.acceptance, ...selectedKpis.monitoring];
 
-  let kpisToShow = [];
-  if(currentTab === "acceptance") kpisToShow = selectedKpis.acceptance;
-  else if(currentTab === "monitoring") kpisToShow = selectedKpis.monitoring;
-  else kpisToShow = [...selectedKpis.acceptance, ...selectedKpis.monitoring];
+  let sitesFromDate = allSites.filter(site => {
+      const date = siteCutoverMap[site];
+      return selectedOnAirDates.includes(date);
+  });
 
-  let finalSiteList = selectedSites.length > 0 ? selectedSites : allSites.filter(s => selectedOnAirDates.includes(siteCutoverMap[s]));
-  let filteredData = allData.filter(d => finalSiteList.includes(d["eNodeB Name"]));
+  let finalSiteList;
+  if (selectedSites.length > 0) {
+      finalSiteList = selectedSites;
+  } else {
+      finalSiteList = sitesFromDate;
+  }
+  
+  let filteredData = allData.filter(d => finalSiteList.includes(d["eNodeB Name"]));
 
-  const timeline = [...new Set(filteredData.map(d=>d["Date"]))].sort((a,b)=>{
-    const [da,ma,ya]=a.split('/').map(Number);
-    const [db,mb,yb]=b.split('/').map(Number);
-    return new Date(ya,ma-1,da)-new Date(yb,mb-1,db);
-  });
 
-  const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const timelineLabels = timeline.map(d => {
-    const [day, month] = d.split('/').map(Number);
-    return `${day} ${monthNames[month-1]}`;
-  });
+  const timeline = [...new Set(filteredData.map(d=>d["Date"]))].sort((a,b)=>{
+    const [da,ma,ya]=a.split('/').map(Number);
+    const [db,mb,yb]=b.split('/').map(Number);
+    return new Date(ya,ma-1,da)-new Date(yb,mb-1,db);
+  });
 
-  const style = chartStyles[selectedStyle];
-  document.querySelectorAll('.chart-card').forEach(c => c.style.backgroundColor = style.bgColor);
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const timelineLabels = timeline.map(d => {
+      const [day, month] = d.split('/').map(Number);
+      return `${day} ${monthNames[month - 1]}`; 
+  });
 
-  kpisToShow.forEach((kpi, idx)=>{
-    const card = document.createElement("div");
-    card.className = "chart-card";
+  const style = chartStyles[selectedStyle]; 
+  document.querySelectorAll('.chart-card').forEach(card => card.style.backgroundColor = style.bgColor);
 
-    const wrapper = document.createElement("div");
-    wrapper.className = "chart-container";
+  kpisToShow.forEach((kpi, idx) => {
+    const card = document.createElement("div");
+    card.className = "chart-card";
+    
+    const wrapper = document.createElement("div");
+    wrapper.className = "chart-container";
+    
+    const canvas = document.createElement("canvas");
+    canvas.id = `chart_${idx}`;
+    
+    wrapper.appendChild(canvas);
+    card.appendChild(wrapper);
+    container.appendChild(card);
 
-    const canvas = document.createElement("canvas");
-    canvas.id = `chart_${idx}`;
+    const dataPoints = timeline.map(date => {
+       const vals = filteredData.filter(d => d["Date"] === date && d[kpi] !== null).map(d => d[kpi]);
+       if(vals.length === 0) return null;
+       const isAvg = kpi.match(/(rate|%|ratio|average)/i);
+       const sum = vals.reduce((a,b)=>a+b,0);
+       return isAvg ? sum/vals.length : sum;
+    });
 
-    wrapper.appendChild(canvas);
-    card.appendChild(wrapper);
-    container.appendChild(card);
+    // Dynamic Y-Axis Start Calculation (Applying Custom Logic)
+    const dataOnly = dataPoints.filter(v => v !== null);
+    const minValue = dataOnly.length > 0 ? Math.min(...dataOnly) : 0;
+    const maxValue = dataOnly.length > 0 ? Math.max(...dataOnly) : 100;
+    const isRateMetric = kpi.match(/(rate|success|%|ratio)/i) !== null;
 
-    const dataPoints = timeline.map(date => {
-      const vals = filteredData.filter(d=>d["Date"]===date && d[kpi]!=null).map(d=>d[kpi]);
-      if(vals.length===0) return null;
-      const isAvg = kpi.match(/(rate|%|ratio|average)/i);
-      const sum = vals.reduce((a,b)=>a+b,0);
-      return isAvg ? sum/vals.length : sum;
-    });
+    let yMin, yMax, yStepSize;
+    
+    if (dataOnly.length === 0) {
+        // Default scale for no data
+        yMin = 0;
+        yMax = isRateMetric ? 100 : 10;
+        yStepSize = isRateMetric ? 20 : 2;
+    } else {
+        const scale = getNiceYAxisScale(minValue, maxValue, isRateMetric);
+        yMin = scale.yMin;
+        yMax = scale.yMax;
+        yStepSize = scale.yStepSize;
+    }
+    // End of Dynamic Y-Axis Start Calculation (Applying Custom Logic)
+    
+    // Determine background color for fill if needed 
+    let bColor = 'transparent';
+    let lineC = getRandomColor();
+    if (style.fill) {
+        const hex = lineC.substring(1);
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        bColor = `rgba(${r}, ${g}, ${b}, ${style.alpha || 0.15})`;
+    }
 
-    let bColor = 'transparent', lineC = getRandomColor();
-    if(style.fill){
-      const hex = lineC.substring(1);
-      const r = parseInt(hex.substring(0,2),16);
-      const g = parseInt(hex.substring(2,4),16);
-      const b = parseInt(hex.substring(4,6),16);
-      bColor = `rgba(${r},${g},${b},${style.alpha||0.15})`;
-    }
 
-    new Chart(canvas.getContext("2d"), {
-      type: 'line',
-      data: { labels: timelineLabels, datasets:[{
-        label: (finalSiteList.length>0 && dataPoints.some(p=>p!==null)) ? "Aggregate" : "No Data",
-        data: dataPoints,
-        borderColor: lineC,
-        backgroundColor: bColor,
-        fill: style.fill,
-        borderWidth: style.border,
-        pointRadius: style.pointRadius,
-        tension: style.tension,
-        stepped: style.stepped,
-        spanGaps: true
-      }]},
-      options: {
-        responsive:true,
-        maintainAspectRatio:false,
-        plugins:{
-          legend:{display:false},
-          title:{display:true,text:kpi,font:{size:14,weight:'bold'},color:style.titleColor}
-        },
-        scales:{ x:{ticks:{font:{size:8}},grid:{display:false}}, y:{grid:{color:style.gridColor}} } // default Y-axis
-      }
-    });
-  });
+    // Draw Chart with Animation
+    new Chart(canvas.getContext("2d"), {
+      type: 'line',
+      data: {
+        labels: timelineLabels,
+        datasets: [{
+          label: (finalSiteList.length > 0 && dataPoints.some(p => p !== null)) ? "Aggregate" : "No Data",
+          data: dataPoints,
+          borderColor: lineC,
+          backgroundColor: bColor, 
+          fill: style.fill,
+          borderWidth: style.border,
+          pointRadius: style.pointRadius,
+          tension: style.tension,
+          stepped: style.stepped,
+          spanGaps: true 
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: {
+            x: {
+                type: 'number',
+                easing: 'linear',
+                duration: 500,
+                from: NaN,
+                delay: (ctx) => ctx.index * 30 
+            },
+            y: { duration: 0 }
+        },
+        plugins: { 
+            legend: { display: false },
+            title: { 
+                display: true,
+                text: kpi,
+                font: {
+                    size: 14,
+                    weight: 'bold'
+                },
+                color: style.titleColor
+            }
+        },
+        scales: {
+           x: { 
+               ticks: { font: {size:8} }, 
+               grid: {display:false} 
+           },
+           y: { 
+               beginAtZero: yMin === 0, 
+               min: yMin,
+               max: yMax,
+               ticks: {
+                   stepSize: yStepSize // Apply the calculated step size
+               },
+               grid: {color: style.gridColor}
+           }
+        }
+      }
+    });
+  });
 }
 
-// --- PPT EXPORT ---
-async function downloadPPT(){
-  const pptx = new PptxGenJS();
-  pptx.layout='LAYOUT_16x9';
-  const canvases = document.querySelectorAll("canvas");
-  const count = graphsPerSlide;
-  const lineColor = chartExportColor;
-  const titleColor = chartExportTitleColor;
 
-  const layoutDef = {
-    1:{cols:1,rows:1,chartW:9.0,chartH:5.5,padding:0.5},
-    2:{cols:2,rows:1,chartW:4.5,chartH:3.5,padding:0.4},
-    3:{cols:3,rows:1,chartW:3.0,chartH:3.0,padding:0.4},
-    4:{cols:2,rows:2,chartW:4.5,chartH:2.5,padding:0.3},
-    6:{cols:3,rows:2,chartW:3.0,chartH:2.5,padding:0.2},
-    9:{cols:3,rows:3,chartW:3.0,chartH:1.7,padding:0.1}
-  }[count] || {cols:2,rows:1,chartW:4.5,chartH:3.5,padding:0.4};
+// --- KPI DRAWER & UTILITY LOGIC ---
 
-  for(let i=0;i<canvases.length;i+=count){
-    const slide = pptx.addSlide();
-    const chartsThisSlide = Math.min(count, canvases.length-i);
-    const layoutPositions=[];
+function populateKpiOptions(){
+  const kpiSection = document.getElementById("kpiOptionsList");
+  kpiSection.innerHTML = ''; // Clear content for redraw
 
-    const maxW = 9.5, startX=0.5, startY=1.0;
-    const totalChartWidth = layoutDef.cols*layoutDef.chartW;
-    const totalPaddingWidth = (layoutDef.cols-1)*layoutDef.padding;
-    const marginX = ((maxW-totalChartWidth-totalPaddingWidth)/2)+startX;
+  const acceptanceSection = currentTab === 'acceptance' || currentTab === 'both';
+  const monitoringSection = currentTab === 'monitoring' || currentTab === 'both';
+  
+  const createGroup = (title, key, sourceArr) => {
+    const h4 = document.createElement("h4");
+    h4.textContent = title;
+    h4.style.marginTop = "15px";
+    kpiSection.appendChild(h4);
+    
+    sourceArr.forEach(kpi => {
+      const div = document.createElement("div");
+      const checked = selectedKpis[key].includes(kpi) ? "checked" : "";
+      div.innerHTML = `<input type='checkbox' class='kpi-chk' data-group='${key}' value='${kpi}' ${checked}> <span style='font-size:13px'>${kpi}</span>`;
+      div.onclick = (e) => {
+        if(e.target.tagName !== "INPUT") {
+            const chk = div.querySelector("input");
+            chk.checked = !chk.checked;
+        }
+      };
+      kpiSection.appendChild(div);
+    });
+  };
 
-    for(let r=0;r<layoutDef.rows;r++){
-      for(let c=0;c<layoutDef.cols;c++){
-        if(layoutPositions.length>=chartsThisSlide) break;
-        layoutPositions.push({x:marginX+c*(layoutDef.chartW+layoutDef.padding),y:startY+r*(layoutDef.chartH+layoutDef.padding),w:layoutDef.chartW,h:layoutDef.chartH});
-      }
-    }
-
-    for(let j=0;j<chartsThisSlide;j++){
-      const c = canvases[i+j];
-      const imgData = c.toDataURL("image/png");
-      const {x,y,w,h} = layoutPositions[j];
-      slide.addImage({data:imgData,x,y,w,h,sizing:{type:'contain',w,h}});
-    }
-  }
-
-  pptx.writeFile({fileName:"LTE_KPI_Report.pptx"});
+  if (acceptanceSection) createGroup("Acceptance KPIs", "acceptance", acceptanceKpis);
+  if (monitoringSection) createGroup("Monitoring KPIs", "monitoring", monitoringKpis);
 }
 
-// --- INIT ---
-document.addEventListener('DOMContentLoaded',fetchData);
+function populateStyleOptions(){
+  const styleContainer = document.getElementById("chartStyleOptions");
+  styleContainer.innerHTML = '';
+  Object.keys(chartStyles).forEach(styleName => {
+    const button = document.createElement('button');
+    button.textContent = styleName;
+    button.className = 'action-btn';
+    button.setAttribute('data-style', styleName);
+    button.onclick = () => updateChartStyle(styleName);
+    if (selectedStyle === styleName) {
+        button.classList.add('active');
+    }
+    styleContainer.appendChild(button);
+  });
+}
+
+function selectVisibleKpis() {
+    const chks = document.querySelectorAll(".kpi-chk");
+    chks.forEach(c => { c.checked = true; });
+
+    if (currentTab === 'acceptance' || currentTab === 'both') {
+        selectedKpis.acceptance = [...acceptanceKpis];
+    }
+    if (currentTab === 'monitoring' || currentTab === 'both') {
+        selectedKpis.monitoring = [...monitoringKpis];
+    }
+}
+
+function clearVisibleKpis() {
+    const chks = document.querySelectorAll(".kpi-chk");
+    chks.forEach(c => { c.checked = false; });
+
+    if (currentTab === 'acceptance' || currentTab === 'both') {
+        selectedKpis.acceptance = [];
+    }
+    if (currentTab === 'monitoring' || currentTab === 'both') {
+        selectedKpis.monitoring = [];
+    }
+}
+
+
+function applyKpis(){
+  const chks = document.querySelectorAll(".kpi-chk");
+  
+  const tempAcceptance = currentTab === 'acceptance' || currentTab === 'both' ? [] : [...selectedKpis.acceptance];
+  const tempMonitoring = currentTab === 'monitoring' || currentTab === 'both' ? [] : [...selectedKpis.monitoring];
+
+  chks.forEach(c => {
+    if(c.checked) {
+        if(c.dataset.group === 'acceptance') tempAcceptance.push(c.value);
+        if(c.dataset.group === 'monitoring') tempMonitoring.push(c.value);
+    }
+  });
+
+  selectedKpis.acceptance = tempAcceptance;
+  selectedKpis.monitoring = tempMonitoring;
+  
+  toggleKpiDrawer();
+  renderCharts();
+}
+
+// --- PPT EXPORT CUSTOMIZATION & PREVIEW ---
+
+function openPreview() {
+    const canvases = document.querySelectorAll("canvas");
+    if(canvases.length === 0) { alert("No charts to export."); return; }
+    
+    graphsPerSlide = 2; 
+    chartExportColor = '#2F80ED'; 
+    chartExportTitleColor = '#333333';
+
+    updatePreviewSettings(graphsPerSlide, chartExportColor, chartExportTitleColor);
+    
+    document.getElementById("previewModal").style.display = "flex";
+}
+
+function highlightSettingButtons(count, lineColor, titleColor) {
+    document.querySelectorAll('.graph-options button').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.backgroundColor = '#2F80ED';
+        if (parseInt(btn.dataset.count) === count) {
+            btn.classList.add('active');
+            btn.style.backgroundColor = '#27AE60'; 
+        }
+    });
+
+    document.querySelectorAll('#lineColorOptions .color-option').forEach(el => {
+        el.classList.remove('selected');
+        if (el.dataset.color === lineColor) {
+            el.classList.add('selected');
+        }
+    });
+
+    document.querySelectorAll('#titleColorOptions .color-option').forEach(el => {
+        el.classList.remove('selected');
+        if (el.dataset.color === titleColor) {
+            el.classList.add('selected');
+        }
+    });
+}
+
+function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
+    if (newCount) graphsPerSlide = newCount;
+    if (newLineColor) chartExportColor = newLineColor;
+    if (newTitleColor) chartExportTitleColor = newTitleColor;
+
+    highlightSettingButtons(graphsPerSlide, chartExportColor, chartExportTitleColor);
+    
+    const count = graphsPerSlide;
+    const body = document.getElementById("previewBody");
+    const canvases = document.querySelectorAll("canvas");
+    
+    document.getElementById("previewTitle").textContent = `PPT Export Preview (${count} Graphs per Slide) - Line: ${chartExportColor}, Title: ${chartExportTitleColor}`;
+    body.innerHTML = "";
+
+    let gridCols = '1fr';
+    let rows = 1;
+    if (count === 2) { gridCols = '1fr 1fr'; rows = 1; }
+    else if (count === 3 || count === 6 || count === 9) { gridCols = '1fr 1fr 1fr'; }
+    else if (count === 4) { gridCols = '1fr 1fr'; rows = 2; }
+    
+    if (count === 6) rows = 2;
+    if (count === 9) rows = 3;
+
+
+    for(let i=0; i<canvases.length; i+=count){
+        const slideDiv = document.createElement("div");
+        slideDiv.className = "preview-slide";
+        
+        const slideTitle = document.createElement("div");
+        slideTitle.className = "preview-slide-title";
+        slideTitle.textContent = `Slide ${Math.floor(i/count) + 1}`;
+        slideDiv.appendChild(slideTitle);
+
+        const grid = document.createElement("div");
+        grid.className = "preview-grid";
+        grid.style.gridTemplateColumns = gridCols;
+        grid.style.gridTemplateRows = rows === 1 ? '1fr' : (rows === 2 ? '1fr 1fr' : (rows === 3 ? '1fr 1fr 1fr' : 'repeat(auto-fit, 1fr)'));
+
+
+        for(let j=0; j<count; j++){
+            if(i+j < canvases.length){
+                const c = canvases[i+j];
+                const box = createPreviewBox(c, chartExportColor, chartExportTitleColor); 
+                grid.appendChild(box);
+            }
+        }
+        slideDiv.appendChild(grid);
+        body.appendChild(slideDiv);
+    }
+}
+
+function createPreviewBox(canvas, lineColor, titleColor) {
+  const box = document.createElement("div");
+  box.className = "preview-img-box";
+  
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = canvas.width;
+  tempCanvas.height = canvas.height;
+  const tempCtx = tempCanvas.getContext('2d');
+  
+  const chartInstance = Chart.getChart(canvas.id);
+  let imgData = '';
+  
+  if (chartInstance) {
+      // 1. Store original chart properties
+      const originalDatasetProps = chartInstance.data.datasets.map(d => ({
+          borderColor: d.borderColor,
+          pointBorderColor: d.pointBorderColor,
+          pointBackgroundColor: d.pointBackgroundColor,
+          fill: d.fill,
+          backgroundColor: d.backgroundColor,
+          stepped: d.stepped
+      }));
+      const originalTitleColor = chartInstance.options.plugins.title.color;
+      const originalYMin = chartInstance.options.scales.y.min;
+      const originalYMax = chartInstance.options.scales.y.max;
+      const originalYStep = chartInstance.options.scales.y.ticks.stepSize;
+      
+      const style = chartStyles[selectedStyle];
+      
+      // 2. Apply PPT visual overrides (Color and Style)
+      chartInstance.data.datasets.forEach(d => { 
+        d.borderColor = lineColor; 
+        d.pointBorderColor = lineColor; 
+        d.pointBackgroundColor = lineColor; 
+        
+        let bColor = 'transparent';
+        if (style.fill) {
+            const hex = lineColor.substring(1);
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+            bColor = `rgba(${r}, ${g}, ${b}, ${style.alpha || 0.15})`;
+        }
+        d.backgroundColor = bColor;
+        d.fill = style.fill;
+        d.stepped = style.stepped;
+        
+        d.pointRadius = 3; 
+        d.pointStyle = 'circle'; 
+        d.spanGaps = true; 
+      });
+
+      chartInstance.options.plugins.title.color = titleColor; 
+      
+      // 3. Apply CUSTOM Dynamic Y-Axis Scaling for Preview/PPT
+      const kpi = chartInstance.options.plugins.title.text;
+      const dataPoints = chartInstance.data.datasets[0].data;
+      const dataOnly = dataPoints.filter(v => v !== null);
+      const minValue = dataOnly.length > 0 ? Math.min(...dataOnly) : 0;
+      const maxValue = dataOnly.length > 0 ? Math.max(...dataOnly) : 100;
+      const isRateMetric = kpi.match(/(rate|success|%|ratio)/i) !== null;
+      
+      let pptYMin, pptYMax, pptYStep;
+      
+      if (dataOnly.length === 0) {
+          // Use default scale for no data
+          pptYMin = 0;
+          pptYMax = isRateMetric ? 100 : 10;
+          pptYStep = isRateMetric ? 20 : 2;
+      } else {
+          const scale = getNiceYAxisScale(minValue, maxValue, isRateMetric);
+          pptYMin = scale.yMin;
+          pptYMax = scale.yMax;
+          pptYStep = scale.yStepSize;
+      }
+
+      chartInstance.options.scales.y.min = pptYMin;
+      chartInstance.options.scales.y.max = pptYMax;
+      chartInstance.options.scales.y.ticks.stepSize = pptYStep;
+
+      chartInstance.update('none'); 
+      
+      // 4. Draw image and restore properties
+      tempCtx.drawImage(canvas, 0, 0);
+      imgData = tempCanvas.toDataURL("image/png");
+      
+      // Restore original properties
+      chartInstance.data.datasets.forEach((d, index) => { 
+        Object.assign(d, originalDatasetProps[index]);
+      });
+      chartInstance.options.plugins.title.color = originalTitleColor;
+      chartInstance.options.scales.y.min = originalYMin;
+      chartInstance.options.scales.y.max = originalYMax;
+      chartInstance.options.scales.y.ticks.stepSize = originalYStep;
+      chartInstance.update('none');
+  }
+
+  const img = document.createElement("img");
+  img.src = imgData;
+  
+  box.appendChild(img);
+  return box;
+}
+
+function closePreview(){ document.getElementById("previewModal").style.display = "none"; }
+
+async function downloadPPT() {
+    const pptx = new PptxGenJS();
+    pptx.layout = 'LAYOUT_16x9';
+
+    const canvases = document.querySelectorAll("canvas");
+    const count = graphsPerSlide;
+    const lineColor = chartExportColor;
+    const titleColor = chartExportTitleColor;
+
+    const layoutDef = {
+        1: { cols: 1, rows: 1, chartW: 9.0, chartH: 5.5, padding: 0.5 },
+        2: { cols: 2, rows: 1, chartW: 4.5, chartH: 3.5, padding: 0.4 },
+        3: { cols: 3, rows: 1, chartW: 3.0, chartH: 3.0, padding: 0.4 },
+        4: { cols: 2, rows: 2, chartW: 4.5, chartH: 2.5, padding: 0.3 },
+        6: { cols: 3, rows: 2, chartW: 3.0, chartH: 2.5, padding: 0.2 },
+        9: { cols: 3, rows: 3, chartW: 3.0, chartH: 1.7, padding: 0.1 } 
+    }[count] || { cols: 2, rows: 1, chartW: 4.5, chartH: 3.5, padding: 0.4 };
+
+    const numCols = layoutDef.cols;
+    const numRows = layoutDef.rows;
+    const chartW = layoutDef.chartW;
+    const chartH = layoutDef.chartH;
+    const padding = layoutDef.padding;
+    const startX = 0.5;
+    const startY = 1.0;
+    const maxW = 9.5;
+
+    for (let i = 0; i < canvases.length; i += count) {
+        const slide = pptx.addSlide();
+
+        const chartsThisSlide = Math.min(count, canvases.length - i);
+        const layoutPositions = [];
+
+        const totalChartWidth = numCols * chartW;
+        const totalPaddingWidth = (numCols - 1) * padding;
+        const remainingXSpace = maxW - totalChartWidth - totalPaddingWidth;
+        const marginX = (remainingXSpace / 2) + startX;
+
+        for (let r = 0; r < numRows; r++) {
+            for (let c = 0; c < numCols; c++) {
+                if (layoutPositions.length >= chartsThisSlide) break;
+                const x = marginX + c * (chartW + padding);
+                const y = startY + r * (chartH + padding);
+                layoutPositions.push({ x, y, w: chartW, h: chartH });
+            }
+            if (layoutPositions.length >= chartsThisSlide) break;
+        }
+
+        for (let j = 0; j < chartsThisSlide; j++) {
+            const c = canvases[i + j];
+            const chartInstance = Chart.getChart(c.id);
+            if (!chartInstance) continue;
+
+            // === Store original dataset and style properties ===
+            const originalDatasetProps = chartInstance.data.datasets.map(d => ({
+                borderColor: d.borderColor,
+                fill: d.fill,
+                backgroundColor: d.backgroundColor,
+                stepped: d.stepped
+            }));
+            const originalTitleColor = chartInstance.options.plugins.title.color;
+
+            // Apply PPT overrides
+            const style = chartStyles[selectedStyle];
+            chartInstance.data.datasets.forEach(d => {
+                d.borderColor = lineColor;
+                let bColor = 'transparent';
+                if (style.fill) {
+                    const hex = lineColor.substring(1);
+                    const r = parseInt(hex.substring(0,2),16);
+                    const g = parseInt(hex.substring(2,4),16);
+                    const b = parseInt(hex.substring(4,6),16);
+                    bColor = `rgba(${r},${g},${b},${style.alpha||0.15})`;
+                }
+                d.backgroundColor = bColor;
+                d.fill = style.fill;
+                d.stepped = style.stepped;
+            });
+            chartInstance.options.plugins.title.color = titleColor;
+
+            // === Use chart’s existing Y-axis scale (do not recalc) ===
+            chartInstance.update('none');
+
+            const imgData = c.toDataURL("image/png");
+            const { x, y, w, h } = layoutPositions[j];
+            slide.addImage({ data: imgData, x, y, w, h, sizing: { type:'contain', w, h } });
+
+            // === Restore original chart properties ===
+            chartInstance.data.datasets.forEach((d, idx) => {
+                Object.assign(d, originalDatasetProps[idx]);
+            });
+            chartInstance.options.plugins.title.color = originalTitleColor;
+            chartInstance.update('none');
+        }
+    }
+
+    renderCharts(); // restore dashboard charts
+    pptx.writeFile({ fileName: "LTE_KPI_Report.pptx" });
+    closePreview();
+}
+
+
+document.addEventListener('DOMContentLoaded', fetchData);
 </script>
-
 </body>
 </html>
