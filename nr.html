@@ -100,7 +100,7 @@ canvas { background:white; border-radius:12px; padding:16px; width:100% !importa
 
 <script>
 // --- FULL JS COPIED FROM LTE ---
-// Change site column name to "NR Site Name" or keep same if your CSV uses "eNodeB Name"
+// Change site column name to "NR Site Name" or keep same if your CSV uses "gNodeB Name"
 let allData=[], fuse=null, allSites=[];
 let selectedSites=[];
 let acceptanceKpisList=[], monitoringKpisList=[];
@@ -122,8 +122,8 @@ async function fetchData(){
   const rows = text.trim().split('\n').map(r=>r.split(','));
   const headers = rows.shift().map(h=>h.trim());
   allData = rows.map(r=>{ const obj={}; headers.forEach((h,i)=>{ const val=r[i]?r[i].trim():"0"; obj[h]=isNaN(val)?val:parseFloat(val); }); return obj; });
-  fuse = new Fuse(allData,{ keys:['eNodeB Name'], threshold:0.4 });
-  allSites = [...new Set(allData.map(d=>d["eNodeB Name"]))].sort();
+  fuse = new Fuse(allData,{ keys:['gNodeB Name'], threshold:0.4 });
+  allSites = [...new Set(allData.map(d=>d["gNodeB Name"]))].sort();
   populateSiteDropdown();
   populateKpiDrawers();
   drawAcceptanceCharts();
@@ -182,14 +182,14 @@ function drawCharts(kpis,containerId){
     let labelText="All Sites"; if(selectedSites.length===1) labelText=selectedSites[0]; else if(selectedSites.length>1 && selectedSites.length<allSites.length) labelText="Multiple Sites";
     title.textContent=`${kpi} - ${labelText}`;
     const canvas=document.createElement("canvas"); card.appendChild(title); card.appendChild(canvas); container.appendChild(card);
-    let filteredData=allData; if(selectedSites.length>0) filteredData=allData.filter(d=>selectedSites.includes(d["eNodeB Name"]));
+    let filteredData=allData; if(selectedSites.length>0) filteredData=allData.filter(d=>selectedSites.includes(d["gNodeB Name"]));
     const dataPoints=timeline.map(date=>{ const vals = filteredData.filter(d=>d["Date"]===date).map(d=>{ const v=d[kpi]; return (v===""||v==null||isNaN(v))?0:v; }); if(vals.length===0) return 0; if(kpi.toLowerCase().includes("%")||kpi.toLowerCase().includes("rate")||kpi.toLowerCase().includes("average")||kpi.toLowerCase().includes("avg")||kpi.toLowerCase().includes("ratio")){ return vals.reduce((a,b)=>a+b,0)/vals.length; }else return vals.reduce((a,b)=>a+b,0); });
     new Chart(canvas.getContext("2d"),{ type:'line', data:{ labels:timelineLabels,datasets:[{label:labelText,data:dataPoints,borderColor:'#'+Math.floor(Math.random()*16777215).toString(16),fill:false,tension:0.3,pointRadius:3}] }, options:{ responsive:true, maintainAspectRatio:false, animation:{ x:{ type:'number', easing:'linear', duration:animationDuration, from:NaN, delay(ctx){ return ctx.index*10; } }, y:{duration:0} }, scales:{x:{display:true},y:{beginAtZero:true,ticks:{maxTicksLimit:6}}}, plugins:{legend:{position:'top'}} } });
   });
 }
 
 const siteInput=document.getElementById("siteFilter"); const dropdown=document.getElementById("dropdown");
-siteInput.addEventListener("input", ()=>{ const val=siteInput.value.trim(); if(!val || !fuse){ dropdown.style.display="none"; return; } const results=fuse.search(val).slice(0,5).map(r=>r.item["eNodeB Name"]); dropdown.innerHTML=""; results.forEach(r=>{ const div=document.createElement("div"); div.textContent=r; div.onclick=()=>{ siteInput.value=r; dropdown.style.display="none"; selectedSites=[r]; document.querySelectorAll(".siteOption").forEach(c=>c.checked=c.value===r); updateSiteButtonLabel(); drawCurrentPageCharts(); }; dropdown.appendChild(div); }); dropdown.style.display=results.length?"block":"none"; });
+siteInput.addEventListener("input", ()=>{ const val=siteInput.value.trim(); if(!val || !fuse){ dropdown.style.display="none"; return; } const results=fuse.search(val).slice(0,5).map(r=>r.item["gNodeB Name"]); dropdown.innerHTML=""; results.forEach(r=>{ const div=document.createElement("div"); div.textContent=r; div.onclick=()=>{ siteInput.value=r; dropdown.style.display="none"; selectedSites=[r]; document.querySelectorAll(".siteOption").forEach(c=>c.checked=c.value===r); updateSiteButtonLabel(); drawCurrentPageCharts(); }; dropdown.appendChild(div); }); dropdown.style.display=results.length?"block":"none"; });
 document.addEventListener("click", e=>{ if(e.target!==siteInput) dropdown.style.display="none"; });
 document.getElementById("refreshBtn").addEventListener("click", fetchData);
 
