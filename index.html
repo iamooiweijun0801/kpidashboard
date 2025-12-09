@@ -447,96 +447,72 @@ function getRandomColor() {
   return colors[Math.floor(Math.random() * colors.length)];
 }
 
-/**
- * Calculates a 'nice' Y-axis scale (min, max, stepSize) based on specific rules:
- * 1. If Rate/Ratio/%, max is capped at 100.
- * 2. If min > 0, min is set to 0.
- * 3. Step size (delta_nice) is calculated based on effective range (C_max - C_min) / 6.
- * 4. Step size is rounded up to nearest 1, 2, 5, 10 * 10^P.
- * 5. yMin is rounded down, yMax is rounded up to the nearest delta_nice multiple.
- * 6. For the 0-100 range, delta_nice is capped at 20 to ensure at least 6 labels (0, 20, 40, 60, 80, 100).
- * * @param {number} minValue - The actual minimum data value.
- * @param {number} maxValue - The actual maximum data value.
- * @param {boolean} isRateMetric - True if the KPI is a rate, success, %, or ratio.
- * @returns {{yMin: number, yMax: number, yStepSize: number}} The calculated scale.
- */
 function getNiceYAxisScale(minValue, maxValue, isRateMetric) {
+    if (minValue === undefined || maxValue === undefined) minValue = 0, maxValue = 0;
     const dataRange = maxValue - minValue;
 
-    // Handle no data or min = max
+    // No data or single-value
     if (dataRange <= 0) {
-        let min = 0;
-        let max = isRateMetric ? 100 : minValue + (minValue === 0 ? 10 : minValue * 0.1);
-        let step = isRateMetric ? 20 : (max - min) / 5;
-        return { yMin: min, yMax: max, yStepSize: step };
+        let max = isRateMetric ? Math.max(100, minValue + 0.1) : minValue + (minValue === 0 ? 10 : minValue * 0.1);
+        let step = isRateMetric ? 20 : (max - 0) / 5;
+        return { yMin: 0, yMax: max, yStepSize: step };
     }
 
     let C_min = minValue;
     let C_max = maxValue;
 
+    // Handle rate metrics smartly
     if (isRateMetric) {
-        if (C_max >= 100) C_max = 100;
-        else if (C_max > 80) C_max = 100;
-        if (C_min <= 0) C_min = 0;
+        if (C_max >= 80) C_max = 100; // Cap if large
+        if (C_min <= 0) C_min = 0;     // Min 0
     }
 
     let effectiveRange = C_max - C_min;
 
-    // FULL set of nice multiples up to 10,000,000 including decimals for small ranges
     const niceSteps = [
         0.001,0.002,0.005,0.01,0.02,0.05,0.1,0.2,0.5,1,2,5,
         10,20,50,100,200,500,1000,2000,5000,10000,20000,50000,
         100000,200000,500000,1000000,2000000,5000000,10000000
     ];
 
-    // Initial rough step
-    let roughStep = effectiveRange / 6; // at least 6 intervals
-    // Pick the next higher nice step
+    // Pick a step that ensures at least 6 intervals
+    let roughStep = effectiveRange / 6;
     let delta_nice = niceSteps.find(s => s >= roughStep) || roughStepsPowerOf10(roughStep);
 
-    // Adjust min/max to multiples of delta_nice
     let yMin = Math.floor(C_min / delta_nice) * delta_nice;
     let yMax = Math.ceil(C_max / delta_nice) * delta_nice;
 
-    // Ensure min ≥ 0 for positive-only data
     if (C_min >= 0 && yMin < 0) yMin = 0;
-
-    // Ensure yMax covers actual max
     if (yMax < C_max) yMax += delta_nice;
 
-    // Special handling for very small ranges
-    if (!isRateMetric && effectiveRange < 0.1) {
-        delta_nice = niceSteps.find(s => s >= effectiveRange / 6) || 0.01;
-        yMin = Math.floor(C_min / delta_nice) * delta_nice;
-        yMax = Math.ceil(C_max / delta_nice) * delta_nice;
-        if (C_min >= 0 && yMin < 0) yMin = 0;
-    }
-
-    // Special case for rate metrics
-    if (isRateMetric) {
-        yMax = 100;
-        delta_nice = 20;
-        if (yMin > 0) yMin = Math.floor(yMin / delta_nice) * delta_nice;
-    }
-
     // Ensure at least 6 intervals
-    let intervalCount = Math.ceil((yMax - yMin) / delta_nice);
-    if (intervalCount < 6) {
+    let intervals = Math.ceil((yMax - yMin) / delta_nice);
+    if (intervals < 6) {
         delta_nice = niceSteps.find(s => s >= (yMax - yMin) / 6) || roughStepsPowerOf10((yMax - yMin) / 6);
         yMin = Math.floor(C_min / delta_nice) * delta_nice;
         yMax = Math.ceil(C_max / delta_nice) * delta_nice;
         if (C_min >= 0 && yMin < 0) yMin = 0;
     }
 
-    // Round to avoid floating point issues
-    const decimals = delta_nice.toString().includes('.') ? delta_nice.toString().split('.').pop().length : 0;
-    yMin = parseFloat(yMin.toFixed(decimals));
-    yMax = parseFloat(yMax.toFixed(decimals));
-    delta_nice = parseFloat(delta_nice.toFixed(decimals));
+    // Special case: small values (<1) keep nice decimals
+    if (effectiveRange < 1 && !isRateMetric) {
+        let decimals = Math.max(0, Math.ceil(-Math.log10(delta_nice)));
+        yMin = parseFloat(yMin.toFixed(decimals));
+        yMax = parseFloat(yMax.toFixed(decimals));
+        delta_nice = parseFloat(delta_nice.toFixed(decimals));
+    } else {
+        yMin = Math.round(yMin);
+        yMax = Math.round(yMax);
+        delta_nice = Math.round(delta_nice);
+    }
+
+    // Special case for rate metric: if max small, don't force 100
+    if (isRateMetric && C_max < 80) {
+        // leave yMax as calculated, not forced 100
+    }
 
     return { yMin, yMax, yStepSize: delta_nice };
 
-    // Fallback power-of-10 step
     function roughStepsPowerOf10(val) {
         const P = Math.pow(10, Math.floor(Math.log10(val)));
         const M = val / P;
@@ -548,6 +524,7 @@ function getNiceYAxisScale(minValue, maxValue, isRateMetric) {
         return M_nice * P;
     }
 }
+
 
 // --- DATA FETCHING & MAPPING ---
 async function fetchData(){
