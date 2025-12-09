@@ -406,6 +406,46 @@ function roundUpToCleanScale(value) {
     return Math.ceil(value / 10000) * 10000;
 }
 
+/**
+ * Calculates the largest clean step size that guarantees at least 'minTicks' (e.g., 5) across a range.
+ * A "clean" step is 1, 2, 5 multiplied by a power of 10.
+ * @param {number} range - The total range (yMax - yMin).
+ * @param {number} minTicks - The minimum number of ticks desired.
+ * @returns {number} The calculated clean step size.
+ */
+function getIdealTickStep(range, minTicks = 5) {
+    if (range <= 0) return 0.2; 
+
+    // Ideal step size is range / (minTicks - 1)
+    const targetSteps = minTicks - 1; // e.g., 4 steps for 5 ticks
+    let idealStep = range / targetSteps;
+
+    // Find the magnitude (power of 10) of the ideal step
+    let power = Math.pow(10, Math.floor(Math.log10(idealStep)));
+    
+    // Check clean steps in descending order (5x, 2x, 1x magnitude)
+    const cleanSteps = [5 * power, 2 * power, 1 * power];
+    
+    // Find the largest clean step that is less than or equal to the ideal step
+    for (let step of cleanSteps) {
+        // Use a small epsilon (1e-9) to handle floating point issues near the boundary
+        if (step <= idealStep + 1e-9 && step > 0) {
+            return step;
+        }
+    }
+    
+    // Fallback if idealStep is smaller than 1*power (e.g., ideal=0.08, power=0.1)
+    let smallerPower = power / 10;
+    
+    // Check 5x the smaller magnitude (e.g., 0.05)
+    if (5 * smallerPower > 0) {
+        return 5 * smallerPower;
+    }
+    
+    // Safety fallback for extremely tiny ranges
+    return 0.1; 
+}
+
 
 /**
  * Toggles the KPI drawer visibility.
@@ -747,13 +787,12 @@ function renderCharts(){
     let bColor = selectedStyle === 'Monochromatic' ? 'rgba(47, 128, 237, 0.15)' : lineC.replace(')', ', 0.15)').replace('rgb', 'rgba');
 
 
-    // Dynamic Y-Axis Start Calculation (Unified, Tighter Logic)
+    // Dynamic Y-Axis Start Calculation
     const dataOnly = dataPoints.filter(v => v !== null);
     if (dataOnly.length === 0) {
-        // Fallback for no data
         var yMin = 0;
         var yMax = 100;
-        var yStepSize = null;
+        var yStepSize = 20;
     } else {
         const minValue = Math.min(...dataOnly);
         const maxValue = Math.max(...dataOnly);
@@ -761,65 +800,55 @@ function renderCharts(){
         
         var yMin, yMax, yStepSize;
 
-        // A. Determine appropriate Step Size based on range magnitude
-        if (dataRange < 0.5) yStepSize = 0.1;
-        else if (dataRange < 2) yStepSize = 0.2;
-        else if (dataRange < 5) yStepSize = 0.5;
-        else if (dataRange < 15) yStepSize = 1.0;
-        else if (dataRange < 50) yStepSize = 5.0;
-        else yStepSize = 10.0;
-        
-        // B. Calculate Padding (use at least yStepSize, or 5% of range)
-        let padding = Math.max(yStepSize, dataRange * 0.05);
+        // --- STEP A: CALCULATE IDEAL STEP SIZE BASED ON RAW DATA RANGE (with 10% padding for initial max/min) ---
+        yStepSize = getIdealTickStep(dataRange * 1.1, 5); 
 
-        // C. Calculate Y-Min (Round DOWN to nearest clean multiple of step)
+        // --- STEP B: Calculate Y-Min and Y-Max based on the calculated step size ---
+        let padding = yStepSize; 
+        
         let targetMin = minValue - padding;
         yMin = Math.floor(targetMin / yStepSize) * yStepSize;
         yMin = Math.max(0, yMin); 
 
-        // D. Calculate Y-Max (Round UP to nearest clean multiple of step)
         let targetMax = maxValue + padding;
         yMax = Math.ceil(targetMax / yStepSize) * yStepSize;
         
-        // --- NEW/REVISED Y-AXIS SCALING RULES (STEP E) ---
+        // --- STEP C: Apply Overrides (100% Cap, Clean Rounding) ---
         if (kpi.match(/(rate|success|%|ratio)/i)) {
-
             // Condition 1: High Range Rate (80% to 100%) - STRICT 100 MAX
-            if (maxValue <= 100 && maxValue >= 80) { // Max value is between 80 and 100
-                yMax = 100; // STRICTLY set max to 100
-
+            if (maxValue <= 100 && maxValue >= 80) { 
+                yMax = 100; 
                 // Keep aggressive zoom from the bottom when capped at 100
                 if (dataRange < 5 && maxValue > 95) {
                     let zoomPad = dataRange * 0.15;
-                    let zoomStep = dataRange < 0.5 ? 0.1 : 0.2;
+                    let zoomStep = getIdealTickStep(dataRange * 1.1, 5); // Re-calculate zoomStep
                     yMin = Math.floor((minValue - zoomPad) / zoomStep) * zoomStep;
                     yMin = Math.max(80, yMin); 
                 }
             } 
-            // Condition 2: Ultra Low Rate (0 < n < 1) - TIGHT SCALE MIN 0
-            else if (maxValue > 0 && maxValue < 1) {
-                yMin = 0;
-            } 
-            // Condition 3: Max > 100 (Volume/Count KPIs)
+            // Condition 2: Max > 100 (Volume/Count KPIs)
             else if (maxValue > 100) {
-                // Apply clean rounding for non-percentage KPIs that exceed 100
                 yMax = roundUpToCleanScale(yMax);
-                
-                // Also clean up Y-Min for large numbers to use a clean floor if possible
                 if (yMin > 100) {
-                     // Round floor down a bit using the clean scale logic
                      yMin = roundUpToCleanScale(yMin * 0.95); 
                 }
             }
-            
-             yMin = Math.max(0, yMin); // Final check to ensure yMin is not negative
-
+            yMin = Math.max(0, yMin); 
         } else if (maxValue > 100) {
-             // Default non-rate KPI check (e.g., if "DL Data Total Volume" wasn't flagged as a rate)
+             // Default non-rate KPI check
              yMax = roundUpToCleanScale(yMax);
              if (yMin > 100) {
                  yMin = roundUpToCleanScale(yMin * 0.95);
              }
+        }
+        
+        // --- STEP D: FINAL STEP SIZE ADJUSTMENT (Crucial for 5+ Ticks) ---
+        const finalRange = yMax - yMin;
+        if (finalRange > 0) {
+            yStepSize = getIdealTickStep(finalRange, 5);
+        } else {
+             yStepSize = yMax / 4; 
+             if (yStepSize === 0) yStepSize = 0.2;
         }
         
     }
@@ -1074,41 +1103,39 @@ function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
                 const dataPoints = config.data.datasets[0].data;
                 const timelineLabels = config.data.labels;
 
-                // --- START PPT CHART SCALING AND STYLING LOGIC (Using final logic) ---
+                // --- START PPT CHART SCALING AND STYLING LOGIC ---
                 const kpi = kpis[index];
                 const dataOnly = dataPoints.filter(v => v !== null);
-                let yMin_ppt = 0, yMax_ppt = 100, yStepSize_ppt = null;
+                let yMin_ppt = 0, yMax_ppt = 100, yStepSize_ppt = 20;
                 
                 if (dataOnly.length > 0) {
                     const minValue = Math.min(...dataOnly);
                     const maxValue = Math.max(...dataOnly);
                     const dataRange = maxValue - minValue;
                     
-                    if (dataRange < 0.5) yStepSize_ppt = 0.1;
-                    else if (dataRange < 2) yStepSize_ppt = 0.2;
-                    else if (dataRange < 5) yStepSize_ppt = 0.5;
-                    else if (dataRange < 15) yStepSize_ppt = 1.0;
-                    else if (dataRange < 50) yStepSize_ppt = 5.0;
-                    else yStepSize_ppt = 10.0;
+                    // STEP A: CALCULATE IDEAL STEP SIZE BASED ON RAW DATA RANGE (with 10% padding for initial max/min)
+                    yStepSize_ppt = getIdealTickStep(dataRange * 1.1, 5); 
+
+                    // STEP B: Calculate Y-Min and Y-Max based on the calculated step size
+                    let padding = yStepSize_ppt; 
                     
-                    let padding = Math.max(yStepSize_ppt, dataRange * 0.05);
                     let targetMin = minValue - padding;
                     yMin_ppt = Math.floor(targetMin / yStepSize_ppt) * yStepSize_ppt;
-                    
+                    yMin_ppt = Math.max(0, yMin_ppt); 
+
                     let targetMax = maxValue + padding;
                     yMax_ppt = Math.ceil(targetMax / yStepSize_ppt) * yStepSize_ppt;
-
+                    
+                    // STEP C: Apply Overrides (100% Cap, Clean Rounding)
                     if (kpi.match(/(rate|success|%|ratio)/i)) {
                         if (maxValue <= 100 && maxValue >= 80) {
                             yMax_ppt = 100;
                             if (dataRange < 5 && maxValue > 95) {
                                 let zoomPad = dataRange * 0.15;
-                                let zoomStep = dataRange < 0.5 ? 0.1 : 0.2;
+                                let zoomStep = getIdealTickStep(dataRange * 1.1, 5);
                                 yMin_ppt = Math.floor((minValue - zoomPad) / zoomStep) * zoomStep;
                                 yMin_ppt = Math.max(80, yMin_ppt);
                             }
-                        } else if (maxValue > 0 && maxValue < 1) {
-                            yMin_ppt = 0;
                         } else if (maxValue > 100) {
                              yMax_ppt = roundUpToCleanScale(yMax_ppt);
                              if (yMin_ppt > 100) {
@@ -1122,6 +1149,16 @@ function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
                         }
                     }
                     yMin_ppt = Math.max(0, yMin_ppt);
+
+                    // STEP D: FINAL STEP SIZE ADJUSTMENT (Crucial for 5+ Ticks)
+                    const finalRange = yMax_ppt - yMin_ppt;
+                    if (finalRange > 0) {
+                        yStepSize_ppt = getIdealTickStep(finalRange, 5);
+                    } else {
+                         yStepSize_ppt = yMax_ppt / 4; 
+                         if (yStepSize_ppt === 0) yStepSize_ppt = 0.2;
+                    }
+
                 }
                 // --- END PPT CHART SCALING AND STYLING LOGIC ---
 
@@ -1250,41 +1287,39 @@ async function downloadPPT() {
             const dataPoints = config.data.datasets[0].data;
             const timelineLabels = config.data.labels;
             
-            // --- RECALCULATE SCALING FOR HIGH-RES PPT EXPORT (Using final logic) ---
+            // --- RECALCULATE SCALING FOR HIGH-RES PPT EXPORT ---
             const kpi = chartData.kpi;
             const dataOnly = dataPoints.filter(v => v !== null);
-            let yMin_ppt = 0, yMax_ppt = 100, yStepSize_ppt = null;
+            let yMin_ppt = 0, yMax_ppt = 100, yStepSize_ppt = 20;
             
             if (dataOnly.length > 0) {
                 const minValue = Math.min(...dataOnly);
                 const maxValue = Math.max(...dataOnly);
                 const dataRange = maxValue - minValue;
                 
-                if (dataRange < 0.5) yStepSize_ppt = 0.1;
-                else if (dataRange < 2) yStepSize_ppt = 0.2;
-                else if (dataRange < 5) yStepSize_ppt = 0.5;
-                else if (dataRange < 15) yStepSize_ppt = 1.0;
-                else if (dataRange < 50) yStepSize_ppt = 5.0;
-                else yStepSize_ppt = 10.0;
+                // STEP A: CALCULATE IDEAL STEP SIZE BASED ON RAW DATA RANGE (with 10% padding for initial max/min)
+                yStepSize_ppt = getIdealTickStep(dataRange * 1.1, 5); 
+
+                // STEP B: Calculate Y-Min and Y-Max based on the calculated step size
+                let padding = yStepSize_ppt; 
                 
-                let padding = Math.max(yStepSize_ppt, dataRange * 0.05);
                 let targetMin = minValue - padding;
                 yMin_ppt = Math.floor(targetMin / yStepSize_ppt) * yStepSize_ppt;
-                
+                yMin_ppt = Math.max(0, yMin_ppt); 
+
                 let targetMax = maxValue + padding;
                 yMax_ppt = Math.ceil(targetMax / yStepSize_ppt) * yStepSize_ppt;
 
+                // STEP C: Apply Overrides (100% Cap, Clean Rounding)
                 if (kpi.match(/(rate|success|%|ratio)/i)) {
                     if (maxValue <= 100 && maxValue >= 80) {
                         yMax_ppt = 100;
                         if (dataRange < 5 && maxValue > 95) {
                             let zoomPad = dataRange * 0.15;
-                            let zoomStep = dataRange < 0.5 ? 0.1 : 0.2;
+                            let zoomStep = getIdealTickStep(dataRange * 1.1, 5);
                             yMin_ppt = Math.floor((minValue - zoomPad) / zoomStep) * zoomStep;
                             yMin_ppt = Math.max(80, yMin_ppt);
                         }
-                    } else if (maxValue > 0 && maxValue < 1) {
-                        yMin_ppt = 0;
                     } else if (maxValue > 100) {
                          yMax_ppt = roundUpToCleanScale(yMax_ppt);
                          if (yMin_ppt > 100) {
@@ -1298,6 +1333,15 @@ async function downloadPPT() {
                     }
                 }
                 yMin_ppt = Math.max(0, yMin_ppt);
+
+                // STEP D: FINAL STEP SIZE ADJUSTMENT (Crucial for 5+ Ticks)
+                const finalRange = yMax_ppt - yMin_ppt;
+                if (finalRange > 0) {
+                    yStepSize_ppt = getIdealTickStep(finalRange, 5);
+                } else {
+                     yStepSize_ppt = yMax_ppt / 4; 
+                     if (yStepSize_ppt === 0) yStepSize_ppt = 0.2;
+                }
             }
             // --- END RECALCULATION ---
 
