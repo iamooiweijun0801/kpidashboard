@@ -105,11 +105,11 @@ button.ppt-btn:hover { background:#a8381e; }
     z-index:900; 
     transition: right 0.3s; 
 }
-/* Positioning for KPI button (bottom) */
-.kpiDrawerToggle { right:0; top:145px; } /* Moved down */
+/* Positioning for Style button (top) */
+.styleDrawerToggle { right:0; top:100px; } 
 
-/* Positioning for Style button (top, just above KPI) */
-.styleDrawerToggle { right:0; top:100px; } /* Moved up */ 
+/* Positioning for KPI button (bottom) */
+.kpiDrawerToggle { right:0; top:145px; } 
 
 /* Base Drawer Style */
 .drawer { 
@@ -126,7 +126,7 @@ button.ppt-btn:hover { background:#a8381e; }
 #kpiDrawer.open ~ .styleDrawerToggle { right: 320px; }
 #kpiDrawer.open ~ .kpiDrawerToggle { right: 320px; } 
 
-/* The style drawer opens on top and doesn't need to push the KPI toggle out since it is now below it. */
+/* The style drawer opens on top and pushes both buttons */
 #styleDrawer { z-index: 1001; }
 #styleDrawer.open ~ .kpiDrawerToggle { right: 320px; }
 #styleDrawer.open ~ .styleDrawerToggle { right: 320px; }
@@ -717,54 +717,76 @@ function renderCharts(){
     const dataPoints = timeline.map(date => {
        const vals = filteredData.filter(d => d["Date"] === date && d[kpi] !== null).map(d => d[kpi]);
        if(vals.length === 0) return null;
-       const isAvg = kpi.match(/(rate|%|ratio|average)/i);
+       const isAvg = kpi.match(/(rate|%|ratio|average|latency)/i);
        const sum = vals.reduce((a,b)=>a+b,0);
        return isAvg ? sum/vals.length : sum;
     });
-
-    // Dynamic Y-Axis Start Calculation (Unified Logic for ALL KPIs)
-    const dataOnly = dataPoints.filter(v => v !== null);
-    const minValue = dataOnly.length > 0 ? Math.min(...dataOnly) : 0;
-    const maxValue = dataOnly.length > 0 ? Math.max(...dataOnly) : 100;
-    const dataRange = maxValue - minValue;
-    let yMin = 0;
-    let yMax = 100;
-    let yStepSize = null; 
     
-    if (dataOnly.length > 0 && dataRange > 0) {
-        // Calculate a safe padding below the minimum value (1.5% of the range or a fixed amount)
-        let padding = Math.max(1.0, dataRange * 0.05); 
-        let targetMin = minValue - padding;
+    // Set line and background colors based on style (Monochromatic uses a fixed blue)
+    let lineC = selectedStyle === 'Monochromatic' ? '#2F80ED' : getRandomColor();
+    let bColor = selectedStyle === 'Monochromatic' ? 'rgba(47, 128, 237, 0.15)' : lineC.replace(')', ', 0.15)').replace('rgb', 'rgba');
 
-        // Determine an appropriate step size based on the range magnitude
-        if (dataRange < 2) yStepSize = 0.2;
+
+    // Dynamic Y-Axis Start Calculation (Unified, Tighter Logic)
+    const dataOnly = dataPoints.filter(v => v !== null);
+    if (dataOnly.length === 0) {
+        // Fallback for no data
+        var yMin = 0;
+        var yMax = 100;
+        var yStepSize = null;
+    } else {
+        const minValue = Math.min(...dataOnly);
+        const maxValue = Math.max(...dataOnly);
+        const dataRange = maxValue - minValue;
+        
+        var yMin, yMax, yStepSize;
+
+        // A. Determine appropriate Step Size based on range magnitude
+        if (dataRange < 0.5) yStepSize = 0.1;
+        else if (dataRange < 2) yStepSize = 0.2;
         else if (dataRange < 5) yStepSize = 0.5;
         else if (dataRange < 15) yStepSize = 1.0;
         else if (dataRange < 50) yStepSize = 5.0;
         else yStepSize = 10.0;
         
-        // Round yMin down to the nearest multiple of the calculated step size
+        // B. Calculate Padding (use at least yStepSize, or 5% of range)
+        let padding = Math.max(yStepSize, dataRange * 0.05);
+
+        // C. Calculate Y-Min (Round DOWN to nearest clean multiple of step)
+        let targetMin = minValue - padding;
         yMin = Math.floor(targetMin / yStepSize) * yStepSize;
         yMin = Math.max(0, yMin); 
 
-        // Round yMax up to the nearest multiple of the calculated step size
-        yMax = Math.ceil(maxValue / yStepSize) * yStepSize;
+        // D. Calculate Y-Max (Round UP to nearest clean multiple of step)
+        let targetMax = maxValue + padding;
+        yMax = Math.ceil(targetMax / yStepSize) * yStepSize;
         
-        // Ensure that for Rate/Success metrics, yMax is capped at 100
+        // E. FINAL REVISED Special Rule for Percentage/Rate KPIs
         if (kpi.match(/(rate|success|%|ratio)/i)) {
-            yMax = Math.min(100, yMax);
+
+            // Condition 1: High Range Rate (80% to 100%) - FIXED 100 MAX
+            if (maxValue >= 80 && maxValue <= 100) {
+                yMax = 100;
+
+                // Keep aggressive zoom from the bottom when capped at 100
+                if (dataRange < 5 && maxValue > 95) {
+                    let zoomPad = dataRange * 0.15;
+                    let zoomStep = dataRange < 0.5 ? 0.1 : 0.2;
+                    yMin = Math.floor((minValue - zoomPad) / zoomStep) * zoomStep;
+                    yMin = Math.max(80, yMin); 
+                }
+            } 
+            // Condition 2: Ultra Low Rate (0 < n < 1) - TIGHT SCALE MIN 0
+            else if (maxValue > 0 && maxValue < 1) {
+                // For sub-1% rates (like drop rates), fix Y-Min to 0 for proportionality.
+                yMin = 0;
+                // Y-Max uses the dynamic calculation
+            } 
+            // Condition 3: Mid/Low Range Rate (n < 80 and n >= 1) or Max > 100
+            // The calculated dynamic yMin and yMax are used.
+            
+             yMin = Math.max(0, yMin); // Final check to ensure yMin is not negative
         }
-    }
-    
-    // Determine background color for fill if needed 
-    let bColor = 'transparent';
-    let lineC = getRandomColor();
-    if (style.fill) {
-        const hex = lineC.substring(1);
-        const r = parseInt(hex.substring(0, 2), 16);
-        const g = parseInt(hex.substring(2, 4), 16);
-        b = parseInt(hex.substring(4, 6), 16);
-        bColor = `rgba(${r}, ${g}, ${b}, ${style.alpha || 0.15})`;
     }
 
 
@@ -980,342 +1002,328 @@ function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
     const count = graphsPerSlide;
     const body = document.getElementById("previewBody");
     const canvases = document.querySelectorAll("canvas");
+    let htmlContent = '';
     
-    document.getElementById("previewTitle").textContent = `PPT Export Preview (${count} Graphs per Slide) - Line: ${chartExportColor}, Title: ${chartExportTitleColor}`;
-    body.innerHTML = "";
-
-    let gridCols = '1fr';
-    let rows = 1;
-    if (count === 2) { gridCols = '1fr 1fr'; rows = 1; }
-    else if (count === 3 || count === 6 || count === 9) { gridCols = '1fr 1fr 1fr'; }
-    else if (count === 4) { gridCols = '1fr 1fr'; rows = 2; }
+    // Group canvases into slides
+    let slideCount = Math.ceil(canvases.length / count);
+    let kpis = []; // Get titles from rendered charts
+    document.querySelectorAll('.chart-card').forEach(card => {
+        const titleElement = card.querySelector('canvas').chart.options.plugins.title;
+        if(titleElement.display) kpis.push(titleElement.text);
+    });
     
-    if (count === 6) rows = 2;
-    if (count === 9) rows = 3;
-
-
-    for(let i=0; i<canvases.length; i+=count){
-        const slideDiv = document.createElement("div");
-        slideDiv.className = "preview-slide";
+    for (let i = 0; i < slideCount; i++) {
+        htmlContent += `<div class="preview-slide" data-slide="${i}">`;
         
-        const slideTitle = document.createElement("div");
-        slideTitle.className = "preview-slide-title";
-        slideTitle.textContent = `Slide ${Math.floor(i/count) + 1}`;
-        slideDiv.appendChild(slideTitle);
+        // Use Site/Date info for the overall slide title
+        let slideTitleText = "LTE KPI Report - ";
+        if (selectedSites.length === 1) slideTitleText += selectedSites[0];
+        else if (selectedSites.length > 1) slideTitleText += `Selected Sites (${selectedSites.length})`;
+        else slideTitleText += "Aggregated Data";
 
-        const grid = document.createElement("div");
-        grid.className = "preview-grid";
-        grid.style.gridTemplateColumns = gridCols;
-        grid.style.gridTemplateRows = rows === 1 ? '1fr' : (rows === 2 ? '1fr 1fr' : (rows === 3 ? '1fr 1fr 1fr' : 'repeat(auto-fit, 1fr)'));
+        htmlContent += `<div class="preview-slide-title">${slideTitleText}</div>`;
+        htmlContent += `<div class="preview-grid" style="grid-template-columns: repeat(${Math.ceil(Math.sqrt(count))}, 1fr);">`;
+        
+        for (let j = 0; j < count; j++) {
+            const index = i * count + j;
+            if (index < canvases.length) {
+                const canvas = canvases[index];
+                
+                // Redraw chart using export style settings
+                const exportCanvas = document.createElement('canvas');
+                exportCanvas.width = 600;
+                exportCanvas.height = 400; 
+                
+                const originalChart = canvas.chart;
+                const config = originalChart.config;
+                const dataPoints = config.data.datasets[0].data;
+                const timelineLabels = config.data.labels;
 
+                // --- START PPT CHART SCALING AND STYLING LOGIC (Using final logic) ---
+                const kpi = kpis[index];
+                const dataOnly = dataPoints.filter(v => v !== null);
+                let yMin_ppt = 0, yMax_ppt = 100, yStepSize_ppt = null;
+                
+                if (dataOnly.length > 0) {
+                    const minValue = Math.min(...dataOnly);
+                    const maxValue = Math.max(...dataOnly);
+                    const dataRange = maxValue - minValue;
+                    
+                    if (dataRange < 0.5) yStepSize_ppt = 0.1;
+                    else if (dataRange < 2) yStepSize_ppt = 0.2;
+                    else if (dataRange < 5) yStepSize_ppt = 0.5;
+                    else if (dataRange < 15) yStepSize_ppt = 1.0;
+                    else if (dataRange < 50) yStepSize_ppt = 5.0;
+                    else yStepSize_ppt = 10.0;
+                    
+                    let padding = Math.max(yStepSize_ppt, dataRange * 0.05);
+                    let targetMin = minValue - padding;
+                    yMin_ppt = Math.floor(targetMin / yStepSize_ppt) * yStepSize_ppt;
+                    
+                    let targetMax = maxValue + padding;
+                    yMax_ppt = Math.ceil(targetMax / yStepSize_ppt) * yStepSize_ppt;
 
-        for(let j=0; j<count; j++){
-            if(i+j < canvases.length){
-                const c = canvases[i+j];
-                const box = createPreviewBox(c, chartExportColor, chartExportTitleColor); 
-                grid.appendChild(box);
+                    if (kpi.match(/(rate|success|%|ratio)/i)) {
+                        if (maxValue >= 80 && maxValue <= 100) {
+                            yMax_ppt = 100;
+                            if (dataRange < 5 && maxValue > 95) {
+                                let zoomPad = dataRange * 0.15;
+                                let zoomStep = dataRange < 0.5 ? 0.1 : 0.2;
+                                yMin_ppt = Math.floor((minValue - zoomPad) / zoomStep) * zoomStep;
+                                yMin_ppt = Math.max(80, yMin_ppt);
+                            }
+                        } else if (maxValue > 0 && maxValue < 1) {
+                            yMin_ppt = 0;
+                        }
+                    }
+                    yMin_ppt = Math.max(0, yMin_ppt);
+                }
+                // --- END PPT CHART SCALING AND STYLING LOGIC ---
+
+                const pptChartConfig = {
+                    type: 'line',
+                    data: {
+                        labels: timelineLabels,
+                        datasets: [{
+                            label: kpis[index],
+                            data: dataPoints,
+                            borderColor: chartExportColor,
+                            backgroundColor: chartExportColor + '26', // Add opacity for fill
+                            fill: false, // Force no fill for cleaner PPT export unless specified
+                            borderWidth: 3, 
+                            pointRadius: 4, 
+                            tension: 0.1,
+                            spanGaps: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        plugins: {
+                            legend: { display: false },
+                            title: {
+                                display: true,
+                                text: kpis[index],
+                                font: { size: 24, weight: 'bold' },
+                                color: chartExportTitleColor
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { font: { size: 12 } },
+                                grid: { display: false }
+                            },
+                            y: {
+                                beginAtZero: yMin_ppt === 0,
+                                min: yMin_ppt,
+                                max: yMax_ppt,
+                                ticks: {
+                                    stepSize: yStepSize_ppt,
+                                    font: { size: 14 }
+                                },
+                                grid: { color: 'rgba(0,0,0,0.1)' }
+                            }
+                        }
+                    }
+                };
+
+                const pptChart = new Chart(exportCanvas.getContext("2d"), pptChartConfig);
+                const dataURL = pptChart.toBase64Image();
+                pptChart.destroy(); // Clean up the temporary chart
+
+                htmlContent += `<div class="preview-img-box">`;
+                htmlContent += `<img src="${dataURL}" alt="${kpis[index]}" />`;
+                htmlContent += `<div class="preview-label">${kpis[index]}</div>`;
+                htmlContent += `</div>`;
             }
         }
-        slideDiv.appendChild(grid);
-        body.appendChild(slideDiv);
+        htmlContent += `</div></div>`;
     }
+    body.innerHTML = htmlContent;
 }
 
-function createPreviewBox(canvas, lineColor, titleColor) {
-  const box = document.createElement("div");
-  box.className = "preview-img-box";
-  
-  const tempCanvas = document.createElement('canvas');
-  tempCanvas.width = canvas.width;
-  tempCanvas.height = canvas.height;
-  const tempCtx = tempCanvas.getContext('2d');
-  
-  const chartInstance = Chart.getChart(canvas.id);
-  let imgData = '';
-  
-  if (chartInstance) {
-      // 1. Store original chart properties
-      const originalDatasetProps = chartInstance.data.datasets.map(d => ({
-          borderColor: d.borderColor,
-          pointBorderColor: d.pointBorderColor,
-          pointBackgroundColor: d.pointBackgroundColor,
-          fill: d.fill,
-          backgroundColor: d.backgroundColor,
-          stepped: d.stepped
-      }));
-      const originalTitleColor = chartInstance.options.plugins.title.color;
-      const originalYMin = chartInstance.options.scales.y.min;
-      const originalYMax = chartInstance.options.scales.y.max;
-      const originalYStep = chartInstance.options.scales.y.ticks.stepSize;
-      
-      const style = chartStyles[selectedStyle];
-      
-      // 2. Apply PPT visual overrides (Color and Style)
-      chartInstance.data.datasets.forEach(d => { 
-        d.borderColor = lineColor; 
-        d.pointBorderColor = lineColor; 
-        d.pointBackgroundColor = lineColor; 
-        
-        let bColor = 'transparent';
-        if (style.fill) {
-            const hex = lineColor.substring(1);
-            const r = parseInt(hex.substring(0, 2), 16);
-            const g = parseInt(hex.substring(2, 4), 16);
-            const b = parseInt(hex.substring(4, 6), 16);
-            bColor = `rgba(${r}, ${g}, ${b}, ${style.alpha || 0.15})`;
-        }
-        d.backgroundColor = bColor;
-        d.fill = style.fill;
-        d.stepped = style.stepped;
-        
-        d.pointRadius = 3; 
-        d.pointStyle = 'circle'; 
-        d.spanGaps = true; 
-      });
-
-      chartInstance.options.plugins.title.color = titleColor; 
-      
-      // 3. Apply TIGHT Dynamic Y-Axis Scaling for Preview/PPT
-      const kpi = chartInstance.options.plugins.title.text;
-      const dataPoints = chartInstance.data.datasets[0].data;
-      const dataOnly = dataPoints.filter(v => v !== null);
-      const minValue = dataOnly.length > 0 ? Math.min(...dataOnly) : 0;
-      const maxValue = dataOnly.length > 0 ? Math.max(...dataOnly) : 100;
-      const dataRange = maxValue - minValue;
-      
-      let pptYMin = originalYMin;
-      let pptYMax = originalYMax;
-      let pptYStep = originalYStep;
-
-      if (dataOnly.length > 0 && dataRange > 0) {
-          let padding = Math.max(1.0, dataRange * 0.05); 
-          let targetMin = minValue - padding;
-
-          if (dataRange < 2) pptYStep = 0.2;
-          else if (dataRange < 5) pptYStep = 0.5;
-          else if (dataRange < 15) pptYStep = 1.0;
-          else if (dataRange < 50) pptYStep = 5.0;
-          else pptYStep = 10.0;
-          
-          pptYMin = Math.floor(targetMin / pptYStep) * pptYStep;
-          pptYMin = Math.max(0, pptYMin); 
-
-          pptYMax = Math.ceil(maxValue / pptYStep) * pptYStep;
-          
-          if (kpi.match(/(rate|success|%|ratio)/i)) {
-              pptYMax = Math.min(100, pptYMax); 
-          }
-      }
-
-      chartInstance.options.scales.y.min = pptYMin;
-      chartInstance.options.scales.y.max = pptYMax;
-      chartInstance.options.scales.y.ticks.stepSize = pptYStep;
-
-      chartInstance.update('none'); 
-      
-      // 4. Draw image and restore properties
-      tempCtx.drawImage(canvas, 0, 0);
-      imgData = tempCanvas.toDataURL("image/png");
-      
-      // Restore original properties
-      chartInstance.data.datasets.forEach((d, index) => { 
-        Object.assign(d, originalDatasetProps[index]);
-      });
-      chartInstance.options.plugins.title.color = originalTitleColor;
-      chartInstance.options.scales.y.min = originalYMin;
-      chartInstance.options.scales.y.max = originalYMax;
-      chartInstance.options.scales.y.ticks.stepSize = originalYStep;
-      chartInstance.update('none');
-  }
-
-  const img = document.createElement("img");
-  img.src = imgData;
-  
-  box.appendChild(img);
-  return box;
+function closePreview() {
+    document.getElementById("previewModal").style.display = "none";
 }
 
-function closePreview(){ document.getElementById("previewModal").style.display = "none"; }
+async function downloadPPT() {
+    const pptx = new pptxgen();
+    const canvases = document.querySelectorAll("canvas");
+    let kpis = []; 
+    document.querySelectorAll('.chart-card').forEach(card => {
+        const titleElement = card.querySelector('canvas').chart.options.plugins.title;
+        if(titleElement.display) kpis.push(titleElement.text);
+    });
 
-async function downloadPPT(){
-  const pptx = new PptxGenJS();
-  pptx.layout = 'LAYOUT_16x9';
-  
-  // Title Slide
-  let slide = pptx.addSlide();
-  slide.addText("LTE KPI Report", { x:0.5, y:2, fontSize:32, bold:true, color:'2F80ED' });
-  slide.addText(`Generated: ${new Date().toLocaleDateString()}`, { x:0.5, y:3, fontSize:14 });
+    const chartsPerSlide = graphsPerSlide;
+    const slideCount = Math.ceil(canvases.length / chartsPerSlide);
+    const siteTitle = selectedSites.length === 1 ? selectedSites[0] : `LTE KPI Report (${selectedSites.length} Sites)`;
 
-  const canvases = document.querySelectorAll("canvas");
-  const count = graphsPerSlide;
-  const lineColor = chartExportColor; 
-  const titleColor = chartExportTitleColor;
-  
-  const layoutDef = {
-    1: { cols: 1, rows: 1, chartW: 9.0, chartH: 5.5, padding: 0.5 },
-    2: { cols: 2, rows: 1, chartW: 4.5, chartH: 3.5, padding: 0.4 },
-    3: { cols: 3, rows: 1, chartW: 3.0, chartH: 3.0, padding: 0.4 },
-    4: { cols: 2, rows: 2, chartW: 4.5, chartH: 2.5, padding: 0.3 },
-    6: { cols: 3, rows: 2, chartW: 3.0, chartH: 2.5, padding: 0.2 },
-    9: { cols: 3, rows: 3, chartW: 3.0, chartH: 1.7, padding: 0.1 } 
-  }[count] || { cols: 2, rows: 1, chartW: 4.5, chartH: 3.5, padding: 0.4 }; 
-
-  const layoutPositions = [];
-  const startX = 0.5; 
-  const startY = 1.2; 
-  const maxW = 9.5; 
-  
-  const numCols = layoutDef.cols;
-  const numRows = layoutDef.rows;
-  const chartW = layoutDef.chartW;
-  const chartH = layoutDef.chartH;
-  const padding = layoutDef.padding;
-
-  const totalChartWidth = numCols * chartW;
-  const totalPaddingWidth = (numCols - 1) * padding;
-  const remainingXSpace = maxW - totalChartWidth - totalPaddingWidth;
-  const marginX = (remainingXSpace / 2) + startX; 
-  
-  
-  for (let r = 0; r < numRows; r++) {
-      for (let c = 0; c < numCols; c++) {
-          const x = marginX + (c * chartW) + (c * padding);
-          const y = startY + (r * chartH) + (r * padding);
-          layoutPositions.push({ x: x, y: y, w: chartW, h: chartH });
-          if (layoutPositions.length >= count) break; 
-      }
-      if (layoutPositions.length >= count) break;
-  }
-  
-  if (count === 4) {
-      layoutPositions.length = 0; 
-      const marginX4 = (maxW - (2 * chartW) - padding) / 2 + startX; 
-      const startY4 = 1.0; 
-      
-      layoutPositions.push({ x: marginX4, y: startY4, w: chartW, h: chartH });
-      layoutPositions.push({ x: marginX4 + chartW + padding, y: startY4, w: chartW, h: chartH });
-      layoutPositions.push({ x: marginX4, y: startY4 + chartH + padding, w: chartW, h: chartH });
-      layoutPositions.push({ x: marginX4 + chartW + padding, y: startY4 + chartH + padding, w: chartW, h: chartH });
-  }
-
-
-  for(let i=0; i<canvases.length; i+=count){
-    let slide = pptx.addSlide();
-    
-    slide.addText(`KPI Analysis - Slide ${Math.floor(i/count)+1}`, { x:0.5, y:0.2, fontSize:16, color:'D24726', bold:true });
-
-    for(let j=0; j<count; j++){
-      if(i+j < canvases.length){
-        const c = canvases[i+j];
-        const params = layoutPositions[j];
+    for (let i = 0; i < slideCount; i++) {
+        let slide = pptx.addSlide();
+        slide.background = { fill: "FFFFFF" };
         
-        const chartInstance = Chart.getChart(c.id);
-        
-        // 1. Store original chart properties
-        const originalDatasetProps = chartInstance.data.datasets.map(d => ({
-            borderColor: d.borderColor,
-            pointBorderColor: d.pointBorderColor,
-            pointBackgroundColor: d.pointBackgroundColor,
-            fill: d.fill,
-            backgroundColor: d.backgroundColor,
-            stepped: d.stepped
-        }));
-        const originalTitleColor = chartInstance.options.plugins.title.color;
-        const originalYMin = chartInstance.options.scales.y.min;
-        const originalYMax = chartInstance.options.scales.y.max;
-        const originalYStep = chartInstance.options.scales.y.ticks.stepSize;
+        slide.addText(siteTitle, { x: 0.5, y: 0.25, fontSize: 18, color: chartExportTitleColor.replace('#', ''), bold: true });
+        slide.addText(`KPIs ${i * chartsPerSlide + 1} - ${Math.min((i + 1) * chartsPerSlide, canvases.length)}`, { x: 0.5, y: 0.5, fontSize: 12, color: "777777" });
 
-        const style = chartStyles[selectedStyle];
-        
-        // 2. Override style for PPT export
-        chartInstance.data.datasets.forEach(d => { 
-          d.borderColor = lineColor; 
-          d.pointBorderColor = lineColor; 
-          d.pointBackgroundColor = lineColor; 
-          
-          let bColor = 'transparent';
-          if (style.fill) {
-              const hex = lineColor.substring(1);
-              const r = parseInt(hex.substring(0, 2), 16);
-              const g = parseInt(hex.substring(2, 4), 16);
-              const b = parseInt(hex.substring(4, 6), 16);
-              bColor = `rgba(${r}, ${g}, ${b}, ${style.alpha || 0.15})`;
-          }
-          d.backgroundColor = bColor;
-          d.fill = style.fill;
-          d.stepped = style.stepped;
-          
-          d.pointRadius = 3; 
-          d.spanGaps = true; 
-        });
-        chartInstance.options.plugins.title.color = titleColor; 
-        
-        // 3. Recalculate and apply TIGHT Dynamic Y-Axis Scaling for PPT export
-        const kpi = chartInstance.options.plugins.title.text;
-        const dataPoints = chartInstance.data.datasets[0].data;
-        const dataOnly = dataPoints.filter(v => v !== null);
-        const minValue = dataOnly.length > 0 ? Math.min(...dataOnly) : 0;
-        const maxValue = dataOnly.length > 0 ? Math.max(...dataOnly) : 100;
-        const dataRange = maxValue - minValue;
-        
-        let pptYMin = originalYMin;
-        let pptYMax = originalYMax;
-        let pptYStep = originalYStep;
-
-        if (dataOnly.length > 0 && dataRange > 0) {
-            let padding = Math.max(1.0, dataRange * 0.05); 
-            let targetMin = minValue - padding;
-
-            if (dataRange < 2) pptYStep = 0.2;
-            else if (dataRange < 5) pptYStep = 0.5;
-            else if (dataRange < 15) pptYStep = 1.0;
-            else if (dataRange < 50) pptYStep = 5.0;
-            else pptYStep = 10.0;
-            
-            pptYMin = Math.floor(targetMin / pptYStep) * pptYStep;
-            pptYMin = Math.max(0, pptYMin); 
-
-            pptYMax = Math.ceil(maxValue / pptYStep) * pptYStep;
-            
-            if (kpi.match(/(rate|success|%|ratio)/i)) {
-                pptYMax = Math.min(100, pptYMax); 
+        const chartsInThisSlide = [];
+        for (let j = 0; j < chartsPerSlide; j++) {
+            const index = i * chartsPerSlide + j;
+            if (index < canvases.length) {
+                chartsInThisSlide.push({ canvas: canvases[index], kpi: kpis[index] });
             }
         }
-        
-        chartInstance.options.scales.y.min = pptYMin;
-        chartInstance.options.scales.y.max = pptYMax;
-        chartInstance.options.scales.y.ticks.stepSize = pptYStep;
-        
-        chartInstance.update('none'); 
-        
-        const imgData = c.toDataURL("image/png");
-        
-        // 4. Restore original styles
-        chartInstance.data.datasets.forEach((d, index) => { 
-            Object.assign(d, originalDatasetProps[index]);
-        });
-        chartInstance.options.plugins.title.color = originalTitleColor;
-        chartInstance.options.scales.y.min = originalYMin;
-        chartInstance.options.scales.y.max = originalYMax;
-        chartInstance.options.scales.y.ticks.stepSize = originalYStep;
-        chartInstance.update('none');
-        
-        // Chart Image
-        slide.addImage({ 
-          data: imgData, 
-          x: params.x, y: params.y, 
-          w: params.w, h: params.h 
-        });
-      }
-    }
-  }
 
-  pptx.writeFile({ fileName: `KPI_Report_${new Date().getTime()}.pptx` });
-  closePreview();
+        const gridLayout = {
+            1: [{ x: 1, y: 1, w: 8, h: 5.5 }],
+            2: [{ x: 0.5, y: 1.5, w: 4.5, h: 5 }, { x: 5, y: 1.5, w: 4.5, h: 5 }],
+            3: [{ x: 0.5, y: 1.5, w: 3, h: 5 }, { x: 3.5, y: 1.5, w: 3, h: 5 }, { x: 6.5, y: 1.5, w: 3, h: 5 }],
+            4: [{ x: 0.5, y: 1.5, w: 4.5, h: 2.75 }, { x: 5, y: 1.5, w: 4.5, h: 2.75 }, 
+                { x: 0.5, y: 4.25, w: 4.5, h: 2.75 }, { x: 5, y: 4.25, w: 4.5, h: 2.75 }],
+            6: [{ x: 0.5, y: 1.5, w: 3, h: 2.75 }, { x: 3.5, y: 1.5, w: 3, h: 2.75 }, { x: 6.5, y: 1.5, w: 3, h: 2.75 }, 
+                { x: 0.5, y: 4.25, w: 3, h: 2.75 }, { x: 3.5, y: 4.25, w: 3, h: 2.75 }, { x: 6.5, y: 4.25, w: 3, h: 2.75 }],
+            9: [{ x: 0.5, y: 1.5, w: 3, h: 1.8 }, { x: 3.5, y: 1.5, w: 3, h: 1.8 }, { x: 6.5, y: 1.5, w: 3, h: 1.8 }, 
+                { x: 0.5, y: 3.3, w: 3, h: 1.8 }, { x: 3.5, y: 3.3, w: 3, h: 1.8 }, { x: 6.5, y: 3.3, w: 3, h: 1.8 },
+                { x: 0.5, y: 5.1, w: 3, h: 1.8 }, { x: 3.5, y: 5.1, w: 3, h: 1.8 }, { x: 6.5, y: 5.1, w: 3, h: 1.8 }],
+        };
+        
+        const layout = gridLayout[chartsPerSlide] || gridLayout[2]; 
+
+        for (let j = 0; j < chartsInThisSlide.length; j++) {
+            const chartData = chartsInThisSlide[j];
+            const pos = layout[j];
+
+            // 1. Create temporary chart for high-quality export image
+            const exportCanvas = document.createElement('canvas');
+            // Fixed export size for PPT
+            exportCanvas.width = 1200; 
+            exportCanvas.height = 800; 
+
+            const originalChart = chartData.canvas.chart;
+            const config = originalChart.config;
+            const dataPoints = config.data.datasets[0].data;
+            const timelineLabels = config.data.labels;
+            
+            // --- RECALCULATE SCALING FOR HIGH-RES PPT EXPORT ---
+            const kpi = chartData.kpi;
+            const dataOnly = dataPoints.filter(v => v !== null);
+            let yMin_ppt = 0, yMax_ppt = 100, yStepSize_ppt = null;
+            
+            if (dataOnly.length > 0) {
+                const minValue = Math.min(...dataOnly);
+                const maxValue = Math.max(...dataOnly);
+                const dataRange = maxValue - minValue;
+                
+                if (dataRange < 0.5) yStepSize_ppt = 0.1;
+                else if (dataRange < 2) yStepSize_ppt = 0.2;
+                else if (dataRange < 5) yStepSize_ppt = 0.5;
+                else if (dataRange < 15) yStepSize_ppt = 1.0;
+                else if (dataRange < 50) yStepSize_ppt = 5.0;
+                else yStepSize_ppt = 10.0;
+                
+                let padding = Math.max(yStepSize_ppt, dataRange * 0.05);
+                let targetMin = minValue - padding;
+                yMin_ppt = Math.floor(targetMin / yStepSize_ppt) * yStepSize_ppt;
+                
+                let targetMax = maxValue + padding;
+                yMax_ppt = Math.ceil(targetMax / yStepSize_ppt) * yStepSize_ppt;
+
+                if (kpi.match(/(rate|success|%|ratio)/i)) {
+                    if (maxValue >= 80 && maxValue <= 100) {
+                        yMax_ppt = 100;
+                        if (dataRange < 5 && maxValue > 95) {
+                            let zoomPad = dataRange * 0.15;
+                            let zoomStep = dataRange < 0.5 ? 0.1 : 0.2;
+                            yMin_ppt = Math.floor((minValue - zoomPad) / zoomStep) * zoomStep;
+                            yMin_ppt = Math.max(80, yMin_ppt);
+                        }
+                    } else if (maxValue > 0 && maxValue < 1) {
+                        yMin_ppt = 0;
+                    }
+                }
+                yMin_ppt = Math.max(0, yMin_ppt);
+            }
+            // --- END RECALCULATION ---
+
+            const pptChartConfig = {
+                type: 'line',
+                data: {
+                    labels: timelineLabels,
+                    datasets: [{
+                        label: chartData.kpi,
+                        data: dataPoints,
+                        borderColor: chartExportColor,
+                        backgroundColor: chartExportColor + '26',
+                        fill: false,
+                        borderWidth: 3, 
+                        pointRadius: 4, 
+                        tension: 0.1,
+                        spanGaps: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: {
+                            display: true,
+                            text: chartData.kpi,
+                            font: { size: 28, weight: 'bold' }, // Larger font for PPTX
+                            color: chartExportTitleColor
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { font: { size: 16 } },
+                            grid: { display: false }
+                        },
+                        y: {
+                            beginAtZero: yMin_ppt === 0,
+                            min: yMin_ppt,
+                            max: yMax_ppt,
+                            ticks: {
+                                stepSize: yStepSize_ppt,
+                                font: { size: 18 }
+                            },
+                            grid: { color: 'rgba(0,0,0,0.1)' }
+                        }
+                    }
+                }
+            };
+
+            const pptChart = new Chart(exportCanvas.getContext("2d"), pptChartConfig);
+            const dataURL = pptChart.toBase64Image('image/jpeg', 0.95);
+            pptChart.destroy(); // Clean up
+
+            // 2. Add chart image to slide
+            slide.addImage({ data: dataURL, x: pos.x, y: pos.y, w: pos.w, h: pos.h });
+        }
+    }
+    
+    closePreview();
+    pptx.writeFile({ fileName: `LTE_KPI_Report_${selectedSites.length}_Sites.pptx` });
 }
 
-// Init
-fetchData();
+// --- INITIALIZATION ---
+window.onload = () => {
+    fetchData(); 
+    document.addEventListener('click', function(event) {
+        const siteDropdown = document.getElementById('siteDropdownList');
+        const siteBtn = document.getElementById('siteDropdownBtn');
+        const dateDropdown = document.getElementById('onAirDateDropdownList');
+        const dateBtn = document.getElementById('onAirDateDropdownBtn');
+        
+        if (!siteDropdown.contains(event.target) && event.target !== siteBtn) {
+            siteDropdown.style.display = 'none';
+        }
+        if (!dateDropdown.contains(event.target) && event.target !== dateBtn) {
+            dateDropdown.style.display = 'none';
+        }
+    });
+};
 </script>
 </body>
 </html>
