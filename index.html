@@ -33,6 +33,16 @@ button.action-btn:hover { background:#1f5ab5; }
 button.ppt-btn { background:#D24726; } /* PowerPoint Orange */
 button.ppt-btn:hover { background:#a8381e; }
 
+/* --- CHART STYLE SELECTOR --- */
+#styleSelect {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+    outline: none;
+    background-color: white;
+}
+
 /* --- GRID LAYOUT (3 Graphs per row) --- */
 .chart-grid { 
   display:grid; 
@@ -171,6 +181,16 @@ button.ppt-btn:hover { background:#a8381e; }
 </div>
 
 <div class="controls">
+  <div class="control-group">
+    <select id="styleSelect" onchange="updateChartStyle(this.value)">
+      <option value="Default">Chart Style: Default</option>
+      <option value="Minimalist">Chart Style: Minimalist</option>
+      <option value="Bright Dots">Chart Style: Bright Dots</option>
+      <option value="Smooth & Thin">Chart Style: Smooth & Thin</option>
+      <option value="Bold Lines">Chart Style: Bold Lines</option>
+    </select>
+  </div>
+
   <div class="control-group" style="width:200px;">
     <button id="onAirDateDropdownBtn" class="action-btn" style="background:white; color:#333; border:1px solid #ccc; width:100%; text-align:left; display:flex; justify-content:space-between;">
       <span id="onAirDateBtnLabel">All On-Air Dates</span> <span>▼</span>
@@ -283,6 +303,16 @@ let graphsPerSlide = 2;
 let chartExportColor = '#2F80ED'; // Default Line/Dot Color (Dark Blue)
 let chartExportTitleColor = '#333333'; // Default Title Color (Dark Gray/Black)
 
+// NEW: Chart Styles Configuration
+const chartStyles = {
+  'Default': { border: 2, pointRadius: 3, tension: 0.1, gridColor: '#eee', bgColor: 'white', titleColor: '#333' },
+  'Minimalist': { border: 1, pointRadius: 2, tension: 0.3, gridColor: '#f5f5f5', bgColor: 'white', titleColor: '#555' },
+  'Bright Dots': { border: 3, pointRadius: 4, tension: 0.2, gridColor: '#ddd', bgColor: 'white', titleColor: '#333' },
+  'Smooth & Thin': { border: 1, pointRadius: 0, tension: 0.4, gridColor: '#f0f0f0', bgColor: 'white', titleColor: '#333' },
+  'Bold Lines': { border: 4, pointRadius: 0, tension: 0.1, gridColor: '#eee', bgColor: 'white', titleColor: '#333' }
+};
+let selectedStyle = 'Default'; // Initial style
+
 const acceptanceKpis = [
   "LTE RRC Setup Success Rate","ERAB Setup Success Rate","LTE Call Setup Success Rate","E-RAB Call Drop Rate",
   "CSFB Access Success Rate","LTE Intra Freq HO Success Rate","Intra-eNB HO Success Rate","Inter-eNBX2HO Success Rate",
@@ -302,6 +332,15 @@ let selectedKpis = {
 };
 
 // --- GLOBAL UTILITY FUNCTIONS ---
+
+/**
+ * Updates the selected chart style and re-renders all charts.
+ * @param {string} styleName - The name of the style from chartStyles.
+ */
+function updateChartStyle(styleName) {
+    selectedStyle = styleName;
+    renderCharts();
+}
 
 /**
  * Switches the active tab (Acceptance, Monitoring, Both).
@@ -599,6 +638,10 @@ function renderCharts(){
       return `${day} ${monthNames[month - 1]}`; // e.g., "5 Jan"
   });
 
+  // Apply selected style
+  const style = chartStyles[selectedStyle]; 
+  document.querySelectorAll('.chart-card').forEach(card => card.style.backgroundColor = style.bgColor);
+
   // 3. Generate Charts
   kpisToShow.forEach((kpi, idx) => {
     const card = document.createElement("div");
@@ -623,6 +666,17 @@ function renderCharts(){
        return isAvg ? sum/vals.length : sum;
     });
 
+    // Dynamic Y-Axis Start Calculation
+    const minValue = dataPoints.filter(v => v !== null).length > 0 ? Math.min(...dataPoints.filter(v => v !== null)) : 0;
+    let yMin = 0;
+    
+    // If KPI is a high-range percentage (Rate, Success, %) and min value is > 80, set a dynamic minimum.
+    if (kpi.match(/(rate|success|%|ratio)/i) && minValue > 80) {
+        // Calculate dynamic minimum: round down to the nearest 10, then subtract 10 for margin (e.g., 90.8 -> 90 -> 80)
+        yMin = Math.max(0, Math.floor(minValue / 10) * 10 - 10); 
+    }
+    
+
     // Draw Chart with Animation
     new Chart(canvas.getContext("2d"), {
       type: 'line',
@@ -633,9 +687,9 @@ function renderCharts(){
           data: dataPoints,
           borderColor: getRandomColor(),
           backgroundColor: 'transparent',
-          borderWidth: 2,
-          pointRadius: 3,
-          tension: 0.1,
+          borderWidth: style.border,
+          pointRadius: style.pointRadius,
+          tension: style.tension,
           spanGaps: true 
         }]
       },
@@ -661,7 +715,7 @@ function renderCharts(){
                     size: 14,
                     weight: 'bold'
                 },
-                color: '#333'
+                color: style.titleColor
             }
         },
         scales: {
@@ -670,10 +724,11 @@ function renderCharts(){
                grid: {display:false} 
            },
            y: { 
-               beginAtZero: true, 
-               grid: {color:'#eee'},
+               beginAtZero: yMin === 0, 
+               min: yMin, // Set the calculated minimum
+               grid: {color: style.gridColor},
                // If no data points, fix the scale to prevent giant axes
-               min: (finalSiteList.length === 0 || dataPoints.every(p => p === null)) ? 0 : undefined 
+               min: (finalSiteList.length === 0 || dataPoints.every(p => p === null)) ? 0 : yMin 
            }
         }
       }
@@ -949,13 +1004,14 @@ async function downloadPPT(){
   const titleColor = chartExportTitleColor;
   
   // Define base positions and sizes in inches (for 16x9 slide layout)
+  // NOTE: chartH for 9 graphs reduced from 1.8 to 1.7 to prevent overflow
   const layoutDef = {
     1: { cols: 1, rows: 1, chartW: 9.0, chartH: 5.5, padding: 0.5 },
     2: { cols: 2, rows: 1, chartW: 4.5, chartH: 3.5, padding: 0.4 },
     3: { cols: 3, rows: 1, chartW: 3.0, chartH: 3.0, padding: 0.4 },
     4: { cols: 2, rows: 2, chartW: 4.5, chartH: 2.5, padding: 0.3 },
-    6: { cols: 3, rows: 2, chartW: 3.0, chartH: 2.5, padding: 0.2 }, // New 6-grid: 3 wide, 2 high
-    9: { cols: 3, rows: 3, chartW: 3.0, chartH: 1.8, padding: 0.1 }  // New 9-grid: 3 wide, 3 high
+    6: { cols: 3, rows: 2, chartW: 3.0, chartH: 2.5, padding: 0.2 },
+    9: { cols: 3, rows: 3, chartW: 3.0, chartH: 1.7, padding: 0.1 } // FIXED 9-GRID HEIGHT
   }[count] || { cols: 2, rows: 1, chartW: 4.5, chartH: 3.5, padding: 0.4 }; 
 
   const layoutPositions = [];
@@ -975,7 +1031,6 @@ async function downloadPPT(){
   const remainingXSpace = maxW - totalChartWidth - totalPaddingWidth;
   const marginX = (remainingXSpace / 2) + startX; 
   
-  // For vertical spacing, keeping Y fixed for now, using calculated H and fixed startY
   
   for (let r = 0; r < numRows; r++) {
       for (let c = 0; c < numCols; c++) {
@@ -987,13 +1042,17 @@ async function downloadPPT(){
       if (layoutPositions.length >= count) break;
   }
   
-  // Handle case where count is 4 (2x2 grid)
+  // Recalculate 4-grid positions for perfect centering (using the generic loop logic above for 6 and 9)
   if (count === 4) {
-      layoutPositions.length = 0; // Reset for custom 2x2 logic
-      layoutPositions.push({ x: marginX, y: startY, w: chartW, h: chartH });
-      layoutPositions.push({ x: marginX + chartW + padding, y: startY, w: chartW, h: chartH });
-      layoutPositions.push({ x: marginX, y: startY + chartH + padding, w: chartW, h: chartH });
-      layoutPositions.push({ x: marginX + chartW + padding, y: startY + chartH + padding, w: chartW, h: chartH });
+      // Custom 2x2 centering logic
+      layoutPositions.length = 0; 
+      const marginX4 = (maxW - (2 * chartW) - padding) / 2 + startX; 
+      const startY4 = 1.0; // Adjusted for better vertical centering
+      
+      layoutPositions.push({ x: marginX4, y: startY4, w: chartW, h: chartH });
+      layoutPositions.push({ x: marginX4 + chartW + padding, y: startY4, w: chartW, h: chartH });
+      layoutPositions.push({ x: marginX4, y: startY4 + chartH + padding, w: chartW, h: chartH });
+      layoutPositions.push({ x: marginX4 + chartW + padding, y: startY4 + chartH + padding, w: chartW, h: chartH });
   }
 
 
@@ -1011,10 +1070,13 @@ async function downloadPPT(){
         
         // --- PPT CHART EXPORT LOGIC ---
         const chartInstance = Chart.getChart(c.id);
+        
+        // Save current chart style settings (including dynamic Y-Min)
         const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
         const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
         const originalTitleColor = chartInstance.options.plugins.title.color;
-        
+        const originalYMin = chartInstance.options.scales.y.min;
+
         // Override style for PPT export
         chartInstance.data.datasets.forEach(d => { 
           d.borderColor = lineColor; 
@@ -1024,6 +1086,10 @@ async function downloadPPT(){
           d.spanGaps = true; 
         });
         chartInstance.options.plugins.title.color = titleColor; // Set selected title color
+        // Restore Y-Min for export
+        // Note: For PPT export, we generally don't want the dynamic Y-min, but since the screen render already applied it, we keep it consistent.
+        // If required, we could re-render here to enforce a Y-min of 0 or 80-90 based on user preference, but sticking to displayed settings for consistency.
+        
         chartInstance.update('none'); 
         
         const imgData = c.toDataURL("image/png");
@@ -1035,6 +1101,7 @@ async function downloadPPT(){
           d.spanGaps = true; 
         });
         chartInstance.options.plugins.title.color = originalTitleColor;
+        chartInstance.options.scales.y.min = originalYMin; // Restore Y-min
         chartInstance.update('none');
         // --- END PPT CHART EXPORT LOGIC ---
         
