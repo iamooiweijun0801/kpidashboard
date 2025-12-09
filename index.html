@@ -33,12 +33,12 @@ button.action-btn:hover { background:#1f5ab5; }
 button.ppt-btn { background:#D24726; } /* PowerPoint Orange */
 button.ppt-btn:hover { background:#a8381e; }
 
-/* --- CHART STYLE SELECTOR (Inside Style Drawer) --- */
+/* --- CHART STYLE SELECTOR (Inside Drawer) --- */
 .style-options { 
     display: flex; 
     flex-direction: column; 
     gap: 5px; 
-    margin-top: 5px;
+    margin-top: 10px;
 }
 .style-options button {
     background: #f0f0f0;
@@ -88,31 +88,9 @@ button.ppt-btn:hover { background:#a8381e; }
 #dropdown div, #siteDropdownList div, #onAirDateDropdownList div { padding:6px 10px; cursor:pointer; font-size:13px; border-bottom:1px solid #eee; }
 #dropdown div:hover, #siteDropdownList div:hover, #onAirDateDropdownList div:hover { background:#f0f7ff; color:#2F80ED; }
 
-/* --- DRAWER STYLES (KPI and Style) --- */
-/* Base Toggle Button Style */
-.drawerToggle { 
-    position:fixed; 
-    width:36px; 
-    height:36px; 
-    background:#2F80ED; 
-    color:white; 
-    border-radius:6px 0 0 6px; 
-    cursor:pointer; 
-    display:flex; 
-    align-items:center; 
-    justify-content:center; 
-    font-size:20px; 
-    z-index:900; 
-    transition: right 0.3s; 
-}
-/* Positioning for Style button (top) */
-.styleDrawerToggle { right:0; top:100px; } 
-
-/* Positioning for KPI button (bottom) */
-.kpiDrawerToggle { right:0; top:145px; } 
-
-/* Base Drawer Style */
-.drawer { 
+/* --- KPI Drawer Fixes --- */
+.kpiDrawerToggle { position:fixed; top:100px; right:0; width:36px; height:36px; background:#2F80ED; color:white; border-radius:6px 0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:20px; z-index:900; }
+.kpiDrawer { 
   position:fixed; top:0; right:0; 
   width:320px; 
   height:100%; background:white; 
@@ -120,18 +98,7 @@ button.ppt-btn:hover { background:#a8381e; }
   transform:translateX(100%); transition:0.3s; padding:20px; 
   display: flex; flex-direction: column; 
 }
-.drawer.open { transform:translateX(0); }
-
-/* Adjustments when drawers are open (both buttons move out of the way) */
-#kpiDrawer.open ~ .styleDrawerToggle { right: 320px; }
-#kpiDrawer.open ~ .kpiDrawerToggle { right: 320px; } 
-
-/* The style drawer opens on top and pushes both buttons */
-#styleDrawer { z-index: 1001; }
-#styleDrawer.open ~ .kpiDrawerToggle { right: 320px; }
-#styleDrawer.open ~ .styleDrawerToggle { right: 320px; }
-
-
+.kpiDrawer.open { transform:translateX(0); }
 .drawer-header { 
     display: flex; 
     justify-content: space-between; 
@@ -139,19 +106,18 @@ button.ppt-btn:hover { background:#a8381e; }
     margin-bottom: 10px; 
     padding-bottom: 10px; 
     border-bottom: 1px solid #eee; 
-    flex-shrink: 0;
 }
 .drawer-header h3 { margin: 0; }
 .drawer-controls { 
     display: flex; 
-    gap: 5px; 
+    gap: 5px; /* Reduced gap */
     align-items: center; 
 }
 .drawer-controls .action-btn { 
-    padding: 6px 10px; 
-    font-size: 13px; 
+    padding: 6px 10px; /* Smaller padding for density */
+    font-size: 13px; /* Smaller font for density */
 }
-.drawer-body { flex-grow: 1; overflow-y: auto; padding-right: 5px; padding-bottom: 40px; } 
+.kpi-options-body { flex-grow: 1; overflow-y: auto; padding-right: 5px; padding-bottom: 40px; } 
 
 /* --- PREVIEW MODAL --- */
 .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:2000; display:none; align-items:center; justify-content:center; backdrop-filter:blur(3px); }
@@ -208,7 +174,7 @@ button.ppt-btn:hover { background:#a8381e; }
 }
 </style>
 </head>
-<body onload="fetchData()">
+<body>
 
 <header>LTE KPI Dashboard</header>
 
@@ -216,7 +182,7 @@ button.ppt-btn:hover { background:#a8381e; }
   <a href="gsm.html" class="nav-btn">GSM</a>
   <a href="index.html" class="nav-btn active">LTE</a>
   <a href="nr.html" class="nav-btn">NR</a>
-</div>
+  </div>
 
 <div class="tabs">
   <button class="tab active" onclick="switchTab('both')">All KPIs (Both)</button> 
@@ -245,32 +211,22 @@ button.ppt-btn:hover { background:#a8381e; }
 
 <div class="chart-grid" id="mainChartContainer"></div>
 
-<div class="styleDrawerToggle drawerToggle" onclick="toggleStyleDrawer()">🎨</div>
-<div id="styleDrawer" class="drawer">
+<div class="kpiDrawerToggle" onclick="toggleDrawer()">⚙</div>
+<div id="kpiDrawer" class="kpiDrawer">
   <div class="drawer-header">
-    <h3>Chart Style Settings</h3>
-    <button onclick="toggleStyleDrawer()" style="border:none; background:none; font-size:24px; cursor:pointer; color:#777;">✕</button>
-  </div>
-  <div class="drawer-body">
-    <h4>Chart Display Style (Select one)</h4>
-    <div id="chartStyleOptions" class="style-options">
-      </div>
-    <p style="margin-top:20px; font-size:12px; color:#555;">Choose a style to adjust the line width, point size, smoothness, and background fill of the charts.</p>
-  </div>
-</div>
-
-<div class="kpiDrawerToggle drawerToggle" onclick="toggleKpiDrawer()">⚙</div>
-<div id="kpiDrawer" class="drawer">
-  <div class="drawer-header">
-    <h3>KPI Visibility Settings</h3>
+    <h3 id="drawerHeaderTitle">KPI Settings</h3>
     <div class="drawer-controls">
         <button class="action-btn" onclick="selectVisibleKpis()" style="background:#5cb85c;">Select All</button>
         <button class="action-btn" onclick="clearVisibleKpis()" style="background:#f0ad4e;">Clear All</button>
         <button class="action-btn" onclick="applyKpis()">Apply</button>
-        <button onclick="toggleKpiDrawer()" style="border:none; background:none; font-size:24px; cursor:pointer; color:#777;">✕</button>
+        <button onclick="toggleDrawer()" style="border:none; background:none; font-size:24px; cursor:pointer; color:#777;">✕</button>
     </div>
   </div>
-  <div class="drawer-body" id="kpiOptionsList">
+  <div class="kpi-options-body" id="kpiOptionsList">
+    <h4>Chart Display Style</h4>
+    <div id="chartStyleOptions" class="style-options">
+      </div>
+
     </div>
 </div>
 
@@ -341,23 +297,20 @@ button.ppt-btn:hover { background:#a8381e; }
 let allData = [];
 let fuse = null;
 let allSites = [];
-let siteCutoverMap = {}; 
+let siteCutoverMap = {}; // Maps eNodeB Name -> On-Air Date
 let allOnAirDates = [];
 let selectedOnAirDates = [];
 
 let selectedSites = [];
-let currentTab = "both"; 
+let currentTab = "both"; // DEFAULT IS NOW 'BOTH'
 let graphsPerSlide = 2; 
 
-let chartExportColor = '#2F80ED'; 
-let chartExportTitleColor = '#333333'; 
+let chartExportColor = '#2F80ED'; // Default Line/Dot Color (Dark Blue)
+let chartExportTitleColor = '#333333'; // Default Title Color (Dark Gray/Black)
 
 // NEW: Expanded Chart Styles Configuration (10 styles total)
 const chartStyles = {
-  // RESTORED: This style is now set as the initial default
   'Default': { border: 2, pointRadius: 3, tension: 0.1, gridColor: '#eee', bgColor: 'white', titleColor: '#333', fill: false, stepped: false },
-  // Your preferred non-filled style is still available
-  'Line & Dot (Original)': { border: 2, pointRadius: 3, tension: 0.3, gridColor: '#f5f5f5', bgColor: 'white', titleColor: '#555', fill: false, stepped: false },
   'Minimalist': { border: 1, pointRadius: 2, tension: 0.3, gridColor: '#f5f5f5', bgColor: 'white', titleColor: '#555', fill: false, stepped: false },
   'Bright Dots': { border: 3, pointRadius: 4, tension: 0.2, gridColor: '#ddd', bgColor: 'white', titleColor: '#333', fill: false, stepped: false },
   'Smooth & Thin': { border: 1, pointRadius: 0, tension: 0.4, gridColor: '#f0f0f0', bgColor: 'white', titleColor: '#333', fill: false, stepped: false },
@@ -368,9 +321,7 @@ const chartStyles = {
   'High Contrast': { border: 4, pointRadius: 5, tension: 0.0, gridColor: 'rgba(0,0,0,0.1)', bgColor: 'white', titleColor: '#000', fill: false, stepped: false },
   'Monochromatic': { border: 3, pointRadius: 3, tension: 0.2, gridColor: '#f5f5f5', bgColor: 'white', titleColor: '#333', fill: false, stepped: false }
 };
-
-// Initial style set to 'Default'
-let selectedStyle = 'Default'; 
+let selectedStyle = 'Default'; // Initial style
 
 const acceptanceKpis = [
   "LTE RRC Setup Success Rate","ERAB Setup Success Rate","LTE Call Setup Success Rate","E-RAB Call Drop Rate",
@@ -391,190 +342,6 @@ let selectedKpis = {
 };
 
 // --- GLOBAL UTILITY FUNCTIONS ---
-
-/**
- * Rounds a number up to the nearest clean scale (e.g., 3630 -> 4000, 1580 -> 1600).
- * @param {number} value - The dynamic Ymax value calculated.
- * @returns {number} The cleanly rounded Ymax.
- */
-function roundUpToCleanScale(value) {
-    if (value <= 20) return Math.ceil(value / 5) * 5;      // e.g., 18 -> 20
-    if (value <= 100) return Math.ceil(value / 10) * 10;   // e.g., 85 -> 90
-    if (value <= 200) return Math.ceil(value / 20) * 20;   // e.g., 165 -> 180
-    if (value <= 500) return Math.ceil(value / 50) * 50;   // e.g., 360 -> 400
-    if (value <= 1000) return Math.ceil(value / 100) * 100; // e.g., 750 -> 800
-    if (value <= 2000) return Math.ceil(value / 200) * 200; // e.g., 1580 -> 1600 
-    if (value <= 5000) return Math.ceil(value / 500) * 500; // e.g., 3630 -> 4000
-    if (value <= 10000) return Math.ceil(value / 1000) * 1000;
-    if (value <= 20000) return Math.ceil(value / 2000) * 2000;
-    if (value <= 50000) return Math.ceil(value / 5000) * 5000;
-    return Math.ceil(value / 10000) * 10000;
-}
-
-/**
- * Calculates the largest clean step size that guarantees at least 'minTicks' (e.g., 5) across a range.
- * A "clean" step is 1, 2, 5 multiplied by a power of 10.
- * @param {number} range - The total range (yMax - yMin).
- * @param {number} minTicks - The minimum number of ticks desired.
- * @returns {number} The calculated clean step size.
- */
-function getIdealTickStep(range, minTicks = 5) {
-    if (range <= 0) return 0.2; 
-
-    // Ideal step size is range / (minTicks - 1)
-    const targetSteps = minTicks - 1; // e.g., 4 steps for 5 ticks
-    let idealStep = range / targetSteps;
-
-    // Find the magnitude (power of 10) of the ideal step
-    let power = Math.pow(10, Math.floor(Math.log10(idealStep)));
-    
-    // Check clean steps in descending order (5x, 2x, 1x magnitude)
-    const cleanSteps = [5 * power, 2 * power, 1 * power];
-    
-    // Find the largest clean step that is less than or equal to the ideal step
-    for (let step of cleanSteps) {
-        // Use a small epsilon (1e-9) to handle floating point issues near the boundary
-        if (step <= idealStep + 1e-9 && step > 0) {
-            return step;
-        }
-    }
-    
-    // Fallback if idealStep is smaller than 1*power (e.g., ideal=0.08, power=0.1)
-    let smallerPower = power / 10;
-    
-    // Check 5x the smaller magnitude (e.g., 0.05)
-    if (5 * smallerPower > 0) {
-        return 5 * smallerPower;
-    }
-    
-    // Safety fallback for extremely tiny ranges
-    return 0.1; 
-}
-
-/**
- * Converts a hex color string (e.g., #2F80ED) to an RGBA string with a specified opacity (alpha).
- * @param {string} hex - The hex color code.
- * @param {number} alpha - The desired opacity (0.0 to 1.0).
- * @returns {string} The RGBA color string.
- */
-function hexToRgba(hex, alpha) {
-    let r = 0, g = 0, b = 0;
-    
-    // 3 digits
-    if (hex.length == 4) {
-        r = parseInt(hex[1] + hex[1], 16);
-        g = parseInt(hex[2] + hex[2], 16);
-        b = parseInt(hex[3] + hex[3], 16);
-    } 
-    // 6 digits
-    else if (hex.length == 7) {
-        r = parseInt(hex[1] + hex[2], 16);
-        g = parseInt(hex[3] + hex[4], 16);
-        b = parseInt(hex[5] + hex[6], 16);
-    }
-
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-// --- DRAWER & STYLE FUNCTIONS ---
-
-/**
- * Populates the style drawer with available options and sets the active state.
- */
-function populateStyleOptions() {
-    const container = document.getElementById('chartStyleOptions');
-    container.innerHTML = '';
-
-    Object.keys(chartStyles).forEach(styleName => {
-        const btn = document.createElement('button');
-        btn.textContent = styleName;
-        btn.dataset.style = styleName;
-        btn.onclick = () => updateChartStyle(styleName);
-        
-        if (styleName === selectedStyle) {
-            btn.classList.add('active');
-        }
-        container.appendChild(btn);
-    });
-}
-
-/**
- * Toggles the KPI drawer visibility.
- */
-function toggleKpiDrawer(){
-  const d = document.getElementById("kpiDrawer");
-  const s = document.getElementById("styleDrawer");
-  d.classList.toggle("open");
-  if(d.classList.contains("open")) {
-      populateKpiOptions();
-      s.classList.remove("open"); // Close style drawer if KPI opens
-  }
-}
-
-/**
- * Populates the KPI drawer with checkboxes based on current tab.
- */
-function populateKpiOptions() {
-    const list = document.getElementById("kpiOptionsList");
-    list.innerHTML = "";
-    
-    let kpis = [];
-    if(currentTab === "acceptance") kpis = acceptanceKpis;
-    else if(currentTab === "monitoring") kpis = monitoringKpis;
-    else if(currentTab === "both") kpis = [...acceptanceKpis, ...monitoringKpis];
-
-    // Get the currently visible KPIs based on the combined list
-    const currentVisibleKpis = [...selectedKpis.acceptance, ...selectedKpis.monitoring];
-
-    kpis.forEach(kpi => {
-        const d = document.createElement("div");
-        const isChecked = currentVisibleKpis.includes(kpi);
-        d.innerHTML = `<label><input type='checkbox' value='${kpi}' class='kpi-chk' ${isChecked ? "checked" : ""}> ${kpi}</label>`;
-        list.appendChild(d);
-    });
-}
-
-/**
- * Selects all KPIs in the drawer.
- */
-function selectVisibleKpis() {
-    document.querySelectorAll('#kpiOptionsList .kpi-chk').forEach(chk => chk.checked = true);
-}
-
-/**
- * Clears all KPI selections in the drawer.
- */
-function clearVisibleKpis() {
-    document.querySelectorAll('#kpiOptionsList .kpi-chk').forEach(chk => chk.checked = false);
-}
-
-/**
- * Applies the KPI selections from the drawer and re-renders charts.
- */
-function applyKpis() {
-    const checkedKpis = Array.from(document.querySelectorAll('#kpiOptionsList .kpi-chk:checked')).map(c => c.value);
-    
-    // Reset selectedKpis based on which tab the KPI belongs to
-    selectedKpis.acceptance = checkedKpis.filter(kpi => acceptanceKpis.includes(kpi));
-    selectedKpis.monitoring = checkedKpis.filter(kpi => monitoringKpis.includes(kpi));
-    
-    toggleKpiDrawer();
-    renderCharts();
-}
-
-
-/**
- * Toggles the Chart Style drawer visibility.
- */
-function toggleStyleDrawer(){
-  const d = document.getElementById("styleDrawer");
-  const k = document.getElementById("kpiDrawer");
-  d.classList.toggle("open");
-  if(d.classList.contains("open")) {
-    populateStyleOptions();
-    k.classList.remove("open"); // Close KPI drawer if Style opens
-  }
-}
 
 /**
  * Updates the selected chart style and re-renders all charts.
@@ -602,10 +369,6 @@ function switchTab(tab) {
     });
     document.querySelector(`.tab[onclick="switchTab('${tab}')"]`).classList.add('active');
     currentTab = tab;
-    // Repopulate options when switching tabs in case drawer is open
-    if(document.getElementById("kpiDrawer").classList.contains("open")) {
-        populateKpiOptions();
-    }
     renderCharts(); 
 }
 
@@ -644,6 +407,7 @@ async function fetchData(){
         const siteName = r[cutoverHeaders.indexOf("eNodeB Name")]?.trim();
         const onAirDate = r[cutoverHeaders.indexOf("On-Air Date")]?.trim();
         if (siteName && onAirDate) {
+            // Only map sites that exist in the KPI data to prevent issues
             if (allSites.includes(siteName)) {
                  siteCutoverMap[siteName] = onAirDate;
             }
@@ -652,8 +416,8 @@ async function fetchData(){
 
     // 3. Initialize Date Filter Options and State
     allOnAirDates = [...new Set(Object.values(siteCutoverMap))].filter(d => d).sort();
-    selectedOnAirDates = [...allOnAirDates]; 
-    selectedSites = []; 
+    selectedOnAirDates = [...allOnAirDates]; // Default: Select All Dates
+    selectedSites = []; // Reset site selection
 
     // 4. Update UI
     setupOnAirDateDropdown();
@@ -672,17 +436,21 @@ function setupOnAirDateDropdown(){
   
   const setAll = () => { 
     selectedOnAirDates = [...allOnAirDates]; 
+    // When All Dates are selected, all sites MUST be selected as well
     const allActiveSites = allSites.filter(site => siteCutoverMap[site] && allOnAirDates.includes(siteCutoverMap[site]));
     selectedSites = [...allActiveSites]; 
 
+    // Update UI but DO NOT close the dropdown
     updateDateFilterUI({close: false}); 
-    setupSiteDropdown(); 
+    setupSiteDropdown(); // This re-renders charts
   };
 
   const clearAll = () => { 
     selectedOnAirDates = []; 
+    // When All Dates are cleared, all sites MUST be cleared
     selectedSites = []; 
     
+    // Update UI but DO NOT close the dropdown
     updateDateFilterUI({close: false}); 
     setupSiteDropdown(); 
   };
@@ -697,38 +465,35 @@ function setupOnAirDateDropdown(){
     const checked = selectedOnAirDates.includes(date) ? "checked" : "";
     d.innerHTML = `<input type='checkbox' value='${date}' class='date-chk' ${checked}> ${date}`;
     d.onclick = (e) => {
-        if(e.target.tagName !== "INPUT") {
+       if(e.target.tagName !== "INPUT") {
           const chk = d.querySelector("input");
           chk.checked = !chk.checked;
-        }
-        updateSelectedDates(); 
+       }
+       updateSelectedDates(); // Individual selection
     };
     list.appendChild(d);
   });
   
   btn.onclick = () => list.style.display = list.style.display==="block" ? "none" : "block";
   
+  // Expose helpers globally for inline HTML
   window.dateSetAll = setAll;
   window.dateClearAll = clearAll;
-  updateDateFilterUI({close: true}); 
+  updateDateFilterUI({close: true}); // Initial UI update
 }
 
 function updateSelectedDates() {
     const list = document.getElementById("onAirDateDropdownList");
     selectedOnAirDates = Array.from(list.querySelectorAll(".date-chk:checked")).map(c => c.value);
     
+    // Update the sites based on the new dates (select all sites under the new date scope)
     let activeSites = allSites.filter(site => {
         const date = siteCutoverMap[site];
         return date && selectedOnAirDates.includes(date);
     });
-    // Only keep sites in selectedSites if their date is still active
-    selectedSites = selectedSites.filter(site => activeSites.includes(site)); 
+    selectedSites = [...activeSites]; 
     
-    // If no sites were selected, select all active sites by default
-    if (selectedSites.length === 0 && selectedOnAirDates.length > 0) {
-        selectedSites = [...activeSites];
-    }
-    
+    // Do not close dropdown on individual check
     updateDateFilterUI({close: false}); 
     setupSiteDropdown(); 
 }
@@ -740,11 +505,14 @@ function updateDateFilterUI(options = {close: true}) {
     
     span.textContent = selectedOnAirDates.length === 0 ? "No Dates Selected" : (selectedOnAirDates.length === allOnAirDates.length ? "All On-Air Dates" : `Selected (${selectedOnAirDates.length})`);
     
+    // Update checkboxes visually
     list.querySelectorAll(".date-chk").forEach(c => c.checked = selectedOnAirDates.includes(c.value));
     
+    // Close dropdown only if requested
     if (options.close) {
         list.style.display = "none";
     } else {
+        // If not closing, ensure it's open
         list.style.display = "block";
     }
 }
@@ -756,13 +524,16 @@ function setupSiteDropdown(){
   const btn = document.getElementById("siteDropdownBtn");
   list.innerHTML = "";
 
+  // 1. Determine which sites are active based on the date filter
   let activeSites = allSites.filter(site => {
       const date = siteCutoverMap[site];
       return date && selectedOnAirDates.includes(date);
   });
   
+  // 2. Filter selectedSites to only include those that are currently active
   selectedSites = selectedSites.filter(site => activeSites.includes(site));
   
+  // Actions
   const setAll = () => { 
     selectedSites = [...activeSites]; 
     updateSiteFilterUI({close: false}); 
@@ -775,35 +546,42 @@ function setupSiteDropdown(){
     renderCharts(); 
   };
   
+  // Inject setAll/clearAll actions
   list.innerHTML += `<div onclick="window.siteSetAll()"><b>Select All (${activeSites.length})</b></div>`;
   list.innerHTML += `<div onclick="window.siteClearAll()"><b>Clear All</b></div>`;
 
+  // Options
   activeSites.forEach(site => {
     const d = document.createElement("div");
+    // Check if the site is in the current selectedSites list
     const checked = selectedSites.includes(site) ? "checked" : ""; 
     d.innerHTML = `<input type='checkbox' value='${site}' class='site-chk' ${checked}> ${site}`;
     d.onclick = (e) => {
-        if(e.target.tagName !== "INPUT") {
+       if(e.target.tagName !== "INPUT") {
           const chk = d.querySelector("input");
           chk.checked = !chk.checked;
-        }
-        updateSelectedSites(); 
+       }
+       updateSelectedSites(); // Individual selection
     };
     list.appendChild(d);
   });
   
   btn.onclick = () => list.style.display = list.style.display==="block" ? "none" : "block";
 
+  // Expose helpers globally for inline HTML
   window.siteSetAll = setAll;
   window.siteClearAll = clearAll;
   
+  // Initial UI update for site dropdown and rendering
   updateSiteFilterUI({close: true});
   renderCharts();
 }
 
 function updateSelectedSites() {
     const list = document.getElementById("siteDropdownList");
+    // Ensure we only look at the sites currently visible/active in the list
     selectedSites = Array.from(list.querySelectorAll(".site-chk:checked")).map(c => c.value);
+    // Do not close dropdown on individual check
     updateSiteFilterUI({close: false});
     renderCharts();
 }
@@ -823,25 +601,21 @@ function updateSiteFilterUI(options = {close: true}) {
     else if(selectedSites.length === 1) span.textContent = selectedSites[0];
     else span.textContent = `Selected (${selectedSites.length})`;
 
+    // Re-check all site checkboxes to reflect the selectedSites state 
     list.querySelectorAll(".site-chk").forEach(c => c.checked = selectedSites.includes(c.value));
     
+    // Close dropdown only if requested
     if (options.close) {
         list.style.display = "none";
     } else {
+        // If not closing, ensure it's open
         list.style.display = "block";
     }
 }
 
 // --- CHART RENDERING ---
 
-let chartInstances = {}; // Store chart instances to destroy them later
-function destroyCharts() {
-    Object.values(chartInstances).forEach(chart => chart.destroy());
-    chartInstances = {};
-}
-
 function renderCharts(){
-  destroyCharts(); // Clear previous charts
   const container = document.getElementById("mainChartContainer");
   container.innerHTML = "";
   
@@ -850,6 +624,7 @@ function renderCharts(){
   else if(currentTab === "monitoring") kpisToShow = selectedKpis.monitoring;
   else if(currentTab === "both") kpisToShow = [...selectedKpis.acceptance, ...selectedKpis.monitoring];
 
+  // 1. Determine final list of sites based on date filter AND site filter
   let sitesFromDate = allSites.filter(site => {
       const date = siteCutoverMap[site];
       return selectedOnAirDates.includes(date);
@@ -857,436 +632,606 @@ function renderCharts(){
 
   let finalSiteList;
   if (selectedSites.length > 0) {
+      // Use specifically selected sites
       finalSiteList = selectedSites;
   } else {
+      // Use all sites allowed by the date filter (default behavior when no specific site is selected)
       finalSiteList = sitesFromDate;
   }
   
   let filteredData = allData.filter(d => finalSiteList.includes(d["eNodeB Name"]));
 
+
+  // 2. Process Timeline (unchanged)
   const timeline = [...new Set(filteredData.map(d=>d["Date"]))].sort((a,b)=>{
     const [da,ma,ya]=a.split('/').map(Number);
     const [db,mb,yb]=b.split('/').map(Number);
-    // Note: Assuming MM/DD/YYYY format for robustness. If DD/MM/YYYY, this needs adjustment.
-    // Based on typical KPI dashboards, this sort is usually fine for daily data.
     return new Date(ya,ma-1,da)-new Date(yb,mb-1,db);
   });
 
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const timelineLabels = timeline.map(d => {
       const [day, month] = d.split('/').map(Number);
-      return `${day} ${monthNames[month - 1]}`; 
+      return `${day} ${monthNames[month - 1]}`; // e.g., "5 Jan"
   });
 
-  // Get the current style settings
-  const style = chartStyles[selectedStyle];
+  // Apply selected style
+  const style = chartStyles[selectedStyle]; 
+  document.querySelectorAll('.chart-card').forEach(card => card.style.backgroundColor = style.bgColor);
 
-  // 1. Map KPI data for each chart
-  const chartDataMap = kpisToShow.map(kpi => {
-      // Calculate the average KPI value for each date
-      const dataPoints = timeline.map(date => {
-          // Filter data for the current date
-          const dateData = filteredData.filter(d => d["Date"] === date);
-          // Extract all non-null values for the current KPI
-          const values = dateData.map(d => d[kpi]).filter(v => v !== null && !isNaN(v));
-          
-          // Calculate the average (or sum for volume KPIs)
-          if (values.length === 0) return null;
-          
-          // Sum up volumes, average percentages/rates
-          if (kpi.includes("Volume") || kpi.includes("Traffic")) {
-              return values.reduce((a, b) => a + b, 0);
-          } else {
-              // Average
-              return values.reduce((a, b) => a + b, 0) / values.length;
-          }
+  // 3. Generate Charts
+  kpisToShow.forEach((kpi, idx) => {
+    const card = document.createElement("div");
+    card.className = "chart-card";
+    
+    const wrapper = document.createElement("div");
+    wrapper.className = "chart-container";
+    
+    const canvas = document.createElement("canvas");
+    canvas.id = `chart_${idx}`;
+    
+    wrapper.appendChild(canvas);
+    card.appendChild(wrapper);
+    container.appendChild(card);
+
+    // Calculate Data
+    const dataPoints = timeline.map(date => {
+       const vals = filteredData.filter(d => d["Date"] === date && d[kpi] !== null).map(d => d[kpi]);
+       if(vals.length === 0) return null;
+       const isAvg = kpi.match(/(rate|%|ratio|average)/i);
+       const sum = vals.reduce((a,b)=>a+b,0);
+       return isAvg ? sum/vals.length : sum;
+    });
+
+    // Dynamic Y-Axis Start Calculation (Enhanced for high percentages)
+    const minValue = dataPoints.filter(v => v !== null).length > 0 ? Math.min(...dataPoints.filter(v => v !== null)) : 0;
+    let yMin = 0;
+    
+    // If KPI is a high-range percentage (Rate, Success, %) and min value is high
+    if (kpi.match(/(rate|success|%|ratio)/i) && minValue >= 80) {
+        // Calculate dynamic minimum: start 5 units below the minimum, rounded down slightly.
+        let targetMin = Math.floor(minValue) - 5;
+        
+        // Custom logic to make the starting point an "even" number (0, 2, 4, 5, 6, 8, 10)
+        if (targetMin % 10 < 5) {
+             yMin = Math.max(0, Math.floor(targetMin / 10) * 10); // e.g., 85 -> 80
+        } else {
+             yMin = Math.max(0, Math.floor(targetMin / 10) * 10 + 5); // e.g., 90.8 min -> 85.8 target -> 85
+        }
+        // Final check to ensure we don't start too high or too low unexpectedly
+        yMin = Math.max(0, yMin); 
+        yMin = Math.min(yMin, Math.floor(minValue / 10) * 10); // Ensure calculated min is not higher than the nearest 10 below the actual min
+    }
+    
+    // Determine background color for fill if needed (must be RGB with Alpha)
+    let bColor = 'transparent';
+    let lineC = getRandomColor();
+    if (style.fill) {
+        const hex = lineC.substring(1);
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        bColor = `rgba(${r}, ${g}, ${b}, ${style.alpha || 0.15})`;
+    }
+
+
+    // Draw Chart with Animation
+    new Chart(canvas.getContext("2d"), {
+      type: 'line',
+      data: {
+        labels: timelineLabels,
+        datasets: [{
+          label: (finalSiteList.length > 0 && dataPoints.some(p => p !== null)) ? "Aggregate" : "No Data",
+          data: dataPoints,
+          borderColor: lineC,
+          backgroundColor: bColor, // Used for area fill
+          fill: style.fill,
+          borderWidth: style.border,
+          pointRadius: style.pointRadius,
+          tension: style.tension,
+          stepped: style.stepped,
+          spanGaps: true 
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: {
+            x: {
+                type: 'number',
+                easing: 'linear',
+                duration: 500,
+                from: NaN,
+                delay: (ctx) => ctx.index * 30 
+            },
+            y: { duration: 0 }
+        },
+        plugins: { 
+            legend: { display: false },
+            title: { // Chart.js built-in title
+                display: true,
+                text: kpi,
+                font: {
+                    size: 14,
+                    weight: 'bold'
+                },
+                color: style.titleColor
+            }
+        },
+        scales: {
+           x: { 
+               ticks: { font: {size:8} }, 
+               grid: {display:false} 
+           },
+           y: { 
+               beginAtZero: yMin === 0, 
+               min: (finalSiteList.length === 0 || dataPoints.every(p => p === null)) ? 0 : yMin, // Set the calculated minimum or 0
+               grid: {color: style.gridColor}
+           }
+        }
+      }
+    });
+  });
+}
+
+function getRandomColor() {
+  const colors = ['#2F80ED', '#27AE60', '#D24726', '#8E44AD', '#F39C12', '#2980B9'];
+  return colors[Math.floor(Math.random() * colors.length)];
+}
+
+// --- KPI DRAWER & UTILITY LOGIC ---
+
+function toggleDrawer(){
+  const d = document.getElementById("kpiDrawer");
+  d.classList.toggle("open");
+  if(d.classList.contains("open")) populateKpiOptions();
+}
+
+function populateKpiOptions(){
+  const list = document.getElementById("kpiOptionsList");
+  // Clear only the KPI list section, preserve the style list element
+  const kpiSection = list; 
+  
+  // 1. Populate Style Buttons (only needs to be done once, but safe to run)
+  const styleContainer = document.getElementById("chartStyleOptions");
+  styleContainer.innerHTML = '';
+  Object.keys(chartStyles).forEach(styleName => {
+    const button = document.createElement('button');
+    button.textContent = styleName;
+    button.className = 'action-btn';
+    button.setAttribute('data-style', styleName);
+    button.onclick = () => updateChartStyle(styleName);
+    if (selectedStyle === styleName) {
+        button.classList.add('active');
+    }
+    styleContainer.appendChild(button);
+  });
+  
+  // 2. Clear previous KPI list entries (excluding the style section)
+  // Find the h4 element for Acceptance/Monitoring and clear content after the style section
+  let startClearing = false;
+  let nodesToRemove = [];
+  Array.from(kpiSection.children).forEach(child => {
+      // Start clearing after the style section
+      if (child.id === 'chartStyleOptions') {
+          startClearing = true;
+      } else if (startClearing) {
+          nodesToRemove.push(child);
+      }
+  });
+  nodesToRemove.forEach(node => node.remove());
+
+
+  document.getElementById('drawerHeaderTitle').textContent = 'KPI Settings & Style';
+
+  const acceptanceSection = currentTab === 'acceptance' || currentTab === 'both';
+  const monitoringSection = currentTab === 'monitoring' || currentTab === 'both';
+  
+  const createGroup = (title, key, sourceArr) => {
+    const h4 = document.createElement("h4");
+    h4.textContent = title;
+    h4.style.marginTop = "15px";
+    kpiSection.appendChild(h4);
+    
+    sourceArr.forEach(kpi => {
+      const div = document.createElement("div");
+      const checked = selectedKpis[key].includes(kpi) ? "checked" : "";
+      div.innerHTML = `<input type='checkbox' class='kpi-chk' data-group='${key}' value='${kpi}' ${checked}> <span style='font-size:13px'>${kpi}</span>`;
+      div.onclick = (e) => {
+        if(e.target.tagName !== "INPUT") {
+            const chk = div.querySelector("input");
+            chk.checked = !chk.checked;
+        }
+        // No auto-apply here, user must click Apply
+      };
+      kpiSection.appendChild(div);
+    });
+  };
+
+  if (acceptanceSection) createGroup("Acceptance KPIs", "acceptance", acceptanceKpis);
+  if (monitoringSection) createGroup("Monitoring KPIs", "monitoring", monitoringKpis);
+}
+
+/**
+ * Selects all visible KPI checkboxes and updates the internal state.
+ */
+function selectVisibleKpis() {
+    const chks = document.querySelectorAll(".kpi-chk");
+    
+    // 1. Update Checkboxes Visually
+    chks.forEach(c => {
+        c.checked = true;
+    });
+
+    // 2. Update Internal State
+    if (currentTab === 'acceptance' || currentTab === 'both') {
+        selectedKpis.acceptance = [...acceptanceKpis];
+    }
+    if (currentTab === 'monitoring' || currentTab === 'both') {
+        selectedKpis.monitoring = [...monitoringKpis];
+    }
+}
+
+/**
+ * Clears all visible KPI checkboxes and updates the internal state.
+ */
+function clearVisibleKpis() {
+    const chks = document.querySelectorAll(".kpi-chk");
+    
+    // 1. Update Checkboxes Visually
+    chks.forEach(c => {
+        c.checked = false;
+    });
+
+    // 2. Update Internal State
+    if (currentTab === 'acceptance' || currentTab === 'both') {
+        selectedKpis.acceptance = [];
+    }
+    if (currentTab === 'monitoring' || currentTab === 'both') {
+        selectedKpis.monitoring = [];
+    }
+}
+
+
+function applyKpis(){
+  const chks = document.querySelectorAll(".kpi-chk");
+  
+  // Start with existing selections for non-visible tabs
+  const tempAcceptance = currentTab === 'acceptance' || currentTab === 'both' ? [] : [...selectedKpis.acceptance];
+  const tempMonitoring = currentTab === 'monitoring' || currentTab === 'both' ? [] : [...selectedKpis.monitoring];
+
+  // Apply checked status from the UI
+  chks.forEach(c => {
+    if(c.checked) {
+        if(c.dataset.group === 'acceptance') tempAcceptance.push(c.value);
+        if(c.dataset.group === 'monitoring') tempMonitoring.push(c.value);
+    }
+  });
+
+  selectedKpis.acceptance = tempAcceptance;
+  selectedKpis.monitoring = tempMonitoring;
+  
+  toggleDrawer();
+  renderCharts();
+}
+
+// --- PPT EXPORT CUSTOMIZATION & PREVIEW ---
+
+function openPreview() {
+    const canvases = document.querySelectorAll("canvas");
+    if(canvases.length === 0) { alert("No charts to export."); return; }
+    
+    graphsPerSlide = 2; 
+    chartExportColor = '#2F80ED'; 
+    chartExportTitleColor = '#333333';
+
+    updatePreviewSettings(graphsPerSlide, chartExportColor, chartExportTitleColor);
+    
+    document.getElementById("previewModal").style.display = "flex";
+}
+
+function highlightSettingButtons(count, lineColor, titleColor) {
+    document.querySelectorAll('.graph-options button').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.backgroundColor = '#2F80ED';
+        if (parseInt(btn.dataset.count) === count) {
+            btn.classList.add('active');
+            btn.style.backgroundColor = '#27AE60'; 
+        }
+    });
+
+    document.querySelectorAll('#lineColorOptions .color-option').forEach(el => {
+        el.classList.remove('selected');
+        if (el.dataset.color === lineColor) {
+            el.classList.add('selected');
+        }
+    });
+
+    document.querySelectorAll('#titleColorOptions .color-option').forEach(el => {
+        el.classList.remove('selected');
+        if (el.dataset.color === titleColor) {
+            el.classList.add('selected');
+        }
+    });
+}
+
+function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
+    if (newCount) graphsPerSlide = newCount;
+    if (newLineColor) chartExportColor = newLineColor;
+    if (newTitleColor) chartExportTitleColor = newTitleColor;
+
+    highlightSettingButtons(graphsPerSlide, chartExportColor, chartExportTitleColor);
+    
+    const count = graphsPerSlide;
+    const body = document.getElementById("previewBody");
+    const canvases = document.querySelectorAll("canvas");
+    
+    document.getElementById("previewTitle").textContent = `PPT Export Preview (${count} Graphs per Slide) - Line: ${chartExportColor}, Title: ${chartExportTitleColor}`;
+    body.innerHTML = "";
+
+    // Determine CSS grid columns based on count
+    let gridCols = '1fr';
+    let rows = 1;
+    if (count === 2) { gridCols = '1fr 1fr'; rows = 1; }
+    else if (count === 3 || count === 6 || count === 9) { gridCols = '1fr 1fr 1fr'; }
+    else if (count === 4) { gridCols = '1fr 1fr'; rows = 2; }
+    
+    if (count === 6) rows = 2;
+    if (count === 9) rows = 3;
+
+
+    for(let i=0; i<canvases.length; i+=count){
+        const slideDiv = document.createElement("div");
+        slideDiv.className = "preview-slide";
+        
+        const slideTitle = document.createElement("div");
+        slideTitle.className = "preview-slide-title";
+        slideTitle.textContent = `Slide ${Math.floor(i/count) + 1}`;
+        slideDiv.appendChild(slideTitle);
+
+        const grid = document.createElement("div");
+        grid.className = "preview-grid";
+        grid.style.gridTemplateColumns = gridCols;
+        // Use auto for rows to adapt to content height when the number of items doesn't perfectly match the row definition
+        grid.style.gridTemplateRows = rows === 1 ? '1fr' : (rows === 2 ? '1fr 1fr' : (rows === 3 ? '1fr 1fr 1fr' : 'repeat(auto-fit, 1fr)'));
+
+
+        for(let j=0; j<count; j++){
+            if(i+j < canvases.length){
+                const c = canvases[i+j];
+                const box = createPreviewBox(c, chartExportColor, chartExportTitleColor); 
+                grid.appendChild(box);
+            }
+        }
+        slideDiv.appendChild(grid);
+        body.appendChild(slideDiv);
+    }
+}
+
+function createPreviewBox(canvas, lineColor, titleColor) {
+  const box = document.createElement("div");
+  box.className = "preview-img-box";
+  
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = canvas.width;
+  tempCanvas.height = canvas.height;
+  const tempCtx = tempCanvas.getContext('2d');
+  
+  const chartInstance = Chart.getChart(canvas.id);
+  let imgData = '';
+  
+  if (chartInstance) {
+      // Save original properties
+      const originalDatasetProps = chartInstance.data.datasets.map(d => ({
+          borderColor: d.borderColor,
+          pointBorderColor: d.pointBorderColor,
+          pointBackgroundColor: d.pointBackgroundColor,
+          fill: d.fill,
+          backgroundColor: d.backgroundColor,
+          stepped: d.stepped
+      }));
+      const originalTitleColor = chartInstance.options.plugins.title.color;
+      
+      // Get the selected style properties
+      const style = chartStyles[selectedStyle];
+      
+      // Override style for PPT export (using export color, but preserving dashboard style attributes)
+      chartInstance.data.datasets.forEach(d => { 
+        d.borderColor = lineColor; 
+        d.pointBorderColor = lineColor; 
+        d.pointBackgroundColor = lineColor; 
+        
+        // Re-calculate fill color based on selected export line color
+        let bColor = 'transparent';
+        if (style.fill) {
+            const hex = lineColor.substring(1);
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+            bColor = `rgba(${r}, ${g}, ${b}, ${style.alpha || 0.15})`;
+        }
+        d.backgroundColor = bColor;
+        d.fill = style.fill;
+        d.stepped = style.stepped;
+        
+        d.pointRadius = 3; 
+        d.pointStyle = 'circle'; 
+        d.spanGaps = true; 
       });
 
-      // Calculate Y-Axis bounds
-      const allValues = dataPoints.filter(v => v !== null);
-      const minVal = allValues.length > 0 ? Math.min(...allValues) : 0;
-      const maxVal = allValues.length > 0 ? Math.max(...allValues) : 0;
+      chartInstance.options.plugins.title.color = titleColor; 
       
-      // Determine Ymax and step size for clean axis
-      const isRateOrSuccess = kpi.includes("Rate") || kpi.includes("Success");
-      const yMin = isRateOrSuccess ? 0 : (minVal > 0 ? 0 : minVal * 1.05);
-      const yMaxRaw = isRateOrSuccess ? Math.max(100, maxVal * 1.05) : maxVal * 1.05;
-      const yMax = roundUpToCleanScale(yMaxRaw);
-      const stepSize = getIdealTickStep(yMax - yMin);
+      chartInstance.update('none'); 
       
-      return { kpi, dataPoints, yMin, yMax, stepSize, allValues };
-  });
+      tempCtx.drawImage(canvas, 0, 0);
+      imgData = tempCanvas.toDataURL("image/png");
+      
+      // Restore original properties
+      chartInstance.data.datasets.forEach((d, index) => { 
+        Object.assign(d, originalDatasetProps[index]);
+      });
+      chartInstance.options.plugins.title.color = originalTitleColor;
+      chartInstance.update('none');
+  }
 
-  // 2. Generate HTML and Chart Instances
-  chartDataMap.forEach((chartData, index) => {
-      // Create the container card
-      const chartCard = document.createElement('div');
-      chartCard.className = 'chart-card';
-      chartCard.innerHTML = `
-          <div class="chart-title">${chartData.kpi}</div>
-          <div class="chart-container">
-              <canvas id="chart-${index}"></canvas>
-          </div>
-      `;
-      container.appendChild(chartCard);
+  const img = document.createElement("img");
+  img.src = imgData;
+  
+  box.appendChild(img);
+  return box;
+}
 
-      // Configure the Chart.js dataset based on selected style
-      const datasetColor = `hsl(${(index * 36) % 360}, 65%, 45%)`;
-      const chartConfig = {
-          type: 'line',
-          data: {
-              labels: timelineLabels,
-              datasets: [{
-                  label: chartData.kpi,
-                  data: chartData.dataPoints,
-                  borderColor: datasetColor,
-                  backgroundColor: style.fill ? hexToRgba(datasetColor, style.alpha) : 'transparent',
-                  borderWidth: style.border,
-                  pointRadius: style.pointRadius,
-                  pointBackgroundColor: datasetColor,
-                  tension: style.tension,
-                  fill: style.fill,
-                  stepped: style.stepped,
-              }],
-          },
-          options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                  title: {
-                      display: true,
-                      text: chartData.kpi,
-                      color: style.titleColor,
-                      font: { size: 14, weight: '600' }
-                  },
-                  legend: { display: false }
-              },
-              scales: {
-                  y: {
-                      min: chartData.yMin,
-                      max: chartData.yMax,
-                      ticks: {
-                          stepSize: chartData.stepSize,
-                          color: style.titleColor,
-                          font: { size: 11 }
-                      },
-                      grid: { color: style.gridColor },
-                  },
-                  x: {
-                      ticks: {
-                          color: style.titleColor,
-                          maxRotation: 45, minRotation: 45,
-                          font: { size: 10 }
-                      },
-                      grid: { display: false },
-                  }
-              }
+function closePreview(){ document.getElementById("previewModal").style.display = "none"; }
+
+async function downloadPPT(){
+  const pptx = new PptxGenJS();
+  pptx.layout = 'LAYOUT_16x9';
+  
+  // Title Slide
+  let slide = pptx.addSlide();
+  slide.addText("LTE KPI Report", { x:0.5, y:2, fontSize:32, bold:true, color:'2F80ED' });
+  slide.addText(`Generated: ${new Date().toLocaleDateString()}`, { x:0.5, y:3, fontSize:14 });
+
+  const canvases = document.querySelectorAll("canvas");
+  const count = graphsPerSlide;
+  const lineColor = chartExportColor; 
+  const titleColor = chartExportTitleColor;
+  
+  // Define base positions and sizes in inches (for 16x9 slide layout)
+  // NOTE: chartH for 9 graphs is 1.7
+  const layoutDef = {
+    1: { cols: 1, rows: 1, chartW: 9.0, chartH: 5.5, padding: 0.5 },
+    2: { cols: 2, rows: 1, chartW: 4.5, chartH: 3.5, padding: 0.4 },
+    3: { cols: 3, rows: 1, chartW: 3.0, chartH: 3.0, padding: 0.4 },
+    4: { cols: 2, rows: 2, chartW: 4.5, chartH: 2.5, padding: 0.3 },
+    6: { cols: 3, rows: 2, chartW: 3.0, chartH: 2.5, padding: 0.2 },
+    9: { cols: 3, rows: 3, chartW: 3.0, chartH: 1.7, padding: 0.1 } 
+  }[count] || { cols: 2, rows: 1, chartW: 4.5, chartH: 3.5, padding: 0.4 }; 
+
+  const layoutPositions = [];
+  const startX = 0.5; // Fixed left margin
+  const startY = 1.2; // Starting Y position after slide header
+  const maxW = 9.5; // Max drawing width (10 inches wide slide, 0.5 margin on each side)
+  
+  const numCols = layoutDef.cols;
+  const numRows = layoutDef.rows;
+  const chartW = layoutDef.chartW;
+  const chartH = layoutDef.chartH;
+  const padding = layoutDef.padding;
+
+  // Calculate dynamic spacing to center charts horizontally and vertically
+  const totalChartWidth = numCols * chartW;
+  const totalPaddingWidth = (numCols - 1) * padding;
+  const remainingXSpace = maxW - totalChartWidth - totalPaddingWidth;
+  const marginX = (remainingXSpace / 2) + startX; 
+  
+  
+  for (let r = 0; r < numRows; r++) {
+      for (let c = 0; c < numCols; c++) {
+          const x = marginX + (c * chartW) + (c * padding);
+          const y = startY + (r * chartH) + (r * padding);
+          layoutPositions.push({ x: x, y: y, w: chartW, h: chartH });
+          if (layoutPositions.length >= count) break; // Stop if we've defined all slots for the count
+      }
+      if (layoutPositions.length >= count) break;
+  }
+  
+  // Custom 4-grid centering logic
+  if (count === 4) {
+      layoutPositions.length = 0; 
+      const marginX4 = (maxW - (2 * chartW) - padding) / 2 + startX; 
+      const startY4 = 1.0; 
+      
+      layoutPositions.push({ x: marginX4, y: startY4, w: chartW, h: chartH });
+      layoutPositions.push({ x: marginX4 + chartW + padding, y: startY4, w: chartW, h: chartH });
+      layoutPositions.push({ x: marginX4, y: startY4 + chartH + padding, w: chartW, h: chartH });
+      layoutPositions.push({ x: marginX4 + chartW + padding, y: startY4 + chartH + padding, w: chartW, h: chartH });
+  }
+
+
+  for(let i=0; i<canvases.length; i+=count){
+    let slide = pptx.addSlide();
+    
+    // Slide Title Header
+    slide.addText(`KPI Analysis - Slide ${Math.floor(i/count)+1}`, { x:0.5, y:0.2, fontSize:16, color:'D24726', bold:true });
+
+    // Add Charts
+    for(let j=0; j<count; j++){
+      if(i+j < canvases.length){
+        const c = canvases[i+j];
+        const params = layoutPositions[j];
+        
+        // --- PPT CHART EXPORT LOGIC ---
+        const chartInstance = Chart.getChart(c.id);
+        
+        // Save current chart style settings (including dynamic Y-Min)
+        const originalDatasetProps = chartInstance.data.datasets.map(d => ({
+            borderColor: d.borderColor,
+            pointBorderColor: d.pointBorderColor,
+            pointBackgroundColor: d.pointBackgroundColor,
+            fill: d.fill,
+            backgroundColor: d.backgroundColor,
+            stepped: d.stepped
+        }));
+        const originalTitleColor = chartInstance.options.plugins.title.color;
+        const originalYMin = chartInstance.options.scales.y.min;
+
+        // Get the selected dashboard style (to preserve fill/step attributes)
+        const style = chartStyles[selectedStyle];
+        
+        // Override style for PPT export
+        chartInstance.data.datasets.forEach(d => { 
+          d.borderColor = lineColor; 
+          d.pointBorderColor = lineColor; 
+          d.pointBackgroundColor = lineColor; 
+
+          // Re-calculate fill color based on export line color
+          let bColor = 'transparent';
+          if (style.fill) {
+              const hex = lineColor.substring(1);
+              const r = parseInt(hex.substring(0, 2), 16);
+              const g = parseInt(hex.substring(2, 4), 16);
+              const b = parseInt(hex.substring(4, 6), 16);
+              bColor = `rgba(${r}, ${g}, ${b}, ${style.alpha || 0.15})`;
           }
-      };
-
-      // Initialize the Chart object and store the instance
-      chartInstances[`chart-${index}`] = new Chart(document.getElementById(`chart-${index}`), chartConfig);
-  });
-}
-
-// --- PPT EXPORT FUNCTIONS ---
-
-let pptChartData = []; // Data structure to hold all necessary chart details for export
-let pptCanvasRefs = []; // Array of {canvas: HTMLCanvasElement, config: Chart.js config}
-let previewModalOpen = false;
-
-
-/**
- * Opens the preview modal and initializes the settings.
- */
-function openPreview() {
-    // 1. Collect all chart data required for PPT export
-    const container = document.getElementById("mainChartContainer");
-    pptChartData = Array.from(container.querySelectorAll('.chart-card')).map(card => {
-        const title = card.querySelector('.chart-title').textContent;
-        const canvas = card.querySelector('canvas');
-        
-        // Find the Chart.js instance associated with this canvas
-        const chartId = canvas.id;
-        const chartInstance = chartInstances[chartId];
-
-        if (chartInstance) {
-            // Clone the config. We use the config from the instance, but simplify the data
-            const config = JSON.parse(JSON.stringify(chartInstance.config));
-            // Remove animation/interaction options for static export
-            if (config.options) {
-                delete config.options.animation;
-                delete config.options.responsive;
-                delete config.options.maintainAspectRatio;
-                config.options.plugins.tooltip = { enabled: false };
-                config.options.plugins.legend = { display: false };
-                
-                // Set fixed size for PPT export rendering
-                config.options.layout = {
-                    padding: 10
-                };
-            }
-            
-            return {
-                kpi: title,
-                config: config,
-                initialColor: config.data.datasets[0].borderColor,
-                initialTitleColor: config.options.plugins.title.color
-            };
-        }
-        return null;
-    }).filter(d => d);
-
-    if (pptChartData.length === 0) {
-        alert("No charts visible to export. Please select data and KPIs.");
-        return;
-    }
-    
-    // 2. Initialize and open modal
-    document.getElementById('previewModal').style.display = 'flex';
-    previewModalOpen = true;
-    
-    // 3. Set default preview settings (e.g., 2 graphs/slide)
-    updatePreviewSettings(2, chartExportColor, chartExportTitleColor);
-
-    // Visually select the default options
-    document.querySelectorAll('.graph-options button').forEach(btn => btn.classList.remove('active'));
-    document.querySelector('.graph-options button[data-count="2"]').classList.add('active');
-    
-    document.querySelectorAll('.color-option').forEach(span => span.classList.remove('selected'));
-    document.querySelector(`#lineColorOptions span[data-color="${chartExportColor}"]`).classList.add('selected');
-    document.querySelector(`#titleColorOptions span[data-color="${chartExportTitleColor}"]`).classList.add('selected');
-
-}
-
-/**
- * Updates the preview settings (graphs per slide, colors) and re-renders the preview slides.
- */
-function updatePreviewSettings(count, lineColor, titleColor) {
-    graphsPerSlide = count;
-    chartExportColor = lineColor;
-    chartExportTitleColor = titleColor;
-
-    // Update button/color selector visual state
-    document.querySelectorAll('.graph-options button').forEach(btn => {
-        btn.classList.toggle('active', parseInt(btn.dataset.count) === count);
-    });
-    document.querySelectorAll('#lineColorOptions .color-option').forEach(span => {
-        span.classList.toggle('selected', span.dataset.color === lineColor);
-    });
-    document.querySelectorAll('#titleColorOptions .color-option').forEach(span => {
-        span.classList.toggle('selected', span.dataset.color === titleColor);
-    });
-
-    renderPreviewSlides();
-}
-
-/**
- * Renders the image-based preview slides based on the current settings.
- */
-function renderPreviewSlides() {
-    const previewBody = document.getElementById("previewBody");
-    previewBody.innerHTML = '';
-    pptCanvasRefs = []; // Clear previous canvas refs
-
-    for (let i = 0; i < pptChartData.length; i += graphsPerSlide) {
-        const slideData = pptChartData.slice(i, i + graphsPerSlide);
-        const slideIndex = Math.floor(i / graphsPerSlide) + 1;
-        
-        const slide = document.createElement('div');
-        slide.className = 'preview-slide';
-        slide.innerHTML = `<div class="preview-slide-title">Slide ${slideIndex}: ${slideData.map(d => d.kpi).join(', ')}</div>`;
-
-        // Determine grid layout based on count
-        let gridCols, gridRows;
-        if (graphsPerSlide <= 2) {
-            gridCols = 1;
-            gridRows = graphsPerSlide;
-        } else if (graphsPerSlide === 3 || graphsPerSlide === 4) {
-            gridCols = 2;
-            gridRows = Math.ceil(graphsPerSlide / 2);
-        } else if (graphsPerSlide === 6) {
-            gridCols = 3;
-            gridRows = 2;
-        } else { // Default to max 3x3
-            gridCols = 3;
-            gridRows = 3;
-        }
-
-        slide.querySelector('.preview-slide-title').style.color = chartExportTitleColor;
-        const grid = document.createElement('div');
-        grid.className = 'preview-grid';
-        grid.style.gridTemplateColumns = `repeat(${gridCols}, 1fr)`;
-        grid.style.gridTemplateRows = `repeat(${gridRows}, 1fr)`;
-
-        slideData.forEach(data => {
-            const imgBox = document.createElement('div');
-            imgBox.className = 'preview-img-box';
-            
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = 400; // Fixed width for preview rendering
-            tempCanvas.height = 225; // Aspect ratio 16:9 
-            
-            // Apply current export theme to the chart config for preview
-            const pptChartConfig = JSON.parse(JSON.stringify(data.config));
-            pptChartConfig.data.datasets.forEach(dataset => {
-                dataset.borderColor = chartExportColor;
-                if (data.config.data.datasets[0].fill) {
-                    dataset.backgroundColor = hexToRgba(chartExportColor, data.config.data.datasets[0].backgroundColor.split(',').pop().slice(0, -1));
-                }
-            });
-            pptChartConfig.options.plugins.title.text = data.kpi;
-            pptChartConfig.options.plugins.title.color = chartExportTitleColor;
-
-            // Render chart to the temporary canvas
-            const pptChart = new Chart(tempCanvas.getContext("2d"), pptChartConfig);
-            
-            // Wait for render, then capture image for HTML preview
-            setTimeout(() => {
-                const img = document.createElement('img');
-                img.src = tempCanvas.toDataURL('image/png');
-                imgBox.appendChild(img);
-                imgBox.innerHTML += `<div class="preview-label" style="color: ${chartExportTitleColor}; font-size: 13px;">${data.kpi}</div>`;
-                pptChart.destroy(); // Clean up chart instance
-            }, 50);
-
-            grid.appendChild(imgBox);
-
-            // Store the data and config for the final PPT generation
-            pptCanvasRefs.push({
-                kpi: data.kpi,
-                config: pptChartConfig,
-                width: 1024, // High res for export
-                height: 576
-            });
+          d.backgroundColor = bColor;
+          d.fill = style.fill;
+          d.stepped = style.stepped;
+          
+          d.pointRadius = 3; 
+          d.spanGaps = true; 
         });
-
-        slide.appendChild(grid);
-        previewBody.appendChild(slide);
-    }
-}
-
-/**
- * Closes the preview modal.
- */
-function closePreview() {
-    document.getElementById('previewModal').style.display = 'none';
-    previewModalOpen = false;
-}
-
-/**
- * Generates and downloads the PPTX file.
- */
-async function downloadPPT() {
-    closePreview(); 
-    const pres = new pptxgen();
-    pres.layout = 'LAYOUT_16x9';
-
-    // Temporary high-res canvas setup for export
-    const exportCanvas = document.createElement('canvas');
-    exportCanvas.width = 1024;
-    exportCanvas.height = 576;
-    const ctx = exportCanvas.getContext('2d');
-
-    const totalCharts = pptCanvasRefs.length;
-
-    for (let i = 0; i < totalCharts; i += graphsPerSlide) {
-        const chartsOnSlide = pptCanvasRefs.slice(i, i + graphsPerSlide);
-        const slide = pres.addSlide();
+        chartInstance.options.plugins.title.color = titleColor; // Set selected title color
         
-        // Determine grid layout for PPT slide
-        let gridCols, gridRows, xPos, yPos, chartWidth, chartHeight;
-
-        if (graphsPerSlide === 1) {
-            gridCols = 1; gridRows = 1;
-            xPos = 0.5; yPos = 0.5; chartWidth = 9.0; chartHeight = 5.0; // Large chart
-        } else if (graphsPerSlide === 2) {
-            gridCols = 1; gridRows = 2;
-            xPos = 0.5; yPos = 0.5; chartWidth = 9.0; chartHeight = 2.5; // Two vertically stacked
-        } else if (graphsPerSlide === 3 || graphsPerSlide === 4) {
-            gridCols = 2; gridRows = 2;
-            xPos = 0.25; yPos = 0.5; chartWidth = 4.5; chartHeight = 2.5; // 2x2 grid
-        } else if (graphsPerSlide === 6) {
-            gridCols = 3; gridRows = 2;
-            xPos = 0.25; yPos = 0.5; chartWidth = 3.0; chartHeight = 2.5; // 3x2 grid
-        } else { // Fallback 3x3
-            gridCols = 3; gridRows = 3;
-            xPos = 0.2; yPos = 0.5; chartWidth = 3.0; chartHeight = 1.6;
-        }
-
-        // Add slide title
-        slide.addText(`KPI Trends - ${chartsOnSlide.map(c => c.kpi).join(' / ')}`, {
-            x: 0.5, y: 0.2, w: '95%', h: 0.3,
-            color: chartExportTitleColor.replace('#', ''),
-            fontFace: 'Arial', fontSize: 18, bold: true
+        chartInstance.update('none'); 
+        
+        const imgData = c.toDataURL("image/png");
+        
+        // Restore original styles
+        chartInstance.data.datasets.forEach((d, index) => { 
+            Object.assign(d, originalDatasetProps[index]);
         });
-
-        // Calculate positions dynamically for the grid
-        const slideW = 10; 
-        const slideH = 5.625; 
-        const padding = 0.25;
-        const totalW = slideW - padding * 2;
-        const totalH = slideH - padding * 2;
-        const cellW = totalW / gridCols;
-        const cellH = totalH / gridRows;
-
-        for (let j = 0; j < chartsOnSlide.length; j++) {
-            const chartRef = chartsOnSlide[j];
-            const row = Math.floor(j / gridCols);
-            const col = j % gridCols;
-
-            const finalX = padding + col * cellW;
-            const finalY = padding + row * cellH + 0.5; // Offset for title
-
-            // Render chart to the high-res canvas
-            const pptChartConfig = chartRef.config;
-            
-            // Set chart title/legend options for export context
-            pptChartConfig.options.plugins.title.display = true;
-            pptChartConfig.options.plugins.title.text = chartRef.kpi;
-            pptChartConfig.options.plugins.title.font.size = 20;
-
-            // Reset canvas before drawing
-            ctx.clearRect(0, 0, exportCanvas.width, exportCanvas.height);
-            
-            // Initialize the temporary chart
-            const pptChart = new Chart(ctx, pptChartConfig);
-            
-            // CRITICAL FIX: Wait for the chart to fully render
-            await new Promise(resolve => {
-                requestAnimationFrame(() => {
-                    setTimeout(resolve, 100); // 100ms delay to be absolutely safe
-                });
-            });
-
-            // Capture image data
-            const dataURL = exportCanvas.toDataURL('image/png', 1.0); // PNG for quality
-            
-            // Clean up immediately
-            pptChart.destroy();
-
-            // Add image to the slide
-            slide.addImage({
-                data: dataURL,
-                x: finalX,
-                y: finalY,
-                w: cellW - 0.1, // Small margin
-                h: cellH - 0.1,
-                sizing: { type: 'contain', w: cellW - 0.1, h: cellH - 0.1 }
-            });
-        }
+        chartInstance.options.plugins.title.color = originalTitleColor;
+        chartInstance.options.scales.y.min = originalYMin; // Restore Y-min
+        chartInstance.update('none');
+        // --- END PPT CHART EXPORT LOGIC ---
+        
+        // Chart Image
+        slide.addImage({ 
+          data: imgData, 
+          x: params.x, y: params.y, 
+          w: params.w, h: params.h 
+        });
+      }
     }
+  }
 
-    // Final download call
-    pres.writeFile({ fileName: `LTE_KPI_Dashboard_${new Date().toISOString().slice(0, 10)}.pptx` });
+  pptx.writeFile({ fileName: `KPI_Report_${new Date().getTime()}.pptx` });
+  closePreview();
 }
 
-// --- INITIALIZATION ---
-document.addEventListener('DOMContentLoaded', () => {
-    // Initial call to fetch data is in <body> tag: onload="fetchData()"
-    // Populate the style drawer when the page is ready, regardless of the drawer state
-    populateStyleOptions();
-});
+// Init
+fetchData();
 </script>
 </body>
 </html>
