@@ -5,87 +5,101 @@
 <title>LTE KPI Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.6.2/fuse.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 
 <style>
-body { font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin:0; padding:0; background:#f0f2f5; overflow-x:hidden; }
-header { text-align:center; padding:20px 0; font-size:32px; font-weight:bold; color:#2F80ED; background:white; box-shadow:0 2px 6px rgba(0,0,0,0.1); margin-bottom:16px; }
+body { font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin:0; padding:0; background:#f4f6f8; overflow-x:hidden; }
+header { text-align:center; padding:20px 0; font-size:28px; font-weight:700; color:#1a1a1a; background:white; box-shadow:0 1px 4px rgba(0,0,0,0.05); margin-bottom:20px; }
 
-/* Navbar & Controls */
-.navbar { display:flex; justify-content:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
-.navbar button { padding:8px 16px; cursor:pointer; border:none; background:#2F80ED; color:white; border-radius:6px; font-weight:bold; transition:0.2s; }
-.navbar button:hover { background:#1f5ab5; }
-.tabs { display:flex; justify-content:center; margin-bottom:16px; flex-wrap:wrap; gap:8px; }
-.tab { padding:10px 20px; cursor:pointer; border:1px solid #ccc; border-radius:8px; background:#eee; font-weight:bold; transition:0.3s; }
-.tab.active { background:#2F80ED; color:white; }
-.tab:hover:not(.active) { background:#d0e1ff; }
-.controls { display:flex; justify-content:center; gap:12px; margin-bottom:16px; flex-wrap:wrap; align-items: center; }
+/* Navigation */
+.navbar { display:flex; justify-content:center; gap:10px; margin-bottom:20px; flex-wrap:wrap; }
+.navbar button { padding:8px 20px; cursor:pointer; border:none; background:#ffffff; color:#555; border: 1px solid #ddd; border-radius:20px; font-weight:600; transition:0.2s; }
+.navbar button:hover { background:#f0f0f0; color:#333; }
+.navbar button.active-nav { background:#2F80ED; color:white; border-color:#2F80ED; }
 
-/* Inputs & Dropdowns */
-#siteFilter { padding:8px; width:250px; border-radius:6px; border:1px solid #ccc; }
-#dropdown { position:absolute; background:white; border:1px solid #ccc; max-height:150px; overflow-y:auto; display:none; z-index:10; width:250px; top:38px; left:0; border-radius:6px; }
-#dropdown div { padding:6px 10px; cursor:pointer; transition:0.2s; }
-#dropdown div:hover { background:#2F80ED; color:white; }
-#siteDropdownBtn { padding:8px 10px; cursor:pointer; border:1px solid #ccc; border-radius:6px; background:white; min-width:250px; text-align:left; position:relative; z-index:5; color:#333; }
-#siteDropdownList { position:absolute; background:white; border:1px solid #ccc; max-height:200px; overflow-y:auto; display:none; z-index:10; width:250px; border-radius:6px; padding:6px; top:40px; }
+/* Tabs */
+.tabs { display:flex; justify-content:center; margin-bottom:20px; gap:10px; }
+.tab { padding:10px 24px; cursor:pointer; border-radius:30px; background:#e0e0e0; color:#555; font-weight:600; transition:0.3s; border:none; }
+.tab.active { background:#2F80ED; color:white; box-shadow: 0 4px 10px rgba(47, 128, 237, 0.3); }
 
-button { padding:10px 18px; cursor:pointer; border:none; background:#2F80ED; color:white; border-radius:6px; font-weight:bold; transition:0.2s; }
-button:hover { background:#1f5ab5; }
-/* Special style for export button */
-#exportBtn { background: #E04F5F; } 
-#exportBtn:hover { background: #c0392b; }
+/* Controls */
+.controls { display:flex; justify-content:center; gap:12px; margin-bottom:24px; flex-wrap:wrap; align-items: center; }
+select, input { padding:10px; border-radius:8px; border:1px solid #dae1e7; font-size:14px; outline:none; }
+#siteFilter { width:220px; }
 
-/* Charts */
-.chart-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(400px,1fr)); gap:20px; padding:0 20px 20px 20px; }
-canvas { background:white; border-radius:12px; padding:16px; width:100% !important; height:250px !important; }
-.chart-card { padding:10px; border-radius:12px; background:white; box-shadow:0 2px 12px rgba(0,0,0,0.1); transition:0.3s; }
-.chart-title { text-align:center; font-weight:bold; margin-bottom:10px; color:#333; }
+/* Buttons */
+.action-btn { padding:10px 20px; cursor:pointer; border:none; background:#2F80ED; color:white; border-radius:8px; font-weight:600; transition:0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+.action-btn:hover { background:#1c6cdb; transform: translateY(-1px); }
+#exportBtn { background: #27ae60; } 
+#exportBtn:hover { background: #219150; }
 
-/* Drawer */
-.kpiDrawer { position:fixed; top:0; right:0; width:320px; height:100%; background:white; box-shadow:-4px 0 12px rgba(0,0,0,0.15); transition:0.3s; z-index:20; padding:20px; overflow-y:auto; display:none; }
-.kpiDrawer.open { display:block; }
-.kpiDrawerToggle { position:fixed; top:20px; right:0; width:30px; height:80px; background:#2F80ED; border-radius:6px 0 0 6px; cursor:pointer; z-index:25; }
+/* Chart Grid */
+.chart-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(500px,1fr)); gap:24px; padding:0 24px 40px 24px; max-width: 1600px; margin: 0 auto; }
+.chart-card { 
+  background:white; 
+  border-radius:16px; 
+  padding:20px; 
+  box-shadow:0 2px 10px rgba(0,0,0,0.03); 
+  border: 1px solid #f0f0f0;
+  transition: transform 0.2s ease;
+}
+.chart-card:hover { transform: translateY(-2px); box-shadow:0 8px 20px rgba(0,0,0,0.06); }
 
-/* --- EXPORT PREVIEW MODAL STYLES --- */
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; display: none; align-items: center; justify-content: center; }
-.modal-content { background: white; padding: 20px; width: 80%; max-width: 900px; height: 85%; border-radius: 12px; display: flex; flex-direction: column; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
-.modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 15px; }
-.modal-title { font-size: 20px; font-weight: bold; color: #333; }
-.modal-body { flex: 1; overflow-y: auto; background: #f9f9f9; padding: 20px; border-radius: 8px; border: 1px solid #eee; }
-.modal-footer { margin-top: 15px; display: flex; justify-content: flex-end; gap: 10px; }
-.preview-item { background: white; padding: 10px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; page-break-inside: avoid; }
-.preview-item img { max-width: 100%; height: auto; border: 1px solid #eee; }
-.preview-title { font-weight: bold; margin-bottom: 8px; color: #555; font-size: 14px; }
+.chart-header { display:flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.chart-title { font-size: 16px; font-weight: 700; color: #2c3e50; }
+.chart-badge { font-size: 12px; background: #eef2ff; color: #2F80ED; padding: 4px 8px; border-radius: 6px; font-weight: 600; }
+
+.chart-container { position: relative; height: 300px; width: 100%; }
+
+/* Dropdown Custom */
+.custom-dropdown-wrapper { position: relative; }
+#dropdown, #siteDropdownList { position:absolute; background:white; border:1px solid #eee; max-height:250px; overflow-y:auto; display:none; z-index:100; width:100%; border-radius:8px; top:110%; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+#dropdown div, #siteDropdownList div { padding:8px 12px; cursor:pointer; font-size:14px; border-bottom: 1px solid #f9f9f9; }
+#dropdown div:hover, #siteDropdownList div:hover { background:#f5f9ff; color:#2F80ED; }
+
+/* KPI Drawer */
+.kpiDrawer { position:fixed; top:0; right:0; width:340px; height:100%; background:white; box-shadow:-5px 0 20px rgba(0,0,0,0.1); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index:1000; padding:25px; overflow-y:auto; transform: translateX(100%); }
+.kpiDrawer.open { transform: translateX(0); }
+.drawer-header { font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #333; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+.kpiDrawerToggle { position:fixed; top:120px; right:0; width:40px; height:40px; background:#2F80ED; border-radius:8px 0 0 8px; cursor:pointer; z-index:900; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; box-shadow: -2px 2px 5px rgba(0,0,0,0.1); }
+
+/* Modal */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+.modal-content { background: white; padding: 24px; width: 600px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; }
+.modal-title { font-size: 22px; font-weight: bold; margin-bottom: 10px; }
+.modal-desc { color: #666; margin-bottom: 24px; }
 </style>
 </head>
 <body>
 
-<header>LTE KPI Dashboard</header>
+<header>KPI Dashboard</header>
 
 <div class="navbar">
-  <button onclick="window.location.href='gsm.html'">GSM</button>
-  <button onclick="window.location.href='index.html'">LTE</button>
-  <button onclick="window.location.href='nr.html'">NR</button>
-  <button onclick="window.location.href='nsa.html'">NSA</button>
+  <button>GSM</button>
+  <button class="active-nav">LTE</button>
+  <button>NR</button>
 </div>
 
 <div class="tabs">
-  <div class="tab active" data-tab="acceptance">Acceptance KPIs</div>
-  <div class="tab" data-tab="monitoring">Monitoring KPIs</div>
+  <div class="tab active" data-tab="acceptance">Acceptance</div>
+  <div class="tab" data-tab="monitoring">Monitoring</div>
 </div>
 
 <div class="controls">
-  <div style="position:relative;">
-    <input type="text" id="siteFilter" placeholder="Search GBSC Name">
+  <div class="custom-dropdown-wrapper">
+    <input type="text" id="siteFilter" placeholder="Search Site Name...">
     <div id="dropdown"></div>
   </div>
-  <div style="position:relative;">
-    <button id="siteDropdownBtn">All Sites ▼</button>
+
+  <div class="custom-dropdown-wrapper" style="width: 200px;">
+    <button id="siteDropdownBtn" class="action-btn" style="background:white; color:#333; border:1px solid #ccc; width:100%; text-align:left; display:flex; justify-content:space-between;">
+      <span>All Sites</span> <span>▼</span>
+    </button>
     <div id="siteDropdownList"></div>
   </div>
-  <button id="refreshBtn">Refresh Data</button>
-  <button id="exportBtn">Export PDF</button>
+
+  <button id="refreshBtn" class="action-btn">Refresh Data</button>
+  <button id="exportBtn" class="action-btn">Export PPT</button>
 </div>
 
 <div id="acceptancePage">
@@ -96,42 +110,38 @@ canvas { background:white; border-radius:12px; padding:16px; width:100% !importa
 </div>
 
 <div id="acceptanceDrawer" class="kpiDrawer">
-  <h3>KPIs</h3>
+  <div class="drawer-header">Select KPIs</div>
   <div><input type="checkbox" id="selectAllAcceptance"> <label for="selectAllAcceptance"><b>Select All</b></label></div>
-  <div id="acceptanceKpiOptions"></div>
-  <button id="applyAcceptanceBtn">Apply</button>
+  <div id="acceptanceKpiOptions" style="margin-top:10px;"></div>
+  <button id="applyAcceptanceBtn" class="action-btn" style="width:100%; margin-top:20px;">Apply Changes</button>
 </div>
 <div id="monitoringDrawer" class="kpiDrawer">
-  <h3>KPIs</h3>
+  <div class="drawer-header">Select KPIs</div>
   <div><input type="checkbox" id="selectAllMonitoring"> <label for="selectAllMonitoring"><b>Select All</b></label></div>
-  <div id="monitoringKpiOptions"></div>
-  <button id="applyMonitoringBtn">Apply</button>
+  <div id="monitoringKpiOptions" style="margin-top:10px;"></div>
+  <button id="applyMonitoringBtn" class="action-btn" style="width:100%; margin-top:20px;">Apply Changes</button>
 </div>
 
-<div id="drawerToggle" class="kpiDrawerToggle"></div>
+<div id="drawerToggle" class="kpiDrawerToggle">⚙</div>
 
-<div id="previewModal" class="modal-overlay">
+<div id="exportModal" class="modal-overlay">
   <div class="modal-content">
-    <div class="modal-header">
-      <div class="modal-title">Export Preview</div>
-      <button onclick="closeModal()" style="background:#ccc; color:#333; padding:5px 10px;">✕</button>
-    </div>
-    <div class="modal-body" id="previewArea">
-      </div>
-    <div class="modal-footer">
-      <button onclick="closeModal()" style="background:#888;">Cancel</button>
-      <button onclick="generatePDF()" style="background:#2F80ED;">Download PDF</button>
+    <div class="modal-title">Exporting to PowerPoint</div>
+    <div class="modal-desc">Generating slides for <span id="slideCount">0</span> charts...</div>
+    <div style="width:100%; height:4px; background:#eee; border-radius:2px; overflow:hidden;">
+      <div id="progressBar" style="width:0%; height:100%; background:#27ae60; transition:width 0.3s;"></div>
     </div>
   </div>
 </div>
 
 <script>
+// --- GLOBAL VARIABLES ---
 let allData=[], fuse=null, allSites=[];
 let selectedSites=[];
-let acceptanceKpisList=[], monitoringKpisList=[];
 let selectedAcceptanceKpis=[], selectedMonitoringKpis=[];
-const animationDuration=150;
+let currentTab="acceptance";
 
+// KPI Definitions
 const acceptanceKpis = [
   "LTE RRC Setup Success Rate","ERAB Setup Success Rate","LTE Call Setup Success Rate","E-RAB Call Drop Rate",
   "CSFB Access Success Rate","LTE Intra Freq HO Success Rate","Intra-eNB HO Success Success Rate","Inter-eNBX2HO Success Rate",
@@ -146,327 +156,345 @@ const monitoringKpis = [
   "VoLTE Traffic Erlang","VoLTE Traffic DL (MB)","VoLTE Traffic UL (MB)","DL BLER QCI1","UL BLER QCI1"
 ];
 
+// --- DATA FETCHING ---
 async function fetchData(){
   try {
-    const res = await fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=0&single=true&output=csv");
+    // Adding timestamp to avoid caching
+    const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=0&single=true&output=csv&t=" + Date.now();
+    const res = await fetch(url);
     const text = await res.text();
+    
+    // Parse CSV
     const rows = text.trim().split('\n').map(r=>r.split(','));
     const headers = rows.shift().map(h=>h.trim());
-    allData = rows.map(r=>{ const obj={}; headers.forEach((h,i)=>{ const val=r[i]?r[i].trim():"0"; obj[h]=isNaN(val)?val:parseFloat(val); }); return obj; });
+    allData = rows.map(r=>{ 
+      const obj={}; 
+      headers.forEach((h,i)=>{ 
+        const val=r[i]?r[i].trim():""; 
+        // Handle numbers/empty strings
+        if(val==="") obj[h]=null;
+        else obj[h]=isNaN(val)?val:parseFloat(val); 
+      }); 
+      return obj; 
+    });
+
+    // Initialize Search & Filter
     fuse = new Fuse(allData,{ keys:['eNodeB Name'], threshold:0.4 });
-    allSites = [...new Set(allData.map(d=>d["eNodeB Name"]))].sort();
+    allSites = [...new Set(allData.map(d=>d["eNodeB Name"]))].filter(s=>s).sort();
+    
     populateSiteDropdown();
     populateKpiDrawers();
-    drawAcceptanceCharts();
-  } catch(e) { console.error("Error fetching data", e); }
+    drawCurrentPageCharts();
+
+  } catch(e) { console.error(e); alert("Error loading data."); }
 }
 
-// SITE DROPDOWN
-function populateSiteDropdown(){
-  const list = document.getElementById("siteDropdownList");
-  list.innerHTML="";
+// --- CHARTS & UI ---
 
-  const selectAllDiv = document.createElement("div");
-  selectAllDiv.style.padding="6px 10px";
-  selectAllDiv.style.borderBottom="1px solid #ddd";
-  selectAllDiv.style.cursor="pointer";
-  selectAllDiv.innerHTML = `<b>Select All Sites</b>`;
-  selectAllDiv.onclick = () => {
-    selectedSites = allSites.slice();
-    list.querySelectorAll(".siteOption").forEach(c => c.checked = true);
-    updateSiteButtonLabel();
-    drawCurrentPageCharts();
-  };
-  list.appendChild(selectAllDiv);
-
-  const clearDiv = document.createElement("div");
-  clearDiv.style.padding="6px 10px";
-  clearDiv.style.borderBottom="1px solid #ddd";
-  clearDiv.style.cursor="pointer";
-  clearDiv.innerHTML = `<b>Clear Filter</b>`;
-  clearDiv.onclick = () => {
-    selectedSites = [];
-    list.querySelectorAll(".siteOption").forEach(c => c.checked = false);
-    updateSiteButtonLabel();
-    drawCurrentPageCharts();
-  };
-  list.appendChild(clearDiv);
-
-  allSites.forEach((site,i)=>{
-    const div=document.createElement("div");
-    div.innerHTML= `<input type="checkbox" class="siteOption" id="site_${i}" value="${site}"> <label for="site_${i}">${site}</label>`;
-    div.style.padding="6px 10px";
-    list.appendChild(div);
-  });
-
-  document.getElementById("siteDropdownBtn").onclick = ()=>{ list.style.display = list.style.display==="block" ? "none" : "block"; };
+function drawCharts(kpis, containerId){
+  const container = document.getElementById(containerId);
+  container.innerHTML = "";
   
-  list.querySelectorAll(".siteOption").forEach(chk=>{
-    chk.addEventListener("change", ()=>{
-      selectedSites = Array.from(list.querySelectorAll(".siteOption:checked")).map(c=>c.value);
-      updateSiteButtonLabel();
-      drawCurrentPageCharts();
-    });
-  });
-}
-
-function updateSiteButtonLabel(){
-  const btn=document.getElementById("siteDropdownBtn");
-  if(selectedSites.length===0 || selectedSites.length===allSites.length){ btn.textContent="All Sites ▼"; }
-  else if(selectedSites.length===1){ btn.textContent=selectedSites[0]+" ▼"; }
-  else{ btn.textContent="Multiple Sites ▼"; }
-}
-
-// KPI Drawers
-function populateKpiDrawers(){
-  function renderDrawer(kpiArr,idDrawer,idOptions,idSelectAll){
-    const drawer=document.getElementById(idDrawer);
-    const kpiDiv=document.getElementById(idOptions);
-    let tempSelected = kpiArr.slice();
-    const selectAllChk = document.getElementById(idSelectAll);
-    selectAllChk.checked=true;
-    selectAllChk.onchange=()=>{
-      if(selectAllChk.checked) tempSelected=kpiArr.slice();
-      else tempSelected=[];
-      renderOptions();
-    };
-    function renderOptions(){
-      kpiDiv.innerHTML="";
-      kpiArr.forEach(kpi=>{
-        const checked=tempSelected.includes(kpi)?"checked":"";
-        const div=document.createElement("div");
-        div.className="kpiOption";
-        div.innerHTML=`<input type="checkbox" class="kpiCheckbox" value="${kpi}" ${checked}> ${kpi}`;
-        kpiDiv.appendChild(div);
-      });
-      kpiDiv.querySelectorAll(".kpiCheckbox").forEach(chk=>{
-        chk.onchange=()=>{
-          tempSelected=Array.from(kpiDiv.querySelectorAll(".kpiCheckbox:checked")).map(c=>c.value);
-          selectAllChk.checked=tempSelected.length===kpiArr.length;
-        };
-      });
-    }
-    renderOptions();
-    return ()=>tempSelected.slice();
-  }
-  acceptanceKpisList = renderDrawer(acceptanceKpis,"acceptanceDrawer","acceptanceKpiOptions","selectAllAcceptance");
-  monitoringKpisList = renderDrawer(monitoringKpis,"monitoringDrawer","monitoringKpiOptions","selectAllMonitoring");
-}
-
-document.getElementById("drawerToggle").addEventListener("click", ()=>{
-  const drawer = document.getElementById(currentTab+"Drawer");
-  if(drawer.style.display==="block"){
-    drawer.classList.remove("open");
-    setTimeout(()=>drawer.style.display="none",300);
-  } else {
-    drawer.style.display="block";
-    setTimeout(()=>drawer.classList.add("open"),10);
-  }
-});
-
-document.getElementById("applyAcceptanceBtn").addEventListener("click",()=>{
-  selectedAcceptanceKpis=acceptanceKpisList();
-  document.getElementById("acceptanceDrawer").classList.remove("open");
-  setTimeout(()=>document.getElementById("acceptanceDrawer").style.display="none",300);
-  drawAcceptanceCharts();
-});
-document.getElementById("applyMonitoringBtn").addEventListener("click",()=>{
-  selectedMonitoringKpis=monitoringKpisList();
-  document.getElementById("monitoringDrawer").classList.remove("open");
-  setTimeout(()=>document.getElementById("monitoringDrawer").style.display="none",300);
-  drawMonitoringCharts();
-});
-
-let currentTab="acceptance";
-document.querySelectorAll(".tab").forEach(tab=>{
-  tab.addEventListener("click",()=>{
-    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
-    tab.classList.add("active");
-    const tabName=tab.dataset.tab;
-    document.getElementById("acceptancePage").style.display=tabName==="acceptance"?"block":"none";
-    document.getElementById("monitoringPage").style.display=tabName==="monitoring"?"block":"none";
-    currentTab=tabName;
-    drawCurrentPageCharts();
-  });
-});
-
-function drawCurrentPageCharts(){
-  if(currentTab==="acceptance") drawAcceptanceCharts();
-  else drawMonitoringCharts();
-}
-
-function drawAcceptanceCharts(){ drawCharts(selectedAcceptanceKpis.length?selectedAcceptanceKpis:acceptanceKpis,"acceptanceChartContainer"); }
-function drawMonitoringCharts(){ drawCharts(selectedMonitoringKpis.length?selectedMonitoringKpis:monitoringKpis,"monitoringChartContainer"); }
-
-function drawCharts(kpis,containerId){
-  const container=document.getElementById(containerId);
-  container.innerHTML="";
+  // 1. Process Timeline
   const timeline = [...new Set(allData.map(d=>d["Date"]))];
   timeline.sort((a,b)=>{
     const [da,ma,ya]=a.split('/').map(Number);
     const [db,mb,yb]=b.split('/').map(Number);
     return new Date(ya,ma-1,da)-new Date(yb,mb-1,db);
   });
-  const timelineLabels = timeline.map(d=>{
-    const [day,month]=d.split('/').map(Number);
-    const monthNames=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    return `${day} ${monthNames[month-1]}`;
-  });
-  kpis.forEach(kpi=>{
-    const card=document.createElement("div");
-    card.className="chart-card";
-    const title=document.createElement("div");
-    title.className="chart-title";
-
-    let labelText="All Sites";
-    if(selectedSites.length===1) labelText=selectedSites[0];
-    else if(selectedSites.length>1 && selectedSites.length<allSites.length) labelText="Multiple Sites";
-    title.textContent=`${kpi} - ${labelText}`;
-
-    const canvas=document.createElement("canvas");
-    card.appendChild(title);
-    card.appendChild(canvas);
-    container.appendChild(card);
-
-    let filteredData=allData;
-    if(selectedSites.length>0) filteredData=allData.filter(d=>selectedSites.includes(d["eNodeB Name"]));
-
-    const dataPoints=timeline.map(date=>{
-      const vals = filteredData.filter(d=>d["Date"]===date).map(d=>{
-        const v=d[kpi]; return (v===""||v==null||isNaN(v))?0:v;
-      });
-      if(vals.length===0) return 0;
-      if(kpi.toLowerCase().includes("%")||kpi.toLowerCase().includes("rate")||kpi.toLowerCase().includes("max")||kpi.toLowerCase().includes("average")||kpi.toLowerCase().includes("ratio")){
-        return vals.reduce((a,b)=>a+b,0)/vals.length;
-      }else return vals.reduce((a,b)=>a+b,0);
-    });
-
-    new Chart(canvas.getContext("2d"),{
-      type:'line',
-      data:{ labels:timelineLabels,datasets:[{label:labelText,data:dataPoints,borderColor:'#'+Math.floor(Math.random()*16777215).toString(16),fill:false,tension:0.3,pointRadius:3}] },
-      options:{ responsive:true, maintainAspectRatio:false, animation:{ duration:0 }, scales:{x:{display:true},y:{beginAtZero:true}}, plugins:{legend:{position:'top'}} }
-    });
-  });
-}
-
-// Search & Refresh
-const siteInput=document.getElementById("siteFilter");
-const dropdown=document.getElementById("dropdown");
-siteInput.addEventListener("input", ()=>{
-  const val=siteInput.value.trim();
-  if(!val || !fuse){ dropdown.style.display="none"; return; }
-  const results=fuse.search(val).slice(0,5).map(r=>r.item["eNodeB Name"]);
-  dropdown.innerHTML="";
-  results.forEach(r=>{
-    const div=document.createElement("div");
-    div.textContent=r;
-    div.onclick=()=>{
-      siteInput.value=r;
-      dropdown.style.display="none";
-      selectedSites=[r];
-      document.querySelectorAll(".siteOption").forEach(c=>c.checked=c.value===r);
-      updateSiteButtonLabel();
-      drawCurrentPageCharts();
-    };
-    dropdown.appendChild(div);
-  });
-  dropdown.style.display=results.length?"block":"none";
-});
-document.addEventListener("click", e=>{ if(e.target!==siteInput) dropdown.style.display="none"; });
-document.getElementById("refreshBtn").addEventListener("click", fetchData);
-
-/* --- EXPORT FUNCTIONALITY --- */
-const modal = document.getElementById("previewModal");
-const previewArea = document.getElementById("previewArea");
-
-document.getElementById("exportBtn").addEventListener("click", () => {
-  previewArea.innerHTML = "";
-  // Identify which container is currently visible
-  const activeContainerId = currentTab === "acceptance" ? "acceptanceChartContainer" : "monitoringChartContainer";
-  const container = document.getElementById(activeContainerId);
-  const cards = container.getElementsByClassName("chart-card");
   
-  if(cards.length === 0) { alert("No charts to export!"); return; }
-
-  // Loop through visible charts and create images for preview
-  Array.from(cards).forEach(card => {
-    const title = card.querySelector(".chart-title").textContent;
-    const canvas = card.querySelector("canvas");
-    
-    // Convert canvas to image data URL
-    const imgData = canvas.toDataURL("image/png");
-    
-    // Create Preview Element
-    const previewItem = document.createElement("div");
-    previewItem.className = "preview-item";
-    
-    const pTitle = document.createElement("div");
-    pTitle.className = "preview-title";
-    pTitle.textContent = title;
-    
-    const img = document.createElement("img");
-    img.src = imgData;
-    
-    previewItem.appendChild(pTitle);
-    previewItem.appendChild(img);
-    previewArea.appendChild(previewItem);
-  });
-  
-  // Show Modal
-  modal.style.display = "flex";
-});
-
-function closeModal() {
-  modal.style.display = "none";
-}
-
-async function generatePDF() {
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF('p', 'mm', 'a4'); // Portrait, A4
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  const margin = 10;
-  let yPosition = margin;
-
-  const items = previewArea.getElementsByClassName("preview-item");
-  
-  // Add Header to PDF
-  pdf.setFontSize(16);
-  pdf.text(`LTE KPI Report - ${currentTab.toUpperCase()}`, pageWidth/2, yPosition, { align: "center" });
-  yPosition += 10;
-  pdf.setFontSize(10);
-  pdf.text(`Generated on: ${new Date().toLocaleString()}`, pageWidth/2, yPosition, { align: "center" });
-  yPosition += 15;
-
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-    const title = item.querySelector(".preview-title").textContent;
-    const img = item.querySelector("img");
-
-    // Check if we need a new page
-    if (yPosition + 80 > pageHeight) {
-      pdf.addPage();
-      yPosition = margin;
-    }
-
-    // Add Title
-    pdf.setFontSize(11);
-    pdf.text(title, margin, yPosition + 5);
-    
-    // Add Image (Scaling to fit width)
-    const imgWidth = pageWidth - (margin * 2);
-    const imgHeight = 70; // Fixed height for consistency
-    pdf.addImage(img.src, 'PNG', margin, yPosition + 7, imgWidth, imgHeight);
-
-    yPosition += imgHeight + 15; // Move down for next chart
+  // 2. Filter Data
+  let filteredData = allData;
+  if(selectedSites.length > 0) {
+    filteredData = allData.filter(d => selectedSites.includes(d["eNodeB Name"]));
   }
 
-  pdf.save(`KPI_Report_${currentTab}_${new Date().toISOString().slice(0,10)}.pdf`);
-  closeModal();
+  // 3. Generate Charts
+  kpis.forEach((kpi, index) => {
+    // Create Layout
+    const card = document.createElement("div");
+    card.className = "chart-card";
+    
+    // Header
+    const header = document.createElement("div");
+    header.className = "chart-header";
+    
+    const title = document.createElement("div");
+    title.className = "chart-title";
+    let siteLabel = selectedSites.length === 1 ? selectedSites[0] : (selectedSites.length ? "Multiple Sites" : "All Sites");
+    title.innerHTML = `${kpi} <br><span style="font-weight:400; font-size:12px; color:#777;">${siteLabel}</span>`;
+    
+    const badge = document.createElement("div");
+    badge.className = "chart-badge";
+    badge.textContent = currentTab.toUpperCase();
+
+    header.appendChild(title);
+    header.appendChild(badge);
+    
+    // Canvas Container
+    const chartWrapper = document.createElement("div");
+    chartWrapper.className = "chart-container";
+    const canvas = document.createElement("canvas");
+    canvas.id = `canvas_${containerId}_${index}`; // ID for export
+    chartWrapper.appendChild(canvas);
+
+    card.appendChild(header);
+    card.appendChild(chartWrapper);
+    container.appendChild(card);
+
+    // Data Processing
+    const dataPoints = timeline.map(date => {
+      const vals = filteredData.filter(d => d["Date"] === date && d[kpi] !== null).map(d => d[kpi]);
+      if (vals.length === 0) return null;
+      const sum = vals.reduce((a,b) => a+b, 0);
+      const isRate = kpi.toLowerCase().match(/(rate|%|ratio|average)/);
+      return isRate ? sum / vals.length : sum;
+    });
+
+    // Chart.js Configuration
+    const ctx = canvas.getContext("2d");
+    
+    // Create Gradient
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+    gradient.addColorStop(0, 'rgba(47, 128, 237, 0.4)'); // Top: Blue
+    gradient.addColorStop(1, 'rgba(47, 128, 237, 0.0)'); // Bottom: Transparent
+
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: timeline,
+        datasets: [{
+          label: kpi,
+          data: dataPoints,
+          borderColor: '#2F80ED',
+          backgroundColor: gradient,
+          borderWidth: 2,
+          pointBackgroundColor: '#ffffff',
+          pointBorderColor: '#2F80ED',
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          fill: true,
+          tension: 0.3, // Curve
+          spanGaps: true
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }, // Hide legend, title is enough
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            titleColor: '#333',
+            bodyColor: '#333',
+            borderColor: '#ddd',
+            borderWidth: 1
+          }
+        },
+        scales: {
+          x: { 
+            grid: { display: false },
+            ticks: { font: { size: 10 } }
+          },
+          y: { 
+            beginAtZero: true,
+            grid: { color: '#f0f0f0' },
+            border: { display: false }
+          }
+        }
+      }
+    });
+  });
+}
+
+// --- POWERPOINT EXPORT ---
+document.getElementById("exportBtn").addEventListener("click", async () => {
+  const containerId = currentTab === "acceptance" ? "acceptanceChartContainer" : "monitoringChartContainer";
+  const container = document.getElementById(containerId);
+  const canvases = container.querySelectorAll("canvas");
+  
+  if (canvases.length === 0) return alert("No charts to export.");
+
+  // Show Modal
+  const modal = document.getElementById("exportModal");
+  const slideCount = document.getElementById("slideCount");
+  const progressBar = document.getElementById("progressBar");
+  modal.style.display = "flex";
+  slideCount.textContent = canvases.length;
+  
+  // Init PPT
+  const pptx = new PptxGenJS();
+  pptx.layout = 'LAYOUT_WIDE'; // 16:9
+  pptx.author = 'KPI Dashboard';
+  pptx.company = 'Network Team';
+  pptx.title = `KPI Report - ${currentTab.toUpperCase()}`;
+
+  // Title Slide
+  let slide = pptx.addSlide();
+  slide.background = { color: "F4F6F8" };
+  slide.addText(`LTE KPI Report: ${currentTab.toUpperCase()}`, { x:1, y:2, w:'80%', fontSize:36, bold:true, color:'2F80ED' });
+  slide.addText(`Generated: ${new Date().toLocaleString()}`, { x:1, y:3, fontSize:14, color:'666666' });
+  if(selectedSites.length > 0) {
+     slide.addText(`Sites: ${selectedSites.join(", ")}`, { x:1, y:3.5, fontSize:12, color:'888888' });
+  }
+
+  // Loop Charts
+  for (let i = 0; i < canvases.length; i++) {
+    const canvas = canvases[i];
+    // Find the title text from the DOM
+    const titleDiv = canvas.closest('.chart-card').querySelector('.chart-title');
+    // Extract text content, replacing <br> with space
+    const titleText = titleDiv.innerText.replace(/\n/g, " - ");
+
+    // Create Slide
+    let slide = pptx.addSlide();
+    slide.background = { color: "FFFFFF" };
+    
+    // Add Header Bar
+    slide.addShape(pptx.ShapeType.rect, { x:0, y:0, w:'100%', h:0.8, fill:'2F80ED' });
+    slide.addText(titleText, { x:0.5, y:0.1, w:'90%', fontSize:20, color:'FFFFFF', bold:true });
+
+    // Add Image
+    const imgData = canvas.toDataURL("image/png");
+    slide.addImage({ data: imgData, x: 0.5, y: 1, w: 12.33, h: 5.5 });
+    
+    // Progress
+    progressBar.style.width = `${((i+1)/canvases.length)*100}%`;
+    await new Promise(r => setTimeout(r, 50)); // Small delay for UI update
+  }
+
+  // Save
+  pptx.writeFile({ fileName: `KPI_Report_${currentTab}_${Date.now()}.pptx` });
+  
+  // Close Modal
+  setTimeout(() => { modal.style.display = "none"; progressBar.style.width = "0%"; }, 1000);
+});
+
+// --- HELPER FUNCTIONS ---
+function populateSiteDropdown(){
+  const list = document.getElementById("siteDropdownList");
+  const btn = document.getElementById("siteDropdownBtn");
+  list.innerHTML = "";
+
+  // Actions
+  const actions = [
+    { txt: "Select All", fn: () => { selectedSites = [...allSites]; redrawSite(); } },
+    { txt: "Clear All", fn: () => { selectedSites = []; redrawSite(); } }
+  ];
+  
+  actions.forEach(a => {
+    const d = document.createElement("div");
+    d.innerHTML = `<b>${a.txt}</b>`;
+    d.onclick = a.fn;
+    list.appendChild(d);
+  });
+
+  // Options
+  allSites.forEach(site => {
+    const d = document.createElement("div");
+    d.innerHTML = `<input type='checkbox' value='${site}' class='site-chk'> ${site}`;
+    d.onclick = (e) => {
+       if(e.target.tagName !== "INPUT") {
+          const chk = d.querySelector("input");
+          chk.checked = !chk.checked;
+       }
+       updateSelected();
+    };
+    list.appendChild(d);
+  });
+
+  function updateSelected() {
+    selectedSites = Array.from(list.querySelectorAll(".site-chk:checked")).map(c => c.value);
+    const span = btn.querySelector("span");
+    span.textContent = selectedSites.length === 0 ? "All Sites" : (selectedSites.length === 1 ? selectedSites[0] : `Selected (${selectedSites.length})`);
+    drawCurrentPageCharts();
+  }
+
+  function redrawSite() {
+    list.querySelectorAll(".site-chk").forEach(c => c.checked = selectedSites.includes(c.value));
+    updateSelected();
+  }
+
+  btn.onclick = () => list.style.display = list.style.display==="block" ? "none" : "block";
+}
+
+// KPI Drawer Logic
+function populateKpiDrawers(){
+  function setupDrawer(kpiList, containerId, selectAllId) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = "";
+    kpiList.forEach(kpi => {
+      const div = document.createElement("div");
+      div.style.padding = "5px 0";
+      div.innerHTML = `<input type='checkbox' value='${kpi}' checked> <span style='font-size:14px'>${kpi}</span>`;
+      container.appendChild(div);
+    });
+  }
+  setupDrawer(acceptanceKpis, "acceptanceKpiOptions", "selectAllAcceptance");
+  setupDrawer(monitoringKpis, "monitoringKpiOptions", "selectAllMonitoring");
+}
+
+document.getElementById("applyAcceptanceBtn").addEventListener("click", () => {
+   const chks = document.querySelectorAll("#acceptanceKpiOptions input:checked");
+   selectedAcceptanceKpis = Array.from(chks).map(c => c.value);
+   document.getElementById("acceptanceDrawer").classList.remove("open");
+   drawCharts(selectedAcceptanceKpis.length ? selectedAcceptanceKpis : acceptanceKpis, "acceptanceChartContainer");
+});
+
+document.getElementById("applyMonitoringBtn").addEventListener("click", () => {
+   const chks = document.querySelectorAll("#monitoringKpiOptions input:checked");
+   selectedMonitoringKpis = Array.from(chks).map(c => c.value);
+   document.getElementById("monitoringDrawer").classList.remove("open");
+   drawCharts(selectedMonitoringKpis.length ? selectedMonitoringKpis : monitoringKpis, "monitoringChartContainer");
+});
+
+// Search
+const siteInput = document.getElementById("siteFilter");
+const dropdown = document.getElementById("dropdown");
+siteInput.addEventListener("input", () => {
+  const val = siteInput.value.trim();
+  if (!val) { dropdown.style.display = "none"; return; }
+  const res = fuse.search(val).slice(0, 5);
+  dropdown.innerHTML = "";
+  res.forEach(r => {
+     const d = document.createElement("div");
+     d.textContent = r.item["eNodeB Name"];
+     d.onclick = () => {
+        selectedSites = [r.item["eNodeB Name"]];
+        document.getElementById("siteDropdownBtn").querySelector("span").textContent = selectedSites[0];
+        dropdown.style.display = "none";
+        drawCurrentPageCharts();
+     };
+     dropdown.appendChild(d);
+  });
+  dropdown.style.display = res.length ? "block" : "none";
+});
+
+// UI Event Listeners
+document.getElementById("drawerToggle").onclick = () => {
+   const d = document.getElementById(currentTab + "Drawer");
+   d.classList.toggle("open");
+};
+document.querySelectorAll(".tab").forEach(t => t.onclick = function() {
+   document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+   this.classList.add("active");
+   currentTab = this.dataset.tab;
+   document.getElementById("acceptancePage").style.display = currentTab === "acceptance" ? "block" : "none";
+   document.getElementById("monitoringPage").style.display = currentTab === "monitoring" ? "block" : "none";
+   drawCurrentPageCharts();
+});
+document.getElementById("refreshBtn").onclick = fetchData;
+
+function drawCurrentPageCharts() {
+   const isAcc = currentTab === "acceptance";
+   const kpis = isAcc ? (selectedAcceptanceKpis.length ? selectedAcceptanceKpis : acceptanceKpis) 
+                      : (selectedMonitoringKpis.length ? selectedMonitoringKpis : monitoringKpis);
+   drawCharts(kpis, isAcc ? "acceptanceChartContainer" : "monitoringChartContainer");
 }
 
 fetchData();
 </script>
-
 </body>
 </html>
