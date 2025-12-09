@@ -159,7 +159,7 @@ button.ppt-btn:hover { background:#a8381e; }
 
 <div class="navbar">
   <a href="gsm.html" class="nav-btn active">GSM</a>
-  <a href="index.html" class="nav-btn">LTE</a>
+  <a href="index.html" class="nav-btn ">LTE</a>
   <a href="nr.html" class="nav-btn">NR</a>
 </div>
 
@@ -271,7 +271,7 @@ button.ppt-btn:hover { background:#a8381e; }
 let allData = [];
 let fuse = null;
 let allSites = [];
-let siteCutoverMap = {}; // Maps GBSC -> On-Air Date
+let siteCutoverMap = {}; // Maps eNodeB Name -> On-Air Date
 let allOnAirDates = [];
 let selectedOnAirDates = [];
 
@@ -317,7 +317,7 @@ function switchTab(tab) {
 async function fetchData(){
   try {
     // 1. Fetch KPI Data
-    const kpiUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=1977848975&single=true&output=csv&t=" + Date.now();
+    const kpiUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=893314169&single=true&output=csv&t=" + Date.now();
     const kpiRes = await fetch(kpiUrl);
     const kpiText = await kpiRes.text();
     
@@ -333,7 +333,7 @@ async function fetchData(){
     });
 
     // Determine all sites present in the KPI data
-    allSites = [...new Set(allData.map(d=>d["GBSC"]))].filter(s=>s).sort();
+    allSites = [...new Set(allData.map(d=>d["eNodeB Name"]))].filter(s=>s).sort();
 
     // 2. Fetch Cutover Data
     const cutoverUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=19616562&single=true&output=csv&t=" + Date.now();
@@ -345,7 +345,7 @@ async function fetchData(){
     
     siteCutoverMap = {};
     cutoverRows.forEach(r => {
-        const siteName = r[cutoverHeaders.indexOf("GBSC")]?.trim();
+        const siteName = r[cutoverHeaders.indexOf("eNodeB Name")]?.trim();
         const onAirDate = r[cutoverHeaders.indexOf("On-Air Date")]?.trim();
         if (siteName && onAirDate) {
             // Only map sites that exist in the KPI data to prevent issues
@@ -458,7 +458,7 @@ function updateDateFilterUI(options = {close: true}) {
     }
 }
 
-// --- FILTER UI LOGIC (GBSC) ---
+// --- FILTER UI LOGIC (eNodeB NAME) ---
 
 function setupSiteDropdown(){
   const list = document.getElementById("siteDropdownList");
@@ -580,7 +580,7 @@ function renderCharts(){
       finalSiteList = sitesFromDate;
   }
   
-  let filteredData = allData.filter(d => finalSiteList.includes(d["GBSC"]));
+  let filteredData = allData.filter(d => finalSiteList.includes(d["eNodeB Name"]));
 
 
   // 2. Process Timeline (unchanged)
@@ -624,7 +624,6 @@ const dataPoints = timeline.map(date => {
   return avg;
 });
 
-// Calculate chart min/max nicely
 let validValues = dataPoints.filter(v => v !== null);
 let minVal = Math.min(...validValues);
 let maxVal = Math.max(...validValues);
@@ -642,6 +641,8 @@ if(minVal >= 95 && maxVal <= 100) {
     minVal = Math.floor(minVal / 5) * 5;
     maxVal = Math.ceil(maxVal / 5) * 5;
 }
+
+
     // Draw Chart with Animation
     new Chart(canvas.getContext("2d"), {
       type: 'line',
@@ -691,16 +692,8 @@ if(minVal >= 95 && maxVal <= 100) {
            y: { 
                beginAtZero: false, 
                grid: {color:'#eee'},
-               min: minVal,
-       max: maxVal,
-       ticks: {
-           stepSize: (minVal >= 95 && maxVal <= 100) ? 1 : undefined, // Force step size = 1
-           callback: function(value) {
-               if(minVal >= 95 && maxVal <= 100) {
-                   // Only show ticks 95–100
-                   if(value >= 95 && value <= 100) return value;
-                   return null;
-               }return value;
+               // If no data points, fix the scale to prevent giant axes
+               min: (finalSiteList.length === 0 || dataPoints.every(p => p === null)) ? 0 : undefined 
            }
         }
       }
@@ -967,7 +960,7 @@ async function downloadPPT(){
   
   // Title Slide
   let slide = pptx.addSlide();
-  slide.addText("GSM KPI Report", { x:0.5, y:2, fontSize:32, bold:true, color:'2F80ED' });
+  slide.addText("LTE KPI Report", { x:0.5, y:2, fontSize:32, bold:true, color:'2F80ED' });
   slide.addText(`Generated: ${new Date().toLocaleDateString()}`, { x:0.5, y:3, fontSize:14 });
 
   const canvases = document.querySelectorAll("canvas");
