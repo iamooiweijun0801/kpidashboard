@@ -447,65 +447,6 @@ function getRandomColor() {
   return colors[Math.floor(Math.random() * colors.length)];
 }
 
-function getNiceYAxisScale(minValue, maxValue, isRateMetric) {
-    if (minValue === undefined || maxValue === undefined) minValue = 0, maxValue = 0;
-    let range = maxValue - minValue;
-
-    // Handle single value or no variation
-    if (range <= 0) {
-        const max = isRateMetric ? Math.max(100, minValue + 0.1) : minValue + (minValue === 0 ? 10 : minValue * 0.1);
-        const step = isRateMetric ? 20 : (max - 0) / 5;
-        return { yMin: 0, yMax: max, yStepSize: step };
-    }
-
-    let yMin = minValue;
-    let yMax = maxValue;
-
-    // Rate metric handling
-    if (isRateMetric) {
-        yMin = Math.max(0, yMin);
-        yMax = yMax >= 80 ? 100 : yMax; // force 100 if >=80, else leave as is
-    }
-
-    range = yMax - yMin;
-
-    // Define nice steps
-    const niceSteps = [
-        0.001,0.002,0.005,0.01,0.02,0.05,0.1,0.2,0.5,1,2,5,
-        10,20,50,100,200,500,1000,2000,5000,10000,20000,50000,
-        100000,200000,500000,1000000,2000000,5000000,10000000
-    ];
-
-    // Choose a step size ensuring at least 5–6 intervals
-    let roughStep = range / 6;
-    let step = niceSteps.find(s => s >= roughStep) || Math.pow(10, Math.floor(Math.log10(roughStep)));
-
-    yMin = Math.floor(yMin / step) * step;
-    yMax = Math.ceil(yMax / step) * step;
-
-    // Ensure at least 6 intervals
-    let intervals = Math.ceil((yMax - yMin) / step);
-    if (intervals < 6) {
-        step = niceSteps.find(s => s >= (yMax - yMin) / 6) || Math.pow(10, Math.floor(Math.log10((yMax - yMin) / 6)));
-        yMin = Math.floor(minValue / step) * step;
-        yMax = Math.ceil(maxValue / step) * step;
-    }
-
-    // Handle small ranges <1 for precision
-    if (range < 1 && !isRateMetric) {
-        const decimals = Math.max(0, Math.ceil(-Math.log10(step)));
-        yMin = parseFloat(yMin.toFixed(decimals));
-        yMax = parseFloat(yMax.toFixed(decimals));
-        step = parseFloat(step.toFixed(decimals));
-    } else {
-        yMin = Math.round(yMin);
-        yMax = Math.round(yMax);
-        step = Math.round(step);
-    }
-
-    return { yMin, yMax, yStepSize: step };
-}
-
 // --- DATA FETCHING & MAPPING ---
 async function fetchData(){
   try {
@@ -786,27 +727,7 @@ function renderCharts(){
        return isAvg ? sum/vals.length : sum;
     });
 
-    // Dynamic Y-Axis Start Calculation (Applying Custom Logic)
-    const dataOnly = dataPoints.filter(v => v !== null);
-    const minValue = dataOnly.length > 0 ? Math.min(...dataOnly) : 0;
-    const maxValue = dataOnly.length > 0 ? Math.max(...dataOnly) : 100;
-    const isRateMetric = kpi.match(/(rate|success|%|ratio)/i) !== null;
-
-    let yMin, yMax, yStepSize;
-    
-    if (dataOnly.length === 0) {
-        // Default scale for no data
-        yMin = 0;
-        yMax = isRateMetric ? 100 : 10;
-        yStepSize = isRateMetric ? 20 : 2;
-    } else {
-        const scale = getNiceYAxisScale(minValue, maxValue, isRateMetric);
-        yMin = scale.yMin;
-        yMax = scale.yMax;
-        yStepSize = scale.yStepSize;
-    }
-    // End of Dynamic Y-Axis Start Calculation (Applying Custom Logic)
-    
+       
     // Determine background color for fill if needed 
     let bColor = 'transparent';
     let lineC = getRandomColor();
@@ -867,20 +788,11 @@ function renderCharts(){
                ticks: { font: {size:8} }, 
                grid: {display:false} 
            },
-           y: { 
-               beginAtZero: yMin === 0, 
-               min: yMin,
-               max: yMax,
-               ticks: {
-                   stepSize: yStepSize // Apply the calculated step size
-               },
-               grid: {color: style.gridColor}
-           }
-        }
-      }
-    });
-  });
+           y: { 
+    beginAtZero: false,
+    grid: { color: style.gridColor }
 }
+
 
 
 // --- KPI DRAWER & UTILITY LOGIC ---
@@ -1122,31 +1034,10 @@ function createPreviewBox(canvas, lineColor, titleColor) {
 
       chartInstance.options.plugins.title.color = titleColor; 
       
-      // 3. Apply CUSTOM Dynamic Y-Axis Scaling for Preview/PPT
-      const kpi = chartInstance.options.plugins.title.text;
-      const dataPoints = chartInstance.data.datasets[0].data;
-      const dataOnly = dataPoints.filter(v => v !== null);
-      const minValue = dataOnly.length > 0 ? Math.min(...dataOnly) : 0;
-      const maxValue = dataOnly.length > 0 ? Math.max(...dataOnly) : 100;
-      const isRateMetric = kpi.match(/(rate|success|%|ratio)/i) !== null;
-      
-      let pptYMin, pptYMax, pptYStep;
-      
-      if (dataOnly.length === 0) {
-          // Use default scale for no data
-          pptYMin = 0;
-          pptYMax = isRateMetric ? 100 : 10;
-          pptYStep = isRateMetric ? 20 : 2;
-      } else {
-          const scale = getNiceYAxisScale(minValue, maxValue, isRateMetric);
-          pptYMin = scale.yMin;
-          pptYMax = scale.yMax;
-          pptYStep = scale.yStepSize;
-      }
-
-      chartInstance.options.scales.y.min = pptYMin;
-      chartInstance.options.scales.y.max = pptYMax;
-      chartInstance.options.scales.y.ticks.stepSize = pptYStep;
+      chartInstance.options.scales.y = { 
+    beginAtZero: false,       // optional: default auto-scaling
+    grid: { color: style.gridColor } 
+};
 
       chartInstance.update('none'); 
       
