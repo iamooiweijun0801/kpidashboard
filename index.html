@@ -255,7 +255,7 @@ button.ppt-btn:hover { background:#a8381e; }
     <h4>Chart Display Style (Select one)</h4>
     <div id="chartStyleOptions" class="style-options">
       </div>
-    <p style="margin-top:20px; font-size:12px; color:#555;">Styles like 'Area Fill' use the segment painting feature you requested.</p>
+    <p style="margin-top:20px; font-size:12px; color:#555;">Choose a style to adjust the line width, point size, smoothness, and background fill of the charts.</p>
   </div>
 </div>
 
@@ -365,7 +365,8 @@ const chartStyles = {
   'High Contrast': { border: 4, pointRadius: 5, tension: 0.0, gridColor: 'rgba(0,0,0,0.1)', bgColor: 'white', titleColor: '#000', fill: false, stepped: false },
   'Monochromatic': { border: 3, pointRadius: 3, tension: 0.2, gridColor: '#f5f5f5', bgColor: 'white', titleColor: '#333', fill: false, stepped: false }
 };
-let selectedStyle = 'Default'; // Initial style
+// UPDATED: Initial style set to Minimalist (line and dots only)
+let selectedStyle = 'Default'; 
 
 const acceptanceKpis = [
   "LTE RRC Setup Success Rate","ERAB Setup Success Rate","LTE Call Setup Success Rate","E-RAB Call Drop Rate",
@@ -388,20 +389,87 @@ let selectedKpis = {
 // --- GLOBAL UTILITY FUNCTIONS ---
 
 /**
- * Rounds a number up to the nearest clean scale (e.g., 3630 -> 4000).
+ * Rounds a number up to the nearest clean scale (e.g., 3630 -> 4000, 1580 -> 1600).
  * @param {number} value - The dynamic Ymax value calculated.
  * @returns {number} The cleanly rounded Ymax.
  */
 function roundUpToCleanScale(value) {
-    if (value <= 20) return Math.ceil(value / 5) * 5;
-    if (value <= 100) return Math.ceil(value / 10) * 10;
-    if (value <= 500) return Math.ceil(value / 50) * 50;
-    if (value <= 1000) return Math.ceil(value / 100) * 100;
-    if (value <= 5000) return Math.ceil(value / 500) * 500;
+    if (value <= 20) return Math.ceil(value / 5) * 5;      // e.g., 18 -> 20
+    if (value <= 100) return Math.ceil(value / 10) * 10;   // e.g., 85 -> 90
+    if (value <= 200) return Math.ceil(value / 20) * 20;   // e.g., 165 -> 180
+    if (value <= 500) return Math.ceil(value / 50) * 50;   // e.g., 360 -> 400
+    if (value <= 1000) return Math.ceil(value / 100) * 100; // e.g., 750 -> 800
+    if (value <= 2000) return Math.ceil(value / 200) * 200; // e.g., 1580 -> 1600 
+    if (value <= 5000) return Math.ceil(value / 500) * 500; // e.g., 3630 -> 4000
     if (value <= 10000) return Math.ceil(value / 1000) * 1000;
     if (value <= 20000) return Math.ceil(value / 2000) * 2000;
     if (value <= 50000) return Math.ceil(value / 5000) * 5000;
     return Math.ceil(value / 10000) * 10000;
+}
+
+/**
+ * Calculates the largest clean step size that guarantees at least 'minTicks' (e.g., 5) across a range.
+ * A "clean" step is 1, 2, 5 multiplied by a power of 10.
+ * @param {number} range - The total range (yMax - yMin).
+ * @param {number} minTicks - The minimum number of ticks desired.
+ * @returns {number} The calculated clean step size.
+ */
+function getIdealTickStep(range, minTicks = 5) {
+    if (range <= 0) return 0.2; 
+
+    // Ideal step size is range / (minTicks - 1)
+    const targetSteps = minTicks - 1; // e.g., 4 steps for 5 ticks
+    let idealStep = range / targetSteps;
+
+    // Find the magnitude (power of 10) of the ideal step
+    let power = Math.pow(10, Math.floor(Math.log10(idealStep)));
+    
+    // Check clean steps in descending order (5x, 2x, 1x magnitude)
+    const cleanSteps = [5 * power, 2 * power, 1 * power];
+    
+    // Find the largest clean step that is less than or equal to the ideal step
+    for (let step of cleanSteps) {
+        // Use a small epsilon (1e-9) to handle floating point issues near the boundary
+        if (step <= idealStep + 1e-9 && step > 0) {
+            return step;
+        }
+    }
+    
+    // Fallback if idealStep is smaller than 1*power (e.g., ideal=0.08, power=0.1)
+    let smallerPower = power / 10;
+    
+    // Check 5x the smaller magnitude (e.g., 0.05)
+    if (5 * smallerPower > 0) {
+        return 5 * smallerPower;
+    }
+    
+    // Safety fallback for extremely tiny ranges
+    return 0.1; 
+}
+
+/**
+ * Converts a hex color string (e.g., #2F80ED) to an RGBA string with a specified opacity (alpha).
+ * @param {string} hex - The hex color code.
+ * @param {number} alpha - The desired opacity (0.0 to 1.0).
+ * @returns {string} The RGBA color string.
+ */
+function hexToRgba(hex, alpha) {
+    let r = 0, g = 0, b = 0;
+    
+    // 3 digits
+    if (hex.length == 4) {
+        r = parseInt(hex[1] + hex[1], 16);
+        g = parseInt(hex[2] + hex[2], 16);
+        b = parseInt(hex[3] + hex[3], 16);
+    } 
+    // 6 digits
+    else if (hex.length == 7) {
+        r = parseInt(hex[1] + hex[2], 16);
+        g = parseInt(hex[3] + hex[4], 16);
+        b = parseInt(hex[5] + hex[6], 16);
+    }
+
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 
@@ -742,16 +810,16 @@ function renderCharts(){
     
     // Set line and background colors based on style (Monochromatic uses a fixed blue)
     let lineC = selectedStyle === 'Monochromatic' ? '#2F80ED' : getRandomColor();
-    let bColor = selectedStyle === 'Monochromatic' ? 'rgba(47, 128, 237, 0.15)' : lineC.replace(')', ', 0.15)').replace('rgb', 'rgba');
+    // Use the new hexToRgba function for correct transparency
+    let bColor = hexToRgba(lineC, style.alpha || 0.0); 
 
 
-    // Dynamic Y-Axis Start Calculation (Unified, Tighter Logic)
+    // Dynamic Y-Axis Start Calculation
     const dataOnly = dataPoints.filter(v => v !== null);
     if (dataOnly.length === 0) {
-        // Fallback for no data
         var yMin = 0;
         var yMax = 100;
-        var yStepSize = null;
+        var yStepSize = 20;
     } else {
         const minValue = Math.min(...dataOnly);
         const maxValue = Math.max(...dataOnly);
@@ -759,64 +827,55 @@ function renderCharts(){
         
         var yMin, yMax, yStepSize;
 
-        // A. Determine appropriate Step Size based on range magnitude
-        if (dataRange < 0.5) yStepSize = 0.1;
-        else if (dataRange < 2) yStepSize = 0.2;
-        else if (dataRange < 5) yStepSize = 0.5;
-        else if (dataRange < 15) yStepSize = 1.0;
-        else if (dataRange < 50) yStepSize = 5.0;
-        else yStepSize = 10.0;
-        
-        // B. Calculate Padding (use at least yStepSize, or 5% of range)
-        let padding = Math.max(yStepSize, dataRange * 0.05);
+        // --- STEP A: CALCULATE IDEAL STEP SIZE BASED ON RAW DATA RANGE (with 10% padding for initial max/min) ---
+        yStepSize = getIdealTickStep(dataRange * 1.1, 5); 
 
-        // C. Calculate Y-Min (Round DOWN to nearest clean multiple of step)
+        // --- STEP B: Calculate Y-Min and Y-Max based on the calculated step size ---
+        let padding = yStepSize; 
+        
         let targetMin = minValue - padding;
         yMin = Math.floor(targetMin / yStepSize) * yStepSize;
         yMin = Math.max(0, yMin); 
 
-        // D. Calculate Y-Max (Round UP to nearest clean multiple of step)
         let targetMax = maxValue + padding;
         yMax = Math.ceil(targetMax / yStepSize) * yStepSize;
         
-        // --- NEW/REVISED Y-AXIS SCALING RULES (STEP E) ---
+        // --- STEP C: Apply Overrides (100% Cap, Clean Rounding) ---
         if (kpi.match(/(rate|success|%|ratio)/i)) {
-
             // Condition 1: High Range Rate (80% to 100%) - STRICT 100 MAX
-            if (maxValue >= 80 && maxValue <= 100) {
-                yMax = 100;
-
+            if (maxValue <= 100 && maxValue >= 80) { 
+                yMax = 100; 
                 // Keep aggressive zoom from the bottom when capped at 100
                 if (dataRange < 5 && maxValue > 95) {
                     let zoomPad = dataRange * 0.15;
-                    let zoomStep = dataRange < 0.5 ? 0.1 : 0.2;
+                    let zoomStep = getIdealTickStep(dataRange * 1.1, 5); // Re-calculate zoomStep
                     yMin = Math.floor((minValue - zoomPad) / zoomStep) * zoomStep;
                     yMin = Math.max(80, yMin); 
                 }
             } 
-            // Condition 2: Ultra Low Rate (0 < n < 1) - TIGHT SCALE MIN 0
-            else if (maxValue > 0 && maxValue < 1) {
-                yMin = 0;
-            } 
-            // Condition 3: Max > 100 (Volume/Count KPIs)
+            // Condition 2: Max > 100 (Volume/Count KPIs)
             else if (maxValue > 100) {
-                // Apply clean rounding for non-percentage KPIs that exceed 100
                 yMax = roundUpToCleanScale(yMax);
-                
-                // Also clean up Y-Min for large numbers to use a clean floor if possible
                 if (yMin > 100) {
-                     yMin = roundUpToCleanScale(yMin * 0.95); // Round floor down a bit
+                     yMin = roundUpToCleanScale(yMin * 0.95); 
                 }
             }
-            
-             yMin = Math.max(0, yMin); // Final check to ensure yMin is not negative
-
+            yMin = Math.max(0, yMin); 
         } else if (maxValue > 100) {
-             // Default non-rate KPI check (e.g., if "DL Data Total Volume" wasn't flagged as a rate)
+             // Default non-rate KPI check
              yMax = roundUpToCleanScale(yMax);
              if (yMin > 100) {
                  yMin = roundUpToCleanScale(yMin * 0.95);
              }
+        }
+        
+        // --- STEP D: FINAL STEP SIZE ADJUSTMENT (Crucial for 5+ Ticks) ---
+        const finalRange = yMax - yMin;
+        if (finalRange > 0) {
+            yStepSize = getIdealTickStep(finalRange, 5);
+        } else {
+             yStepSize = yMax / 4; 
+             if (yStepSize === 0) yStepSize = 0.2;
         }
         
     }
@@ -1071,41 +1130,39 @@ function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
                 const dataPoints = config.data.datasets[0].data;
                 const timelineLabels = config.data.labels;
 
-                // --- START PPT CHART SCALING AND STYLING LOGIC (Using final logic) ---
+                // --- START PPT CHART SCALING AND STYLING LOGIC ---
                 const kpi = kpis[index];
                 const dataOnly = dataPoints.filter(v => v !== null);
-                let yMin_ppt = 0, yMax_ppt = 100, yStepSize_ppt = null;
+                let yMin_ppt = 0, yMax_ppt = 100, yStepSize_ppt = 20;
                 
                 if (dataOnly.length > 0) {
                     const minValue = Math.min(...dataOnly);
                     const maxValue = Math.max(...dataOnly);
                     const dataRange = maxValue - minValue;
                     
-                    if (dataRange < 0.5) yStepSize_ppt = 0.1;
-                    else if (dataRange < 2) yStepSize_ppt = 0.2;
-                    else if (dataRange < 5) yStepSize_ppt = 0.5;
-                    else if (dataRange < 15) yStepSize_ppt = 1.0;
-                    else if (dataRange < 50) yStepSize_ppt = 5.0;
-                    else yStepSize_ppt = 10.0;
+                    // STEP A: CALCULATE IDEAL STEP SIZE BASED ON RAW DATA RANGE (with 10% padding for initial max/min)
+                    yStepSize_ppt = getIdealTickStep(dataRange * 1.1, 5); 
+
+                    // STEP B: Calculate Y-Min and Y-Max based on the calculated step size
+                    let padding = yStepSize_ppt; 
                     
-                    let padding = Math.max(yStepSize_ppt, dataRange * 0.05);
                     let targetMin = minValue - padding;
                     yMin_ppt = Math.floor(targetMin / yStepSize_ppt) * yStepSize_ppt;
-                    
+                    yMin_ppt = Math.max(0, yMin_ppt); 
+
                     let targetMax = maxValue + padding;
                     yMax_ppt = Math.ceil(targetMax / yStepSize_ppt) * yStepSize_ppt;
-
+                    
+                    // STEP C: Apply Overrides (100% Cap, Clean Rounding)
                     if (kpi.match(/(rate|success|%|ratio)/i)) {
-                        if (maxValue >= 80 && maxValue <= 100) {
+                        if (maxValue <= 100 && maxValue >= 80) {
                             yMax_ppt = 100;
                             if (dataRange < 5 && maxValue > 95) {
                                 let zoomPad = dataRange * 0.15;
-                                let zoomStep = dataRange < 0.5 ? 0.1 : 0.2;
+                                let zoomStep = getIdealTickStep(dataRange * 1.1, 5);
                                 yMin_ppt = Math.floor((minValue - zoomPad) / zoomStep) * zoomStep;
                                 yMin_ppt = Math.max(80, yMin_ppt);
                             }
-                        } else if (maxValue > 0 && maxValue < 1) {
-                            yMin_ppt = 0;
                         } else if (maxValue > 100) {
                              yMax_ppt = roundUpToCleanScale(yMax_ppt);
                              if (yMin_ppt > 100) {
@@ -1115,10 +1172,20 @@ function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
                     } else if (maxValue > 100) {
                         yMax_ppt = roundUpToCleanScale(yMax_ppt);
                         if (yMin_ppt > 100) {
-                             yMin_ppt = roundUpToCleanScale(yMin_ppt * 0.95);
+                            yMin_ppt = roundUpToCleanScale(yMin_ppt * 0.95);
                         }
                     }
                     yMin_ppt = Math.max(0, yMin_ppt);
+
+                    // STEP D: FINAL STEP SIZE ADJUSTMENT (Crucial for 5+ Ticks)
+                    const finalRange = yMax_ppt - yMin_ppt;
+                    if (finalRange > 0) {
+                        yStepSize_ppt = getIdealTickStep(finalRange, 5);
+                    } else {
+                         yStepSize_ppt = yMax_ppt / 4; 
+                         if (yStepSize_ppt === 0) yStepSize_ppt = 0.2;
+                    }
+
                 }
                 // --- END PPT CHART SCALING AND STYLING LOGIC ---
 
@@ -1130,8 +1197,8 @@ function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
                             label: kpis[index],
                             data: dataPoints,
                             borderColor: chartExportColor,
-                            backgroundColor: chartExportColor + '26', // Add opacity for fill
-                            fill: false, // Force no fill for cleaner PPT export unless specified
+                            backgroundColor: hexToRgba(chartExportColor, 0.20), // Use new RGBA function for transparency
+                            fill: 'origin', // Force fill on preview
                             borderWidth: 3, 
                             pointRadius: 4, 
                             tension: 0.1,
@@ -1170,9 +1237,23 @@ function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
                     }
                 };
 
-                const pptChart = new Chart(exportCanvas.getContext("2d"), pptChartConfig);
-                const dataURL = pptChart.toBase64Image();
-                pptChart.destroy(); // Clean up the temporary chart
+                // 1. Create temporary chart for high-quality export image
+const pptChart = new Chart(exportCanvas.getContext("2d"), pptChartConfig);
+
+// 2. Wait for the chart to fully render in the browser's paint cycle.
+// The requestAnimationFrame approach is often more reliable than a fixed timeout.
+await new Promise(resolve => {
+    // Wait for the next animation frame after the chart update completes
+    requestAnimationFrame(() => {
+        setTimeout(resolve, 50); // Add a small final delay just in case
+    });
+});
+
+// 3. Capture the image data
+const dataURL = exportCanvas.toDataURL('image/jpeg', 0.95);
+
+// 4. Clean up immediately
+pptChart.destroy();
 
                 htmlContent += `<div class="preview-img-box">`;
                 htmlContent += `<img src="${dataURL}" alt="${kpis[index]}" />`;
@@ -1247,41 +1328,39 @@ async function downloadPPT() {
             const dataPoints = config.data.datasets[0].data;
             const timelineLabels = config.data.labels;
             
-            // --- RECALCULATE SCALING FOR HIGH-RES PPT EXPORT (Using final logic) ---
+            // --- RECALCULATE SCALING FOR HIGH-RES PPT EXPORT ---
             const kpi = chartData.kpi;
             const dataOnly = dataPoints.filter(v => v !== null);
-            let yMin_ppt = 0, yMax_ppt = 100, yStepSize_ppt = null;
+            let yMin_ppt = 0, yMax_ppt = 100, yStepSize_ppt = 20;
             
             if (dataOnly.length > 0) {
                 const minValue = Math.min(...dataOnly);
                 const maxValue = Math.max(...dataOnly);
                 const dataRange = maxValue - minValue;
                 
-                if (dataRange < 0.5) yStepSize_ppt = 0.1;
-                else if (dataRange < 2) yStepSize_ppt = 0.2;
-                else if (dataRange < 5) yStepSize_ppt = 0.5;
-                else if (dataRange < 15) yStepSize_ppt = 1.0;
-                else if (dataRange < 50) yStepSize_ppt = 5.0;
-                else yStepSize_ppt = 10.0;
+                // STEP A: CALCULATE IDEAL STEP SIZE BASED ON RAW DATA RANGE (with 10% padding for initial max/min)
+                yStepSize_ppt = getIdealTickStep(dataRange * 1.1, 5); 
+
+                // STEP B: Calculate Y-Min and Y-Max based on the calculated step size
+                let padding = yStepSize_ppt; 
                 
-                let padding = Math.max(yStepSize_ppt, dataRange * 0.05);
                 let targetMin = minValue - padding;
                 yMin_ppt = Math.floor(targetMin / yStepSize_ppt) * yStepSize_ppt;
-                
+                yMin_ppt = Math.max(0, yMin_ppt); 
+
                 let targetMax = maxValue + padding;
                 yMax_ppt = Math.ceil(targetMax / yStepSize_ppt) * yStepSize_ppt;
 
+                // STEP C: Apply Overrides (100% Cap, Clean Rounding)
                 if (kpi.match(/(rate|success|%|ratio)/i)) {
-                    if (maxValue >= 80 && maxValue <= 100) {
+                    if (maxValue <= 100 && maxValue >= 80) {
                         yMax_ppt = 100;
                         if (dataRange < 5 && maxValue > 95) {
                             let zoomPad = dataRange * 0.15;
-                            let zoomStep = dataRange < 0.5 ? 0.1 : 0.2;
+                            let zoomStep = getIdealTickStep(dataRange * 1.1, 5);
                             yMin_ppt = Math.floor((minValue - zoomPad) / zoomStep) * zoomStep;
                             yMin_ppt = Math.max(80, yMin_ppt);
                         }
-                    } else if (maxValue > 0 && maxValue < 1) {
-                        yMin_ppt = 0;
                     } else if (maxValue > 100) {
                          yMax_ppt = roundUpToCleanScale(yMax_ppt);
                          if (yMin_ppt > 100) {
@@ -1295,6 +1374,15 @@ async function downloadPPT() {
                     }
                 }
                 yMin_ppt = Math.max(0, yMin_ppt);
+
+                // STEP D: FINAL STEP SIZE ADJUSTMENT (Crucial for 5+ Ticks)
+                const finalRange = yMax_ppt - yMin_ppt;
+                if (finalRange > 0) {
+                    yStepSize_ppt = getIdealTickStep(finalRange, 5);
+                } else {
+                     yStepSize_ppt = yMax_ppt / 4; 
+                     if (yStepSize_ppt === 0) yStepSize_ppt = 0.2;
+                }
             }
             // --- END RECALCULATION ---
 
@@ -1306,8 +1394,8 @@ async function downloadPPT() {
                         label: chartData.kpi,
                         data: dataPoints,
                         borderColor: chartExportColor,
-                        backgroundColor: chartExportColor + '26',
-                        fill: false,
+                        backgroundColor: hexToRgba(chartExportColor, 0.20), // Use new RGBA function for transparency
+                        fill: 'origin', // Keep fill for final PPT
                         borderWidth: 3, 
                         pointRadius: 4, 
                         tension: 0.1,
@@ -1347,8 +1435,10 @@ async function downloadPPT() {
             };
 
             const pptChart = new Chart(exportCanvas.getContext("2d"), pptChartConfig);
-            const dataURL = pptChart.toBase64Image('image/jpeg', 0.95);
-            pptChart.destroy(); // Clean up
+            // ADDED ROBUSTNESS FIX: Wait for rendering before getting image
+            await new Promise(resolve => setTimeout(resolve, 50)); 
+            const dataURL = exportCanvas.toDataURL('image/jpeg', 0.95);
+            pptChart.destroy(); // Clean up immediately
 
             // 2. Add chart image to slide
             slide.addImage({ data: dataURL, x: pos.x, y: pos.y, w: pos.w, h: pos.h });
