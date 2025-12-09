@@ -694,8 +694,16 @@ if(minVal >= 95 && maxVal <= 100) {
            y: { 
                beginAtZero: false, 
                grid: {color:'#eee'},
-               // If no data points, fix the scale to prevent giant axes
-               min: (finalSiteList.length === 0 || dataPoints.every(p => p === null)) ? 0 : undefined 
+               min: minVal,
+       max: maxVal,
+       ticks: {
+           stepSize: (minVal >= 95 && maxVal <= 100) ? 1 : undefined, // Force step size = 1
+           callback: function(value) {
+               if(minVal >= 95 && maxVal <= 100) {
+                   // Only show ticks 95–100
+                   if(value >= 95 && value <= 100) return value;
+                   return null;
+               }return value;
            }
         }
       }
