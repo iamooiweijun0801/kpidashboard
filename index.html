@@ -742,59 +742,56 @@ function renderCharts(){
 
     // Draw Chart with Animation
     new Chart(canvas.getContext("2d"), {
-      type: 'line',
-      data: {
-        labels: timelineLabels,
-        datasets: [{
-          label: (finalSiteList.length > 0 && dataPoints.some(p => p !== null)) ? "Aggregate" : "No Data",
-          data: dataPoints,
-          borderColor: lineC,
-          backgroundColor: bColor, 
-          fill: style.fill,
-          borderWidth: style.border,
-          pointRadius: style.pointRadius,
-          tension: style.tension,
-          stepped: style.stepped,
-          spanGaps: true 
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: {
-            x: {
-                type: 'number',
-                easing: 'linear',
-                duration: 500,
-                from: NaN,
-                delay: (ctx) => ctx.index * 30 
-            },
-            y: { duration: 0 }
-        },
-        plugins: { 
-            legend: { display: false },
-            title: { 
-                display: true,
-                text: kpi,
-                font: {
-                    size: 14,
-                    weight: 'bold'
-                },
-                color: style.titleColor
-            }
-        },
-        scales: {
-           x: { 
-               ticks: { font: {size:8} }, 
-               grid: {display:false} 
-           },
-           y: { 
-    beginAtZero: false,
-    grid: { color: style.gridColor }
-}
-
-
-
+    type: 'line',
+    data: {
+        labels: timelineLabels,
+        datasets: [{
+            label: (finalSiteList.length > 0 && dataPoints.some(p => p !== null)) ? "Aggregate" : "No Data",
+            data: dataPoints,
+            borderColor: lineC,
+            backgroundColor: bColor, 
+            fill: style.fill,
+            borderWidth: style.border,
+            pointRadius: style.pointRadius,
+            tension: style.tension,
+            stepped: style.stepped,
+            spanGaps: true 
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: {
+            x: {
+                type: 'number',
+                easing: 'linear',
+                duration: 500,
+                from: NaN,
+                delay: (ctx) => ctx.index * 30 
+            },
+            y: { duration: 0 }
+        },
+        plugins: { 
+            legend: { display: false },
+            title: { 
+                display: true,
+                text: kpi,
+                font: { size: 14, weight: 'bold' },
+                color: style.titleColor
+            }
+        },
+        scales: {
+            x: { 
+                ticks: { font: {size:8} }, 
+                grid: {display:false} 
+            },
+            y: { 
+                beginAtZero: false,
+                grid: { color: style.gridColor }
+            }
+        } // <-- Make sure this closes scales
+    } // <-- Make sure this closes options
+}); // <-- Make sure to close Chart constructor
 // --- KPI DRAWER & UTILITY LOGIC ---
 
 function populateKpiOptions(){
