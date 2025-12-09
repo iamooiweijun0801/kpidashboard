@@ -354,19 +354,19 @@ let chartExportTitleColor = '#333333';
 
 // NEW: Expanded Chart Styles Configuration (10 styles total)
 const chartStyles = {
-  'Default (Filled)': { border: 2, pointRadius: 3, tension: 0.1, gridColor: '#eee', bgColor: 'white', titleColor: '#333', fill: 'origin', alpha: 0.15, stepped: false },
+  'Default': { border: 2, pointRadius: 3, tension: 0.1, gridColor: '#eee', bgColor: 'white', titleColor: '#333', fill: false, stepped: false },
   'Minimalist': { border: 1, pointRadius: 2, tension: 0.3, gridColor: '#f5f5f5', bgColor: 'white', titleColor: '#555', fill: false, stepped: false },
   'Bright Dots': { border: 3, pointRadius: 4, tension: 0.2, gridColor: '#ddd', bgColor: 'white', titleColor: '#333', fill: false, stepped: false },
   'Smooth & Thin': { border: 1, pointRadius: 0, tension: 0.4, gridColor: '#f0f0f0', bgColor: 'white', titleColor: '#333', fill: false, stepped: false },
   'Bold Lines': { border: 4, pointRadius: 0, tension: 0.1, gridColor: '#eee', bgColor: 'white', titleColor: '#333', fill: false, stepped: false },
-  'Area Fill (Light)': { border: 2, pointRadius: 3, tension: 0.3, gridColor: '#eee', bgColor: 'white', titleColor: '#333', fill: 'origin', alpha: 0.25, stepped: false },
-  'Shadowed Line': { border: 3, pointRadius: 4, tension: 0.2, gridColor: '#f0f0f0', bgColor: 'white', titleColor: '#333', fill: 'origin', alpha: 0.35, stepped: false },
+  'Area Fill (Light)': { border: 2, pointRadius: 3, tension: 0.3, gridColor: '#eee', bgColor: 'white', titleColor: '#333', fill: 'origin', alpha: 0.15, stepped: false },
+  'Shadowed Line': { border: 3, pointRadius: 4, tension: 0.2, gridColor: '#f0f0f0', bgColor: 'white', titleColor: '#333', fill: 'origin', alpha: 0.25, stepped: false },
   'Stepped Line': { border: 2, pointRadius: 3, tension: 0.0, gridColor: '#eee', bgColor: 'white', titleColor: '#333', fill: false, stepped: true },
   'High Contrast': { border: 4, pointRadius: 5, tension: 0.0, gridColor: 'rgba(0,0,0,0.1)', bgColor: 'white', titleColor: '#000', fill: false, stepped: false },
   'Monochromatic': { border: 3, pointRadius: 3, tension: 0.2, gridColor: '#f5f5f5', bgColor: 'white', titleColor: '#333', fill: false, stepped: false }
 };
 // UPDATED: Initial style set to Minimalist (line and dots only)
-let selectedStyle = 'Minimalist'; 
+let selectedStyle = 'Default'; 
 
 const acceptanceKpis = [
   "LTE RRC Setup Success Rate","ERAB Setup Success Rate","LTE Call Setup Success Rate","E-RAB Call Drop Rate",
@@ -1237,9 +1237,23 @@ function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
                     }
                 };
 
-                const pptChart = new Chart(exportCanvas.getContext("2d"), pptChartConfig);
-                const dataURL = exportCanvas.toBase64Image();
-                pptChart.destroy(); // Clean up the temporary chart
+                // 1. Create temporary chart for high-quality export image
+const pptChart = new Chart(exportCanvas.getContext("2d"), pptChartConfig);
+
+// 2. Wait for the chart to fully render in the browser's paint cycle.
+// The requestAnimationFrame approach is often more reliable than a fixed timeout.
+await new Promise(resolve => {
+    // Wait for the next animation frame after the chart update completes
+    requestAnimationFrame(() => {
+        setTimeout(resolve, 50); // Add a small final delay just in case
+    });
+});
+
+// 3. Capture the image data
+const dataURL = exportCanvas.toDataURL('image/jpeg', 0.95);
+
+// 4. Clean up immediately
+pptChart.destroy();
 
                 htmlContent += `<div class="preview-img-box">`;
                 htmlContent += `<img src="${dataURL}" alt="${kpis[index]}" />`;
