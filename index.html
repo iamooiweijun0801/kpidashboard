@@ -47,14 +47,25 @@ button.ppt-btn:hover { background:#a8381e; }
 
 /* --- CARDS & CHARTS --- */
 .chart-card { background:white; border-radius:8px; padding:15px; box-shadow:0 2px 8px rgba(0,0,0,0.08); display:flex; flex-direction:column; }
-/* .chart-title is now handled by Chart.js, but kept for historical context if needed */
 .chart-title { display:none; } 
 .chart-container { position: relative; height: 280px; width: 100%; }
 
 /* --- DROPDOWNS --- */
-#dropdown, #siteDropdownList { position:absolute; background:white; border:1px solid #ccc; max-height:200px; overflow-y:auto; display:none; z-index:100; width:100%; top:105%; border-radius:6px; box-shadow:0 4px 10px rgba(0,0,0,0.1); }
-#dropdown div, #siteDropdownList div { padding:6px 10px; cursor:pointer; font-size:13px; border-bottom:1px solid #eee; }
-#dropdown div:hover, #siteDropdownList div:hover { background:#f0f7ff; color:#2F80ED; }
+#dropdown, #siteDropdownList, #onAirDateDropdownList { 
+  position:absolute; 
+  background:white; 
+  border:1px solid #ccc; 
+  max-height:200px; 
+  overflow-y:auto; 
+  display:none; 
+  z-index:100; 
+  width:100%; 
+  top:105%; 
+  border-radius:6px; 
+  box-shadow:0 4px 10px rgba(0,0,0,0.1); 
+}
+#dropdown div, #siteDropdownList div, #onAirDateDropdownList div { padding:6px 10px; cursor:pointer; font-size:13px; border-bottom:1px solid #eee; }
+#dropdown div:hover, #siteDropdownList div:hover, #onAirDateDropdownList div:hover { background:#f0f7ff; color:#2F80ED; }
 
 /* --- KPI Drawer Fixes --- */
 .kpiDrawerToggle { position:fixed; top:100px; right:0; width:36px; height:36px; background:#2F80ED; color:white; border-radius:6px 0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:20px; z-index:900; }
@@ -106,7 +117,6 @@ button.ppt-btn:hover { background:#a8381e; }
 .preview-grid { display:grid; height:100%; align-items:center; padding-top:30px; }
 .preview-img-box { text-align:center; padding:5px; height:100%; display:flex; flex-direction:column; justify-content:center; }
 .preview-img-box img { max-width:100%; max-height:calc(100% - 20px); object-fit:contain; border:1px solid #eee; }
-/* The label below the chart is now redundant since the title is in the chart */
 .preview-label { display: none; } 
 
 /* Settings Side (Fixed, not scrollable) */
@@ -153,9 +163,11 @@ button.ppt-btn:hover { background:#a8381e; }
 </div>
 
 <div class="controls">
-  <div class="control-group">
-    <input type="text" id="siteFilter" placeholder="Search Site..." style="width:180px;">
-    <div id="dropdown"></div>
+  <div class="control-group" style="width:200px;">
+    <button id="onAirDateDropdownBtn" class="action-btn" style="background:white; color:#333; border:1px solid #ccc; width:100%; text-align:left; display:flex; justify-content:space-between;">
+      <span id="onAirDateBtnLabel">All On-Air Dates</span> <span>▼</span>
+    </button>
+    <div id="onAirDateDropdownList"></div>
   </div>
 
   <div class="control-group" style="width:200px;">
@@ -248,6 +260,10 @@ button.ppt-btn:hover { background:#a8381e; }
 let allData = [];
 let fuse = null;
 let allSites = [];
+let siteCutoverMap = {}; // Maps eNodeB Name -> On-Air Date
+let allOnAirDates = [];
+let selectedOnAirDates = [];
+
 let selectedSites = [];
 let currentTab = "both"; // DEFAULT IS NOW 'BOTH'
 let graphsPerSlide = 2; 
@@ -273,44 +289,191 @@ let selectedKpis = {
   monitoring: [...monitoringKpis]
 };
 
-// --- FETCH DATA ---
+// --- DATA FETCHING & MAPPING ---
 async function fetchData(){
   try {
-    // NOTE: Replace this with your actual data fetching logic if it changes
-    const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=0&single=true&output=csv&t=" + Date.now();
-    const res = await fetch(url);
-    const text = await res.text();
+    // 1. Fetch KPI Data
+    const kpiUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=0&single=true&output=csv&t=" + Date.now();
+    const kpiRes = await fetch(kpiUrl);
+    const kpiText = await kpiRes.text();
     
-    const rows = text.trim().split('\n').map(r=>r.split(','));
-    const headers = rows.shift().map(h=>h.trim());
-    allData = rows.map(r=>{ 
+    const kpiRows = kpiText.trim().split('\n').map(r=>r.split(','));
+    const kpiHeaders = kpiRows.shift().map(h=>h.trim());
+    allData = kpiRows.map(r=>{ 
       const obj={}; 
-      headers.forEach((h,i)=>{ 
+      kpiHeaders.forEach((h,i)=>{ 
         const val=r[i]?r[i].trim():""; 
         obj[h] = val==="" ? null : (isNaN(val) ? val : parseFloat(val)); 
       }); 
       return obj; 
     });
 
-    fuse = new Fuse(allData,{ keys:['eNodeB Name'], threshold:0.4 });
+    // Determine all sites present in the KPI data
     allSites = [...new Set(allData.map(d=>d["eNodeB Name"]))].filter(s=>s).sort();
+
+    // 2. Fetch Cutover Data
+    const cutoverUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=19616562&single=true&output=csv&t=" + Date.now();
+    const cutoverRes = await fetch(cutoverUrl);
+    const cutoverText = await cutoverRes.text();
     
+    const cutoverRows = cutoverText.trim().split('\n').map(r=>r.split(','));
+    const cutoverHeaders = cutoverRows.shift().map(h=>h.trim());
+    
+    siteCutoverMap = {};
+    cutoverRows.forEach(r => {
+        const siteName = r[cutoverHeaders.indexOf("eNodeB Name")]?.trim();
+        const onAirDate = r[cutoverHeaders.indexOf("On-Air Date")]?.trim();
+        if (siteName && onAirDate) {
+            siteCutoverMap[siteName] = onAirDate;
+        }
+    });
+
+    // 3. Initialize Date Filter Options and State
+    allOnAirDates = [...new Set(Object.values(siteCutoverMap))].filter(d => d).sort();
+    selectedOnAirDates = [...allOnAirDates]; // Default: Select All Dates
+    selectedSites = []; // Reset site selection
+
+    // 4. Update UI
+    setupOnAirDateDropdown();
     setupSiteDropdown();
     renderCharts();
+
   } catch(e) { console.error(e); alert("Failed to load data."); }
 }
 
-// --- TAB SWITCHING ---
-function switchTab(tab){
-  currentTab = tab;
-  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-  document.querySelectorAll(".tab").forEach(t => {
-     if(t.textContent.toLowerCase().includes(tab === 'both' ? 'all' : tab)) t.classList.add("active");
+// --- FILTER UI LOGIC (ON-AIR DATE) ---
+
+function setupOnAirDateDropdown(){
+  const list = document.getElementById("onAirDateDropdownList");
+  const btn = document.getElementById("onAirDateDropdownBtn");
+  list.innerHTML = "";
+  
+  const setAll = () => { selectedOnAirDates = [...allOnAirDates]; updateDateFilterUI(); };
+  const clearAll = () => { selectedOnAirDates = []; updateDateFilterUI(); };
+  
+  // Actions
+  list.innerHTML += `<div onclick="window.dateSetAll()"><b>Select All</b></div>`;
+  list.innerHTML += `<div onclick="window.dateClearAll()"><b>Clear All</b></div>`;
+
+  // Options
+  allOnAirDates.forEach(date => {
+    const d = document.createElement("div");
+    const checked = selectedOnAirDates.includes(date) ? "checked" : "";
+    d.innerHTML = `<input type='checkbox' value='${date}' class='date-chk' ${checked}> ${date}`;
+    d.onclick = (e) => {
+       if(e.target.tagName !== "INPUT") {
+          const chk = d.querySelector("input");
+          chk.checked = !chk.checked;
+       }
+       updateSelectedDates();
+    };
+    list.appendChild(d);
   });
-  renderCharts();
+  
+  btn.onclick = () => list.style.display = list.style.display==="block" ? "none" : "block";
+  
+  // Expose helpers globally for inline HTML
+  window.dateSetAll = setAll;
+  window.dateClearAll = clearAll;
 }
 
-// --- RENDER CHARTS ---
+function updateSelectedDates() {
+    const list = document.getElementById("onAirDateDropdownList");
+    selectedOnAirDates = Array.from(list.querySelectorAll(".date-chk:checked")).map(c => c.value);
+    
+    // Ensure UI elements reflect current state
+    list.querySelectorAll(".date-chk").forEach(c => c.checked = selectedOnAirDates.includes(c.value));
+    
+    updateDateFilterUI();
+}
+
+function updateDateFilterUI() {
+    const btn = document.getElementById("onAirDateDropdownBtn");
+    const span = document.getElementById("onAirDateBtnLabel");
+    span.textContent = selectedOnAirDates.length === 0 ? "No Dates Selected" : (selectedOnAirDates.length === allOnAirDates.length ? "All On-Air Dates" : `Selected (${selectedOnAirDates.length})`);
+    
+    // Crucial: Update the dependent Site filter and redraw charts
+    setupSiteDropdown();
+}
+
+// --- FILTER UI LOGIC (eNodeB NAME) ---
+
+function setupSiteDropdown(){
+  const list = document.getElementById("siteDropdownList");
+  const btn = document.getElementById("siteDropdownBtn");
+  list.innerHTML = "";
+
+  // 1. Determine which sites are active based on the date filter
+  let activeSites = allSites.filter(site => {
+      const date = siteCutoverMap[site];
+      return selectedOnAirDates.includes(date);
+  });
+  
+  // 2. Filter selectedSites to only include those that are currently active
+  selectedSites = selectedSites.filter(site => activeSites.includes(site));
+  
+  // Actions
+  const setAll = () => { selectedSites = [...activeSites]; updateSiteFilterUI(); renderCharts(); };
+  const clearAll = () => { selectedSites = []; updateSiteFilterUI(); renderCharts(); };
+  
+  // Inject setAll/clearAll actions
+  list.innerHTML += `<div onclick="window.siteSetAll()"><b>Select All (${activeSites.length})</b></div>`;
+  list.innerHTML += `<div onclick="window.siteClearAll()"><b>Clear All</b></div>`;
+
+  // Options
+  activeSites.forEach(site => {
+    const d = document.createElement("div");
+    const checked = selectedSites.includes(site) ? "checked" : "";
+    d.innerHTML = `<input type='checkbox' value='${site}' class='site-chk' ${checked}> ${site}`;
+    d.onclick = (e) => {
+       if(e.target.tagName !== "INPUT") {
+          const chk = d.querySelector("input");
+          chk.checked = !chk.checked;
+       }
+       updateSelectedSites();
+    };
+    list.appendChild(d);
+  });
+  
+  btn.onclick = () => list.style.display = list.style.display==="block" ? "none" : "block";
+
+  // Expose helpers globally for inline HTML
+  window.siteSetAll = setAll;
+  window.siteClearAll = clearAll;
+  
+  // Initial UI update for site dropdown
+  updateSiteFilterUI();
+  // Call renderCharts only after both filters are set up initially
+}
+
+function updateSelectedSites() {
+    const list = document.getElementById("siteDropdownList");
+    // Ensure we only look at the sites currently visible/active in the list
+    selectedSites = Array.from(list.querySelectorAll(".site-chk:checked")).map(c => c.value);
+    updateSiteFilterUI();
+    renderCharts();
+}
+
+function updateSiteFilterUI() {
+    const btn = document.getElementById("siteDropdownBtn");
+    const span = document.getElementById("siteBtnLabel");
+    
+    let activeSites = allSites.filter(site => {
+        const date = siteCutoverMap[site];
+        return selectedOnAirDates.includes(date);
+    });
+
+    if(selectedSites.length === 0) span.textContent = "All Active Sites";
+    else if(selectedSites.length === activeSites.length) span.textContent = `All Active Sites (${selectedSites.length})`;
+    else if(selectedSites.length === 1) span.textContent = selectedSites[0];
+    else span.textContent = `Selected (${selectedSites.length})`;
+
+    // Re-check all site checkboxes to reflect the selectedSites state 
+    document.getElementById("siteDropdownList").querySelectorAll(".site-chk").forEach(c => c.checked = selectedSites.includes(c.value));
+}
+
+// --- CHART RENDERING ---
+
 function renderCharts(){
   const container = document.getElementById("mainChartContainer");
   container.innerHTML = "";
@@ -320,8 +483,26 @@ function renderCharts(){
   else if(currentTab === "monitoring") kpisToShow = selectedKpis.monitoring;
   else if(currentTab === "both") kpisToShow = [...selectedKpis.acceptance, ...selectedKpis.monitoring];
 
-  // 1. Process Timeline
-  const timeline = [...new Set(allData.map(d=>d["Date"]))].sort((a,b)=>{
+  // 1. Determine final list of sites based on date filter AND site filter
+  let sitesFromDate = allSites.filter(site => {
+      const date = siteCutoverMap[site];
+      return selectedOnAirDates.includes(date);
+  });
+
+  let finalSiteList;
+  if (selectedSites.length > 0) {
+      // Use specifically selected sites
+      finalSiteList = selectedSites;
+  } else {
+      // Use all sites allowed by the date filter (default behavior)
+      finalSiteList = sitesFromDate;
+  }
+  
+  let filteredData = allData.filter(d => finalSiteList.includes(d["eNodeB Name"]));
+
+
+  // 2. Process Timeline (unchanged)
+  const timeline = [...new Set(filteredData.map(d=>d["Date"]))].sort((a,b)=>{
     const [da,ma,ya]=a.split('/').map(Number);
     const [db,mb,yb]=b.split('/').map(Number);
     return new Date(ya,ma-1,da)-new Date(yb,mb-1,db);
@@ -333,11 +514,7 @@ function renderCharts(){
       return `${day} ${monthNames[month - 1]}`; // e.g., "5 Jan"
   });
 
-  const filteredData = selectedSites.length > 0 
-    ? allData.filter(d => selectedSites.includes(d["eNodeB Name"])) 
-    : allData;
-
-  // 2. Generate Charts
+  // 3. Generate Charts
   kpisToShow.forEach((kpi, idx) => {
     const card = document.createElement("div");
     card.className = "chart-card";
@@ -356,7 +533,7 @@ function renderCharts(){
     const dataPoints = timeline.map(date => {
        const vals = filteredData.filter(d => d["Date"] === date && d[kpi] !== null).map(d => d[kpi]);
        if(vals.length === 0) return null;
-       const isAvg = kpi.match(/(rate|%|ratio|average|max|avg)/i);
+       const isAvg = kpi.match(/(rate|%|ratio|average)/i);
        const sum = vals.reduce((a,b)=>a+b,0);
        return isAvg ? sum/vals.length : sum;
     });
@@ -367,7 +544,7 @@ function renderCharts(){
       data: {
         labels: timelineLabels,
         datasets: [{
-          label: selectedSites.length===1 ? selectedSites[0] : "Aggregate",
+          label: finalSiteList.length > 0 ? "Aggregate" : "No Data",
           data: dataPoints,
           borderColor: getRandomColor(),
           backgroundColor: 'transparent',
@@ -419,7 +596,8 @@ function getRandomColor() {
   return colors[Math.floor(Math.random() * colors.length)];
 }
 
-// --- KPI DRAWER & SETTINGS ---
+// --- KPI DRAWER & SITE/DATE DROPDOWN LOGIC (UNCHANGED/REUSED) ---
+
 function toggleDrawer(){
   const d = document.getElementById("kpiDrawer");
   d.classList.toggle("open");
@@ -430,7 +608,6 @@ function populateKpiOptions(){
   const list = document.getElementById("kpiOptionsList");
   list.innerHTML = "";
   
-  // Title remains fixed
   document.getElementById('drawerHeaderTitle').textContent = 'KPI Settings';
 
   const acceptanceSection = currentTab === 'acceptance' || currentTab === 'both';
@@ -457,7 +634,6 @@ function populateKpiOptions(){
 function applyKpis(){
   const chks = document.querySelectorAll(".kpi-chk");
   
-  // Keep existing selections for tabs not currently displayed
   const tempAcceptance = currentTab === 'acceptance' || currentTab === 'both' ? [] : [...selectedKpis.acceptance];
   const tempMonitoring = currentTab === 'monitoring' || currentTab === 'both' ? [] : [...selectedKpis.monitoring];
 
@@ -475,35 +651,31 @@ function applyKpis(){
   renderCharts();
 }
 
-// --- PPT EXPORT CUSTOMIZATION & PREVIEW ---
+// --- PPT EXPORT CUSTOMIZATION & PREVIEW (UNCHANGED) ---
 
 function openPreview() {
     const canvases = document.querySelectorAll("canvas");
     if(canvases.length === 0) { alert("No charts to export."); return; }
     
-    // Set initial state for the modal (re-apply defaults)
     graphsPerSlide = 2; 
     chartExportColor = '#2F80ED'; 
     chartExportTitleColor = '#333333';
 
-    // Update the visual controls and render the preview
     updatePreviewSettings(graphsPerSlide, chartExportColor, chartExportTitleColor);
     
     document.getElementById("previewModal").style.display = "flex";
 }
 
 function highlightSettingButtons(count, lineColor, titleColor) {
-    // Highlight graph count button
     document.querySelectorAll('.graph-options button').forEach(btn => {
         btn.classList.remove('active');
         btn.style.backgroundColor = '#2F80ED';
         if (parseInt(btn.dataset.count) === count) {
             btn.classList.add('active');
-            btn.style.backgroundColor = '#27AE60'; // Highlight color
+            btn.style.backgroundColor = '#27AE60'; 
         }
     });
 
-    // Highlight line color option
     document.querySelectorAll('#lineColorOptions .color-option').forEach(el => {
         el.classList.remove('selected');
         if (el.dataset.color === lineColor) {
@@ -511,7 +683,6 @@ function highlightSettingButtons(count, lineColor, titleColor) {
         }
     });
 
-    // Highlight title color option
     document.querySelectorAll('#titleColorOptions .color-option').forEach(el => {
         el.classList.remove('selected');
         if (el.dataset.color === titleColor) {
@@ -527,7 +698,6 @@ function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
 
     highlightSettingButtons(graphsPerSlide, chartExportColor, chartExportTitleColor);
     
-    // Render the preview with the new settings
     const count = graphsPerSlide;
     const body = document.getElementById("previewBody");
     const canvases = document.querySelectorAll("canvas");
@@ -552,7 +722,6 @@ function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
         for(let j=0; j<count; j++){
             if(i+j < canvases.length){
                 const c = canvases[i+j];
-                // Pass current export settings to createPreviewBox
                 const box = createPreviewBox(c, chartExportColor, chartExportTitleColor); 
                 grid.appendChild(box);
             }
@@ -566,7 +735,6 @@ function createPreviewBox(canvas, lineColor, titleColor) {
   const box = document.createElement("div");
   box.className = "preview-img-box";
   
-  // Create temporary canvas for the styled image
   const tempCanvas = document.createElement('canvas');
   tempCanvas.width = canvas.width;
   tempCanvas.height = canvas.height;
@@ -576,12 +744,10 @@ function createPreviewBox(canvas, lineColor, titleColor) {
   let imgData = '';
   
   if (chartInstance) {
-      // Store original settings
       const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
       const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
       const originalTitleColor = chartInstance.options.plugins.title.color;
       
-      // Override style for screenshot using current settings
       chartInstance.data.datasets.forEach(d => { 
         d.borderColor = lineColor; 
         d.pointBorderColor = lineColor; 
@@ -591,7 +757,6 @@ function createPreviewBox(canvas, lineColor, titleColor) {
         d.spanGaps = true; 
       });
 
-      // Temporarily change title color 
       chartInstance.options.plugins.title.color = titleColor; 
       
       chartInstance.update('none'); 
@@ -599,7 +764,6 @@ function createPreviewBox(canvas, lineColor, titleColor) {
       tempCtx.drawImage(canvas, 0, 0);
       imgData = tempCanvas.toDataURL("image/png");
       
-      // Restore original styles and title color
       chartInstance.data.datasets.forEach((d, index) => { 
         d.borderColor = originalColors[index]; 
         d.pointBorderColor = originalPointColors[index];
@@ -611,7 +775,6 @@ function createPreviewBox(canvas, lineColor, titleColor) {
   const img = document.createElement("img");
   img.src = imgData;
   
-  // No separate label needed, title is in the image
   box.appendChild(img);
   return box;
 }
@@ -715,62 +878,6 @@ async function downloadPPT(){
 
   pptx.writeFile({ fileName: `KPI_Report_${new Date().getTime()}.pptx` });
   closePreview();
-}
-
-// --- SITE DROPDOWN LOGIC (Reused) ---
-function setupSiteDropdown(){
-  const btn = document.getElementById("siteDropdownBtn");
-  const list = document.getElementById("siteDropdownList");
-  const search = document.getElementById("siteFilter");
-  const dropdown = document.getElementById("dropdown");
-
-  list.innerHTML = `<div onclick="setSites([])"><b>Select All (Aggregate)</b></div>`;
-  allSites.forEach(s => {
-    const d = document.createElement("div");
-    d.innerHTML = `<input type='checkbox' value='${s}' class='site-chk' onclick='event.stopPropagation()'> ${s}`;
-    d.onclick = (e) => {
-       if(e.target.tagName !== "INPUT") d.querySelector("input").click();
-       updateSelectedSites();
-    };
-    list.appendChild(d);
-  });
-
-  btn.onclick = () => list.style.display = list.style.display==="block" ? "none" : "block";
-  search.addEventListener("input", ()=>{
-    const val = search.value;
-    if(!val) { dropdown.style.display = "none"; return; }
-    const res = fuse.search(val).slice(0,5);
-    dropdown.innerHTML = "";
-    res.forEach(r => {
-      const d = document.createElement("div");
-      d.textContent = r.item["eNodeB Name"];
-      d.onclick = () => { setSites([r.item["eNodeB Name"]]); dropdown.style.display="none"; };
-      dropdown.appendChild(d);
-    });
-    dropdown.style.display = "block";
-  });
-}
-
-function updateSelectedSites(){
-  const chks = document.querySelectorAll(".site-chk:checked");
-  selectedSites = Array.from(chks).map(c=>c.value);
-  updateSiteLabel();
-  renderCharts();
-}
-
-function setSites(arr){
-  selectedSites = arr;
-  document.querySelectorAll(".site-chk").forEach(c => c.checked = arr.includes(c.value));
-  document.getElementById("siteDropdownList").style.display = "none";
-  updateSiteLabel();
-  renderCharts();
-}
-
-function updateSiteLabel(){
-  const span = document.getElementById("siteBtnLabel");
-  if(selectedSites.length===0) span.textContent = "All Sites";
-  else if(selectedSites.length===1) span.textContent = selectedSites[0];
-  else span.textContent = `${selectedSites.length} Sites Selected`;
 }
 
 // Init
