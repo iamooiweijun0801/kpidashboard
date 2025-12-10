@@ -186,6 +186,7 @@ button.ppt-btn:hover { background:#a8381e; }
 
   <button onclick="fetchData()" class="action-btn">Refresh</button>
   <button onclick="openPreview()" class="action-btn ppt-btn">Export PPT</button>
+  <button id="toggleSheetBtn" class="action-btn" onclick="switchSheet()">Use Group Daily</button>
 </div>
 
 <div class="chart-grid" id="mainChartContainer"></div>
@@ -281,6 +282,8 @@ let graphsPerSlide = 2;
 
 let chartExportColor = '#2F80ED'; // Default Line/Dot Color (Dark Blue)
 let chartExportTitleColor = '#333333'; // Default Title Color (Dark Gray/Black)
+  
+let currentSheet = 'site'; // 'site' = Site Daily, 'group' = Group Daily
 
 const acceptanceKpis = [
   "Call setup success rate(%)", "SDCCH Congestion Rate(%)", "TCH Congestion Rate(%)", 
@@ -316,7 +319,23 @@ function switchTab(tab) {
 async function fetchData(){
   try {
     // 1. Fetch KPI Data
-    const kpiUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=1930867305&single=true&output=csv&t=" + Date.now();
+    const sheetUrls = {
+    site: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=1930867305&single=true&output=csv",
+    group: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=1977848975&single=true&output=csv"
+};
+    function switchSheet() {
+    if(currentSheet === 'site') {
+        currentSheet = 'group';
+        document.getElementById('toggleSheetBtn').textContent = 'Use Site Daily';
+    } else {
+        currentSheet = 'site';
+        document.getElementById('toggleSheetBtn').textContent = 'Use Group Daily';
+    }
+    fetchData(); // Refetch the data from the new sheet
+}
+
+
+const kpiUrl = sheetUrls[currentSheet] + "&t=" + Date.now();
     const kpiRes = await fetch(kpiUrl);
     const kpiText = await kpiRes.text();
     
