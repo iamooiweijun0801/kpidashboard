@@ -346,6 +346,7 @@ const monitoringKpis = [
   "Average DL RLC throughput in EGPRS mode (kbit/sec) per TSL", 
   "Average DL RLC throughput in GPRS mode (kbit/sec) Per TSL", "Cell Availability(%)"
 ];
+
 let selectedKpis = {
   acceptance: [...acceptanceKpis],
   monitoring: [...monitoringKpis]
@@ -684,7 +685,7 @@ function renderCharts(){
 
     // Calculate Data
 const dataPoints = timeline.map(date => {
- const values = filteredData
+      const values = filteredData
   .filter(d => d["Date"] === date)
   .map(d => d[kpi])                // take raw value
   .filter(v => v !== null && v !== "") // keep only actual values
@@ -1089,7 +1090,7 @@ async function downloadPPT(){
     
     // Title Slide
     let slide = pptx.addSlide();
-    slide.addText("GSM KPI Report", { x:0.5, y:2, fontSize:32, bold:true, color:'2F80ED' });
+    slide.addText("LTE KPI Report", { x:0.5, y:2, fontSize:32, bold:true, color:'2F80ED' });
     slide.addText(`Generated: ${new Date().toLocaleDateString()}`, { x:0.5, y:3, fontSize:14 });
 
     const canvases = document.querySelectorAll("canvas");
