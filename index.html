@@ -227,11 +227,11 @@ button.ppt-btn:hover { background:#a8381e; }
   </div>
 
   <div class="toggle-switch" id="sheetToggle">
-  <span class="toggle-label">Site Level</span>
+  <span class="toggle-label">Group Level</span>
   <div class="switch" onclick="switchSheetToggle()">
     <div class="circle"></div>
   </div>
-  <span class="toggle-label">Group Level</span>
+  <span class="toggle-label">Site Level</span>
 </div>
 
 
@@ -388,8 +388,8 @@ async function fetchData(){
   try {
     // 1. Fetch KPI Data
     const sheetUrls = {
-    site: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=0&single=true&output=csv",
-    group: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=893314169&single=true&output=csv"
+    site: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=893314169&single=true&output=csv",
+    group: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=0&single=true&output=csv"
 };
   
 const kpiUrl = sheetUrls[currentSheet] + "&t=" + Date.now();
@@ -707,24 +707,19 @@ const dataPoints = timeline.map(date => {
     });
 
     let validValues = dataPoints.filter(v => v !== null);
-let minVal = Math.min(...validValues);
-let maxVal = Math.max(...validValues);
+    let minVal = Math.min(...validValues);
+    let maxVal = Math.max(...validValues);
 
-// FORCE MAX & MIN RULES
-const n = 10; // example: 10%
-const threshold = n / 100;
+    // Special rule: if min >= 95 and max <= 100, set scale explicitly
+    if (minVal >= 95 && maxVal <= 100) {
+      minVal = 95;
+      maxVal = 100;
+    } else {
+      if (minVal < 40) minVal = Math.max(Math.floor(minVal), 42);
+      if (maxVal > 100) maxVal = 100;
 
-if (maxVal < 1) {
-    maxVal = Math.max(maxVal, threshold);
-}
-if (minVal !== 0) {
-    minVal = Math.max(minVal, threshold);
-}
-
-// Optional rounding
-minVal = Math.floor(minVal * 100) / 100;
-maxVal = Math.ceil(maxVal * 100) / 100;
-
+      minVal = Math.floor(minVal / 5) * 5;
+      maxVal = Math.ceil(maxVal / 5) * 5;
     }
 
     // Draw Chart with Animation
@@ -776,8 +771,6 @@ maxVal = Math.ceil(maxVal * 100) / 100;
            y: { 
                beginAtZero: false, 
                grid: {color:'#eee'},
-             min: minVal,
-      max: maxVal,
                // If no data points, fix the scale to prevent giant axes
                min: (finalSiteList.length === 0 || dataPoints.every(p => p === null)) ? 0 : undefined 
            }
