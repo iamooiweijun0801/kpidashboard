@@ -942,9 +942,6 @@ function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
                     previewRows = 1;
                 }
                 // --- END PREVIEW FIX LOGIC ---
-
-                // Adjust height for preview based on calculated rows
-                box.style.height = `calc((100% / ${previewRows}) - 15px)`;	
                 
                 grid.appendChild(box);
             }
