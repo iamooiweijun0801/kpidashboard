@@ -944,11 +944,7 @@ function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
                 if (chartsOnSlide === 3) {
                     previewRows = 1;
                 }
-                // --- END PREVIEW FIX LOGIC ---
-
-                // Adjust height for preview based on calculated rows
-                box.style.height = `calc((100% / ${previewRows}) - 15px)`;	
-                
+                // --- END PREVIEW FIX LOGIC ---               
                 grid.appendChild(box);
             }
         }
