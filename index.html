@@ -763,105 +763,155 @@ function renderCharts(){
     card.appendChild(wrapper);
     container.appendChild(card);
 
-    const dataPoints = timeline.map(date => {
-      const values = filteredData
-        .filter(d => d["Date"] === date)
-        .map(d => d[kpi])
-        .filter(v => v !== null && v !== "")
-        .map(Number)
-        .filter(v => !isNaN(v));
+    // Helper: nice rounding function for axis
+function niceNumber(value, round) {
+  const exponent = Math.floor(Math.log10(value));
+  const fraction = value / Math.pow(10, exponent);
 
-      if (values.length === 0) return null;
+  let niceFraction;
+  if (round) {
+    if (fraction < 1.5) niceFraction = 1;
+    else if (fraction < 3) niceFraction = 2;
+    else if (fraction < 7) niceFraction = 5;
+    else niceFraction = 10;
+  } else {
+    if (fraction <= 1) niceFraction = 1;
+    else if (fraction <= 2) niceFraction = 2;
+    else if (fraction <= 5) niceFraction = 5;
+    else niceFraction = 10;
+  }
 
-      const kpiLower = kpi.toLowerCase();
-      if (kpiLower.includes('%') || kpiLower.includes('rate') || kpiLower.includes('avg') || kpiLower.includes('average') || kpiLower.includes('max')) {
-        return values.reduce((a, b) => a + b, 0) / values.length;
-      } else {
-        return values.reduce((a, b) => a + b, 0);
-      }
-    });
+  return niceFraction * Math.pow(10, exponent);
+}
 
-    let validValues = dataPoints.filter(v => v !== null);
-    let minVal = Math.min(...validValues);
-    let maxVal = Math.max(...validValues);
+// Compute smart Y-axis
+function computeYAxis(minVal, maxVal) {
+  // ⭐ Special rule: if min >= 98 and max <= 100
+  if (minVal >= 98 && maxVal <= 100) {
+    return { niceMin: 97, niceMax: 100, tickSpacing: 1 };
+  }
 
-    if (minVal >= 95 && maxVal <= 100) {
-      minVal = 95;
-      maxVal = 100;
-    } else {
-      if (minVal < 40) minVal = Math.max(Math.floor(minVal), 42);
-      if (maxVal > 100) maxVal = 100;
+  // ±5% buffer
+  let minV = minVal * 0.95;
+  let maxV = maxVal * 1.05;
 
-      minVal = Math.floor(minVal / 5) * 5;
-      maxVal = Math.ceil(maxVal / 5) * 5;
-    }
+  // Small KPI rule
+  if (maxVal < 10) minV = 0;
 
-    // Determine chart color
-    let chartColor;
-    if (activeCustomColor) {
-        chartColor = activeCustomColor;
-    } else if (activeChartStyle && activeChartStyle.randomColor) {
-        chartColor = getRandomColor();
-    } else if (activeChartStyle && activeChartStyle.borderColor) {
-        chartColor = activeChartStyle.borderColor;
-    } else {
-        chartColor = getRandomColor();
-    }
+  // Cap 90–100 → ymax = 100
+  if (maxVal > 90 && maxVal <= 100) maxV = 100;
 
-    // Create chart configuration
-    const chartConfig = {
-      type: 'line',
-      data: {
-        labels: timelineLabels,
-        datasets: [{
-          label: (finalSiteList.length > 0 && dataPoints.some(p => p !== null)) ? "Aggregate" : "No Data",
-          data: dataPoints,
-          borderColor: chartColor,
-          backgroundColor: 'transparent',
-          borderWidth: 2,
-          pointRadius: 3,
-          tension: 0.1,
-          spanGaps: true 
-        }]
+  let range = maxV - minV;
+  if (range === 0) range = Math.abs(maxV) * 0.1 || 1;
+
+  // Choose nice tick spacing, aim for 5–6 ticks
+  const tickSpacing = niceNumber(range / 5, true);
+
+  // Align min/max to nice numbers
+  const niceMin = Math.floor(minV / tickSpacing) * tickSpacing;
+  const niceMax = Math.ceil(maxV / tickSpacing) * tickSpacing;
+
+  return { niceMin, niceMax, tickSpacing };
+}
+
+// -------------------- Data Processing --------------------
+const dataPoints = timeline.map(date => {
+  const values = filteredData
+    .filter(d => d["Date"] === date)
+    .map(d => d[kpi])
+    .filter(v => v !== null && v !== "")
+    .map(Number)
+    .filter(v => !isNaN(v));
+
+  if (values.length === 0) return null;
+
+  const kpiLower = kpi.toLowerCase();
+  if (
+    kpiLower.includes('%') ||
+    kpiLower.includes('rate') ||
+    kpiLower.includes('avg') ||
+    kpiLower.includes('average') ||
+    kpiLower.includes('max')
+  ) {
+    return values.reduce((a, b) => a + b, 0) / values.length;
+  } else {
+    return values.reduce((a, b) => a + b, 0);
+  }
+});
+
+// Only valid values
+let validValues = dataPoints.filter(v => v !== null);
+let minVal = Math.min(...validValues);
+let maxVal = Math.max(...validValues);
+
+// Compute smart Y-axis
+const { niceMin, niceMax, tickSpacing } = computeYAxis(minVal, maxVal);
+
+// -------------------- Chart Color --------------------
+let chartColor;
+if (activeCustomColor) {
+  chartColor = activeCustomColor;
+} else if (activeChartStyle && activeChartStyle.randomColor) {
+  chartColor = getRandomColor();
+} else if (activeChartStyle && activeChartStyle.borderColor) {
+  chartColor = activeChartStyle.borderColor;
+} else {
+  chartColor = getRandomColor();
+}
+
+// -------------------- Chart Config --------------------
+const chartConfig = {
+  type: 'line',
+  data: {
+    labels: timelineLabels,
+    datasets: [{
+      label: (finalSiteList.length > 0 && dataPoints.some(p => p !== null)) ? "Aggregate" : "No Data",
+      data: dataPoints,
+      borderColor: chartColor,
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      pointRadius: 3,
+      tension: 0.1,
+      spanGaps: true
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: {
+      x: {
+        type: 'number',
+        easing: 'linear',
+        duration: 500,
+        from: NaN,
+        delay: (ctx) => ctx.index * 30
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: {
-            x: {
-                type: 'number',
-                easing: 'linear',
-                duration: 500,
-                from: NaN,
-                delay: (ctx) => ctx.index * 30 
-            },
-            y: { duration: 0 }
-        },
-        plugins: { 
-            legend: { display: false },
-            title: {
-                display: true,
-                text: kpi,
-                font: {
-                    size: 14,
-                    weight: 'bold'
-                },
-                color: '#333'
-            }
-        },
-        scales: {
-           x: { 
-               ticks: { font: {size:8} }, 
-               grid: {display:false} 
-           },
-           y: { 
-               beginAtZero: false, 
-               grid: {color:'#eee'},
-               min: (finalSiteList.length === 0 || dataPoints.every(p => p === null)) ? 0 : undefined 
-           }
-        }
+      y: { duration: 0 }
+    },
+    plugins: {
+      legend: { display: false },
+      title: {
+        display: true,
+        text: kpi,
+        font: { size: 14, weight: 'bold' },
+        color: '#333'
       }
-    };
+    },
+    scales: {
+      x: {
+        ticks: { font: { size: 8 } },
+        grid: { display: false }
+      },
+      y: {
+        grid: { color: '#eee' },
+        min: niceMin,
+        max: niceMax,
+        ticks: { stepSize: tickSpacing },
+        beginAtZero: maxVal < 10
+      }
+    }
+  }
+};
 
     // Apply active chart style if set
     if (activeChartStyle) {
