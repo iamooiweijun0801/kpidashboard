@@ -934,11 +934,19 @@ function renderCharts(){
                ticks: { font: {size:8} }, 
                grid: {display:false} 
            },
-           y: { 
-               beginAtZero: false, 
-               grid: {color:'#eee'},
-               min: (finalSiteList.length === 0 || dataPoints.every(p => p === null)) ? 0 : undefined 
-           }
+           yy: {
+    grid: { color: '#eee' },
+
+    // NEW LOGIC:
+    // If max < 10 ⇒ force start at zero
+    beginAtZero: maxVal < 10,
+
+    min: (maxVal < 10)
+        ? 0              // start from zero for small KPIs
+        : minVal,        // your computed min range
+
+    max: maxVal          // your computed max range
+}
         }
       }
     };
