@@ -787,8 +787,8 @@ function niceNumber(value, round) {
 // Compute smart Y-axis
 function computeYAxis(minVal, maxVal) {
   // ⭐ Special rule: if min >= 98 and max <= 100
-  if (minVal >= 98 && maxVal <= 100) {
-    return { niceMin: 97, niceMax: 100, tickSpacing: 1 };
+  if (minVal >= 97 && maxVal <= 100) {
+    return { niceMin: 96, niceMax: 100, tickSpacing: 1 };
   }
 
   // ±5% buffer
