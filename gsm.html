@@ -327,16 +327,16 @@ button.ppt-btn:hover { background:#a8381e; }
     </div>
     
     <div class="style-options-body">
-        <div class="style-button" onclick="applyChartStyle(0)">Style 1 – Clean Lines</div>
-        <div class="style-button" onclick="applyChartStyle(1)">Style 2 – Bold</div>
-        <div class="style-button" onclick="applyChartStyle(2)">Style 3 – Dotted</div>
-        <div class="style-button" onclick="applyChartStyle(3)">Style 4 – Thick + Soft</div>
-        <div class="style-button" onclick="applyChartStyle(4)">Style 5 – Minimalist</div>
-        <div class="style-button" onclick="applyChartStyle(5)">Style 6 – Dashed</div>
-        <div class="style-button" onclick="applyChartStyle(6)">Style 7 – Neon</div>
-        <div class="style-button" onclick="applyChartStyle(7)">Style 8 – Shadow Line</div>
-        <div class="style-button" onclick="applyChartStyle(8)">Style 9 – Rounded Dots</div>
-        <div class="style-button" onclick="applyChartStyle(9)">Style 10 – Random Colors</div>
+        <div class="style-button" onclick="applyChartStyle(0)">Filled</div>
+        <div class="style-button" onclick="applyChartStyle(1)">Minimalist</div>
+        <div class="style-button" onclick="applyChartStyle(2)">Step</div>
+        <div class="style-button" onclick="applyChartStyle(3)">Smooth</div>
+        <div class="style-button" onclick="applyChartStyle(4)">Thick Line with Dots</div>
+        <div class="style-button" onclick="applyChartStyle(5)">Thin Line with Dots</div>
+        <div class="style-button" onclick="applyChartStyle(6)">Thick Line No Dots</div>
+        <div class="style-button" onclick="applyChartStyle(7)">Dotted</div>
+        <div class="style-button" onclick="applyChartStyle(8)">Dashed</div>
+        <div class="style-button" onclick="applyChartStyle(9)">Random Colors</div>
         
         <hr style="margin:15px 0;">
         
@@ -459,16 +459,99 @@ let activeChartStyle = null;
 let activeCustomColor = null;
 
 const chartStyles = [
-    { borderWidth: 2, pointRadius: 3, borderDash: [], tension: 0.2, borderColor: null },
-    { borderWidth: 4, pointRadius: 5, borderDash: [], tension: 0.25, borderColor: null },
-    { borderWidth: 2, pointRadius: 0, borderDash: [6,3], tension: 0.1, borderColor: null },
-    { borderWidth: 3, pointRadius: 4, borderDash: [], tension: 0.4, borderColor: null },
-    { borderWidth: 1, pointRadius: 0, borderDash: [], tension: 0, borderColor: null },
-    { borderWidth: 2, pointRadius: 2, borderDash: [4,4], tension: 0.3, borderColor: null },
-    { borderWidth: 3, pointRadius: 6, borderDash: [], tension: 0.15, borderColor: null },
-    { borderWidth: 3, pointRadius: 3, borderDash: [], tension: 0.2, borderColor: null },
-    { borderWidth: 2, pointRadius: 8, borderDash: [], tension: 0.25, borderColor: null },
-    { borderWidth: 3, pointRadius: 5, borderDash: [], tension: 0.25, randomColor: true }
+    { 
+        name: "Filled", 
+        borderWidth: 3, 
+        pointRadius: 0, 
+        borderDash: [], 
+        tension: 0.2, 
+        borderColor: null,
+        fill: true,
+        backgroundColor: "rgba(47, 128, 237, 0.1)"
+    },
+    { 
+        name: "Minimalist", 
+        borderWidth: 1, 
+        pointRadius: 0, 
+        borderDash: [], 
+        tension: 0, 
+        borderColor: null,
+        fill: false
+    },
+    { 
+        name: "Step", 
+        borderWidth: 2, 
+        pointRadius: 0, 
+        borderDash: [], 
+        tension: 0, 
+        borderColor: null,
+        fill: false,
+        stepped: true
+    },
+    { 
+        name: "Smooth", 
+        borderWidth: 2, 
+        pointRadius: 0, 
+        borderDash: [], 
+        tension: 0.4, 
+        borderColor: null,
+        fill: false
+    },
+    { 
+        name: "Thick Line with Dots", 
+        borderWidth: 4, 
+        pointRadius: 5, 
+        borderDash: [], 
+        tension: 0.2, 
+        borderColor: null,
+        fill: false
+    },
+    { 
+        name: "Thin Line with Dots", 
+        borderWidth: 1, 
+        pointRadius: 3, 
+        borderDash: [], 
+        tension: 0.2, 
+        borderColor: null,
+        fill: false
+    },
+    { 
+        name: "Thick Line No Dots", 
+        borderWidth: 4, 
+        pointRadius: 0, 
+        borderDash: [], 
+        tension: 0.3, 
+        borderColor: null,
+        fill: false
+    },
+    { 
+        name: "Dotted", 
+        borderWidth: 2, 
+        pointRadius: 0, 
+        borderDash: [2, 5], 
+        tension: 0.1, 
+        borderColor: null,
+        fill: false
+    },
+    { 
+        name: "Dashed", 
+        borderWidth: 2, 
+        pointRadius: 0, 
+        borderDash: [10, 5], 
+        tension: 0.2, 
+        borderColor: null,
+        fill: false
+    },
+    { 
+        name: "Random Colors", 
+        borderWidth: 3, 
+        pointRadius: 5, 
+        borderDash: [], 
+        tension: 0.25, 
+        borderColor: null,
+        fill: false,
+        randomColor: true
+    }
 ];
 
 // --- GLOBAL UTILITY FUNCTIONS ---
