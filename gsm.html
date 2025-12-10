@@ -843,7 +843,54 @@ function renderCharts(){
     card.appendChild(wrapper);
     container.appendChild(card);
 
-    const dataPoints = timeline.map(date => {
+    // Helper: nice rounding function for axis
+function niceNumber(value, round) {
+  const exponent = Math.floor(Math.log10(value));
+  const fraction = value / Math.pow(10, exponent);
+
+  let niceFraction;
+  if (round) {
+    if (fraction < 1.5) niceFraction = 1;
+    else if (fraction < 3) niceFraction = 2;
+    else if (fraction < 7) niceFraction = 5;
+    else niceFraction = 10;
+  } else {
+    if (fraction <= 1) niceFraction = 1;
+    else if (fraction <= 2) niceFraction = 2;
+    else if (fraction <= 5) niceFraction = 5;
+    else niceFraction = 10;
+  }
+
+  return niceFraction * Math.pow(10, exponent);
+}
+
+// Compute smart Y-axis
+function computeYAxis(minVal, maxVal) {
+  // ±5% buffer
+  let minV = minVal * 0.95;
+  let maxV = maxVal * 1.05;
+
+  // Small KPI rule
+  if (maxVal < 10) minV = 0;
+
+  // Cap 90–100 → ymax = 100
+  if (maxVal > 90 && maxVal <= 100) maxV = 100;
+
+  let range = maxV - minV;
+  if (range === 0) range = Math.abs(maxV) * 0.1 || 1;
+
+  // Choose nice tick spacing, aim for 5–6 ticks
+  const tickSpacing = niceNumber(range / 5, true);
+
+  // Align min/max to nice numbers
+  const niceMin = Math.floor(minV / tickSpacing) * tickSpacing;
+  const niceMax = Math.ceil(maxV / tickSpacing) * tickSpacing;
+
+  return { niceMin, niceMax, tickSpacing };
+}
+
+// -------------------- Data Processing --------------------
+const dataPoints = timeline.map(date => {
   const values = filteredData
     .filter(d => d["Date"] === date)
     .map(d => d[kpi])
@@ -861,22 +908,21 @@ function renderCharts(){
     kpiLower.includes('average') ||
     kpiLower.includes('max')
   ) {
-    // Average for percentage-type KPIs
     return values.reduce((a, b) => a + b, 0) / values.length;
   } else {
-    // SUM for counters
     return values.reduce((a, b) => a + b, 0);
   }
 });
 
-// Only get valid values
+// Only valid values
 let validValues = dataPoints.filter(v => v !== null);
-
-// Compute min/max but do NOT manipulate them
 let minVal = Math.min(...validValues);
 let maxVal = Math.max(...validValues);
 
-// Pick chart color
+// Compute smart Y-axis
+const { niceMin, niceMax, tickSpacing } = computeYAxis(minVal, maxVal);
+
+// -------------------- Chart Color --------------------
 let chartColor;
 if (activeCustomColor) {
   chartColor = activeCustomColor;
@@ -888,7 +934,7 @@ if (activeCustomColor) {
   chartColor = getRandomColor();
 }
 
-// Chart config
+// -------------------- Chart Config --------------------
 const chartConfig = {
   type: 'line',
   data: {
@@ -933,17 +979,15 @@ const chartConfig = {
       },
       y: {
         grid: { color: '#eee' },
-
-        // ⭐ THE ONLY RULE ⭐
-        beginAtZero: maxVal < 10,
-        min: maxVal < 10 ? 0 : minVal,
-
-        // Let max always follow the real data max
-        max: maxVal
+        min: niceMin,
+        max: niceMax,
+        ticks: { stepSize: tickSpacing },
+        beginAtZero: maxVal < 10
       }
     }
   }
 };
+
 
     // Apply active chart style if set
     if (activeChartStyle) {
