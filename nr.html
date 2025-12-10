@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>NR KPI Dashboard</title>
+<title>LTE KPI Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.6.2/fuse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
@@ -18,7 +18,7 @@ header { text-align:center; padding:15px 0; font-size:28px; font-weight:700; col
 .nav-btn:hover { background:#f0f0f0; color:#333; }
 .nav-btn.active { background:#2F80ED; color:white; border-color:#2F80ED; }
 
-/* --- TABS (Updated for NR & NSA) --- */
+/* --- TABS --- */
 .tabs { display:flex; justify-content:center; margin-bottom:20px; gap:8px; }
 .tab { padding:8px 20px; cursor:pointer; border-radius:6px; background:#e0e0e0; color:#555; font-weight:bold; border:none; transition:0.2s; }
 .tab:hover { background:#d0d0d0; }
@@ -34,108 +34,108 @@ button.ppt-btn { background:#D24726; } /* PowerPoint Orange */
 button.ppt-btn:hover { background:#a8381e; }
 
 /* --- GRID LAYOUT (3 Graphs per row) --- */
-.chart-grid { 
-  display:grid; 
-  grid-template-columns: repeat(3, 1fr); 
-  gap:20px; 
-  padding:0 20px 40px 20px; 
-  max-width: 1800px; 
-  margin: 0 auto; 
+.chart-grid { 
+  display:grid; 
+  grid-template-columns: repeat(3, 1fr); 
+  gap:20px; 
+  padding:0 20px 40px 20px; 
+  max-width: 1800px; 
+  margin: 0 auto; 
 }
 @media (max-width: 1400px) { .chart-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 768px) { .chart-grid { grid-template-columns: 1fr; } }
 
 /* --- CARDS & CHARTS --- */
 .chart-card { background:white; border-radius:8px; padding:15px; box-shadow:0 2px 8px rgba(0,0,0,0.08); display:flex; flex-direction:column; }
-.chart-title { display:none; } 
+.chart-title { display:none; } 
 .chart-container { position: relative; height: 280px; width: 100%; }
 
 /* --- DROPDOWNS --- */
-#dropdown, #siteDropdownList, #onAirDateDropdownList { 
-  position:absolute; 
-  background:white; 
-  border:1px solid #ccc; 
-  max-height:200px; 
-  overflow-y:auto; 
-  display:none; 
-  z-index:100; 
-  width:100%; 
-  top:105%; 
-  border-radius:6px; 
-  box-shadow:0 4px 10px rgba(0,0,0,0.1); 
+#dropdown, #siteDropdownList, #onAirDateDropdownList { 
+  position:absolute; 
+  background:white; 
+  border:1px solid #ccc; 
+  max-height:200px; 
+  overflow-y:auto; 
+  display:none; 
+  z-index:100; 
+  width:100%; 
+  top:105%; 
+  border-radius:6px; 
+  box-shadow:0 4px 10px rgba(0,0,0,0.1); 
 }
 #dropdown div, #siteDropdownList div, #onAirDateDropdownList div { padding:6px 10px; cursor:pointer; font-size:13px; border-bottom:1px solid #eee; }
 #dropdown div:hover, #siteDropdownList div:hover, #onAirDateDropdownList div:hover { background:#f0f7ff; color:#2F80ED; }
 
 /* --- KPI Drawer Fixes --- */
 .kpiDrawerToggle { position:fixed; top:100px; right:0; width:36px; height:36px; background:#2F80ED; color:white; border-radius:6px 0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:20px; z-index:900; }
-.kpiDrawer { 
-  position:fixed; top:0; right:0; 
-  width:320px; 
-  height:100%; background:white; 
-  box-shadow:-2px 0 10px rgba(0,0,0,0.1); z-index:1000; 
-  transform:translateX(100%); transition:0.3s; padding:20px; 
-  display: flex; flex-direction: column; 
+.kpiDrawer { 
+  position:fixed; top:0; right:0; 
+  width:320px; 
+  height:100%; background:white; 
+  box-shadow:-2px 0 10px rgba(0,0,0,0.1); z-index:1000; 
+  transform:translateX(100%); transition:0.3s; padding:20px; 
+  display: flex; flex-direction: column; 
 }
 .kpiDrawer.open { transform:translateX(0); }
-.drawer-header { 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    margin-bottom: 10px; 
-    padding-bottom: 10px; 
-    border-bottom: 1px solid #eee; 
+.drawer-header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 10px; 
+    padding-bottom: 10px; 
+    border-bottom: 1px solid #eee; 
 }
 .drawer-header h3 { margin: 0; }
-.drawer-controls { 
-    display: flex; 
-    gap: 5px; /* Reduced gap */
-    align-items: center; 
+.drawer-controls { 
+    display: flex; 
+    gap: 5px; /* Reduced gap */
+    align-items: center; 
 }
-.drawer-controls .action-btn { 
-    padding: 6px 10px; /* Smaller padding for density */
-    font-size: 13px; /* Smaller font for density */
+.drawer-controls .action-btn { 
+    padding: 6px 10px; /* Smaller padding for density */
+    font-size: 13px; /* Smaller font for density */
 }
-.kpi-options-body { flex-grow: 1; overflow-y: auto; padding-right: 5px; padding-bottom: 40px; } 
+.kpi-options-body { flex-grow: 1; overflow-y: auto; padding-right: 5px; padding-bottom: 40px; } 
 
 /* --- PREVIEW MODAL --- */
 .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:2000; display:none; align-items:center; justify-content:center; backdrop-filter:blur(3px); }
-.modal-content { 
-    background:white; 
-    width:95%; 
-    max-width: 1400px; 
-    height:90vh; 
-    border-radius:12px; 
-    display:flex; 
-    flex-direction:column; 
-    box-shadow:0 10px 25px rgba(0,0,0,0.3); 
+.modal-content { 
+    background:white; 
+    width:95%; 
+    max-width: 1400px; 
+    height:90vh; 
+    border-radius:12px; 
+    display:flex; 
+    flex-direction:column; 
+    box-shadow:0 10px 25px rgba(0,0,0,0.3); 
 }
 .modal-header { padding:15px 20px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; font-weight:bold; font-size:18px; }
-.modal-body { flex:1; display: flex; padding:0; overflow: hidden; } 
+.modal-body { flex:1; display: flex; padding:0; overflow: hidden; } 
 
 /* Preview Side */
-#previewBody { 
-    flex: 1; 
-    overflow-y:auto; 
-    padding:20px; 
-    background:#f5f5f5; 
+#previewBody { 
+    flex: 1; 
+    overflow-y:auto; 
+    padding:20px; 
+    background:#f5f5f5; 
 }
 .preview-slide { background:white; border:1px solid #ddd; margin-bottom:20px; padding:20px; box-shadow:0 2px 5px rgba(0,0,0,0.05); aspect-ratio: 16/9; position:relative; }
 .preview-slide-title { position:absolute; top:10px; left:20px; font-size:16px; font-weight:bold; color:#D24726; }
 .preview-grid { display:grid; height:100%; align-items:center; padding-top:30px; }
 .preview-img-box { text-align:center; padding:5px; height:100%; display:flex; flex-direction:column; justify-content:center; }
 .preview-img-box img { max-width:100%; max-height:calc(100% - 20px); object-fit:contain; border:1px solid #eee; }
-.preview-label { display: none; } 
+.preview-label { display: none; } 
 
 /* Settings Side (Fixed, not scrollable) */
 #previewSettingsPanel {
-    width: 250px;
-    background: #fff;
-    border-left: 1px solid #eee;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0; 
+    width: 250px;
+    background: #fff;
+    border-left: 1px solid #eee;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0; 
 }
 .settings-group { margin-bottom: 20px; }
 .settings-group h4 { margin-top: 0; margin-bottom: 10px; font-size: 14px; color: #555; border-bottom: 1px solid #eee; padding-bottom: 5px; }
@@ -145,220 +145,184 @@ button.ppt-btn:hover { background:#a8381e; }
 .color-option { margin: 5px; display: inline-block; cursor: pointer; border: 2px solid transparent; border-radius: 50%; width: 25px; height: 25px; transition: border 0.1s; }
 .color-option.selected { border-color: #333; }
 
-.modal-footer { 
-    padding:15px 20px; 
-    border-top:1px solid #eee; 
-    text-align:right;
-    flex-shrink: 0; 
+.modal-footer { 
+    padding:15px 20px; 
+    border-top:1px solid #eee; 
+    text-align:right;
+    flex-shrink: 0; 
 }
 </style>
 </head>
 <body>
 
-<header>NR & NSA KPI Dashboard</header>
+<header>NR KPI Dashboard</header>
 
 <div class="navbar">
-  <a href="gsm.html" class="nav-btn">GSM</a>
-  <a href="lte.html" class="nav-btn">LTE</a>
-  <a href="nr.html" class="nav-btn active">NR</a>
+  <a href="gsm.html" class="nav-btn">GSM</a>
+  <a href="index.html" class="nav-btn">LTE</a>
+  <a href="nr.html" class="nav-btn active">NR</a>
 </div>
 
 <div class="tabs">
-  <button class="tab active" onclick="switchTab('both')">All KPIs (NR & NSA)</button> 
-  <button class="tab" onclick="switchTab('nr')">NR KPIs</button>
-  <button class="tab" onclick="switchTab('nsa')">NSA KPIs</button>
+  <button class="tab active" onclick="switchTab('both')">All KPIs(NR & NSA) </button> 
+  <button class="tab" onclick="switchTab('nr')">NR KPIs</button>
+  <button class="tab" onclick="switchTab('nsa')">NSA KPIs</button>
 </div>
 
 <div class="controls">
-  <div class="control-group" style="width:200px;">
-    <button id="onAirDateDropdownBtn" class="action-btn" style="background:white; color:#333; border:1px solid #ccc; width:100%; text-align:left; display:flex; justify-content:space-between;">
-      <span id="onAirDateBtnLabel">All On-Air Dates</span> <span>▼</span>
-    </button>
-    <div id="onAirDateDropdownList"></div>
-  </div>
+  <div class="control-group" style="width:200px;">
+    <button id="onAirDateDropdownBtn" class="action-btn" style="background:white; color:#333; border:1px solid #ccc; width:100%; text-align:left; display:flex; justify-content:space-between;">
+      <span id="onAirDateBtnLabel">All On-Air Dates</span> <span>▼</span>
+    </button>
+    <div id="onAirDateDropdownList"></div>
+  </div>
 
-  <div class="control-group" style="width:200px;">
-    <button id="siteDropdownBtn" class="action-btn" style="background:white; color:#333; border:1px solid #ccc; width:100%; text-align:left; display:flex; justify-content:space-between;">
-      <span id="siteBtnLabel">All gNodeB Sites</span> <span>▼</span>
-    </button>
-    <div id="siteDropdownList"></div>
-  </div>
+  <div class="control-group" style="width:200px;">
+    <button id="siteDropdownBtn" class="action-btn" style="background:white; color:#333; border:1px solid #ccc; width:100%; text-align:left; display:flex; justify-content:space-between;">
+      <span id="siteBtnLabel">All Sites</span> <span>▼</span>
+    </button>
+    <div id="siteDropdownList"></div>
+  </div>
 
-  <button onclick="fetchData()" class="action-btn">Refresh</button>
-  <button onclick="openPreview()" class="action-btn ppt-btn">Export PPT</button>
+  <button onclick="fetchData()" class="action-btn">Refresh</button>
+  <button onclick="openPreview()" class="action-btn ppt-btn">Export PPT</button>
 </div>
 
 <div class="chart-grid" id="mainChartContainer"></div>
 
 <div class="kpiDrawerToggle" onclick="toggleDrawer()">⚙</div>
 <div id="kpiDrawer" class="kpiDrawer">
-  <div class="drawer-header">
-    <h3 id="drawerHeaderTitle">KPI Settings</h3>
-    <div class="drawer-controls">
-        <button class="action-btn" onclick="selectVisibleKpis()" style="background:#5cb85c;">Select All</button>
-        <button class="action-btn" onclick="clearVisibleKpis()" style="background:#f0ad4e;">Clear All</button>
-        <button class="action-btn" onclick="applyKpis()">Apply</button>
-        <button onclick="toggleDrawer()" style="border:none; background:none; font-size:24px; cursor:pointer; color:#777;">✕</button>
-    </div>
-  </div>
-  <div class="kpi-options-body" id="kpiOptionsList"></div>
+  <div class="drawer-header">
+    <h3 id="drawerHeaderTitle">KPI Settings</h3>
+    <div class="drawer-controls">
+        <button class="action-btn" onclick="selectVisibleKpis()" style="background:#5cb85c;">Select All</button>
+        <button class="action-btn" onclick="clearVisibleKpis()" style="background:#f0ad4e;">Clear All</button>
+        <button class="action-btn" onclick="applyKpis()">Apply</button>
+        <button onclick="toggleDrawer()" style="border:none; background:none; font-size:24px; cursor:pointer; color:#777;">✕</button>
+    </div>
+  </div>
+  <div class="kpi-options-body" id="kpiOptionsList"></div>
 </div>
 
 
 <div id="previewModal" class="modal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <span id="previewTitle">PPT Export Preview</span>
-      <button onclick="closePreview()" style="border:none; background:none; font-size:20px; cursor:pointer;">✕</button>
-    </div>
-    <div class="modal-body">
-        
-        <div id="previewBody">
-          </div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <span id="previewTitle">PPT Export Preview</span>
+      <button onclick="closePreview()" style="border:none; background:none; font-size:20px; cursor:pointer;">✕</button>
+    </div>
+    <div class="modal-body">
+        
+        <div id="previewBody">
+          </div>
 
-        <div id="previewSettingsPanel">
-            <h3>Export Settings</h3>
+        <div id="previewSettingsPanel">
+            <h3>Export Settings</h3>
 
-            <div class="settings-group">
-                <h4>Graphs per Slide (Rows)</h4>
-                <div class="graph-options">
-                    <button class="action-btn" data-count="1" onclick="updatePreviewSettings(1, chartExportColor, chartExportTitleColor)">1 Graph</button>
-                    <button class="action-btn" data-count="2" onclick="updatePreviewSettings(2, chartExportColor, chartExportTitleColor)">2 Graphs</button>
-                    <button class="action-btn" data-count="3" onclick="updatePreviewSettings(3, chartExportColor, chartExportTitleColor)">3 Graphs</button>
-                    <button class="action-btn" data-count="4" onclick="updatePreviewSettings(4, chartExportColor, chartExportTitleColor)">4 Graphs</button>
-                    <button class="action-btn" data-count="6" onclick="updatePreviewSettings(6, chartExportColor, chartExportTitleColor)">6 Graphs</button>
-                    <button class="action-btn" data-count="9" onclick="updatePreviewSettings(9, chartExportColor, chartExportTitleColor)">9 Graphs</button>
-                </div>
-            </div>
+            <div class="settings-group">
+                <h4>Graphs per Slide (Rows)</h4>
+                <div class="graph-options">
+                    <button class="action-btn" data-count="1" onclick="updatePreviewSettings(1, chartExportColor, chartExportTitleColor)">1 Graph</button>
+                    <button class="action-btn" data-count="2" onclick="updatePreviewSettings(2, chartExportColor, chartExportTitleColor)">2 Graphs</button>
+                    <button class="action-btn" data-count="3" onclick="updatePreviewSettings(3, chartExportColor, chartExportTitleColor)">3 Graphs</button>
+                    <button class="action-btn" data-count="4" onclick="updatePreviewSettings(4, chartExportColor, chartExportTitleColor)">4 Graphs</button>
+                    <button class="action-btn" data-count="6" onclick="updatePreviewSettings(6, chartExportColor, chartExportTitleColor)">6 Graphs</button>
+                    <button class="action-btn" data-count="9" onclick="updatePreviewSettings(9, chartExportColor, chartExportTitleColor)">9 Graphs</button>
+                </div>
+            </div>
 
-            <div class="settings-group">
-                <h4>Line & Dot Color for PPT</h4>
-                <div id="lineColorOptions">
-                    <span class="color-option" style="background-color:#2F80ED;" data-color="#2F80ED" onclick="updatePreviewSettings(graphsPerSlide, '#2F80ED', chartExportTitleColor)"></span>
-                    <span class="color-option" style="background-color:#27AE60;" data-color="#27AE60" onclick="updatePreviewSettings(graphsPerSlide, '#27AE60', chartExportTitleColor)"></span>
-                    <span class="color-option" style="background-color:#D24726;" data-color="#D24726" onclick="updatePreviewSettings(graphsPerSlide, '#D24726', chartExportTitleColor)"></span>
-                    <span class="color-option" style="background-color:#8E44AD;" data-color="#8E44AD" onclick="updatePreviewSettings(graphsPerSlide, '#8E44AD', chartExportTitleColor)"></span>
-                    <span class="color-option" style="background-color:#F39C12;" data-color="#F39C12" onclick="updatePreviewSettings(graphsPerSlide, '#F39C12', chartExportTitleColor)"></span>
-                </div>
-            </div>
+            <div class="settings-group">
+                <h4>Line & Dot Color for PPT</h4>
+                <div id="lineColorOptions">
+                    <span class="color-option" style="background-color:#2F80ED;" data-color="#2F80ED" onclick="updatePreviewSettings(graphsPerSlide, '#2F80ED', chartExportTitleColor)"></span>
+                    <span class="color-option" style="background-color:#27AE60;" data-color="#27AE60" onclick="updatePreviewSettings(graphsPerSlide, '#27AE60', chartExportTitleColor)"></span>
+                    <span class="color-option" style="background-color:#D24726;" data-color="#D24726" onclick="updatePreviewSettings(graphsPerSlide, '#D24726', chartExportTitleColor)"></span>
+                    <span class="color-option" style="background-color:#8E44AD;" data-color="#8E44AD" onclick="updatePreviewSettings(graphsPerSlide, '#8E44AD', chartExportTitleColor)"></span>
+                    <span class="color-option" style="background-color:#F39C12;" data-color="#F39C12" onclick="updatePreviewSettings(graphsPerSlide, '#F39C12', chartExportTitleColor)"></span>
+                </div>
+            </div>
 
-            <div class="settings-group">
-                <h4>Chart Title Color for PPT</h4>
-                <div id="titleColorOptions">
-                    <span class="color-option" style="background-color:#333333;" data-color="#333333" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#333333')"></span>
-                    <span class="color-option" style="background-color:#000000;" data-color="#000000" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#000000')"></span>
-                    <span class="color-option" style="background-color:#2F80ED;" data-color="#2F80ED" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#2F80ED')"></span>
-                    <span class="color-option" style="background-color:#8E44AD;" data-color="#8E44AD" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#8E44AD')"></span>
-                    <span class="color-option" style="background-color:#D24726;" data-color="#D24726" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#D24726')"></span>
-                </div>
-            </div>
+            <div class="settings-group">
+                <h4>Chart Title Color for PPT</h4>
+                <div id="titleColorOptions">
+                    <span class="color-option" style="background-color:#333333;" data-color="#333333" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#333333')"></span>
+                    <span class="color-option" style="background-color:#000000;" data-color="#000000" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#000000')"></span>
+                    <span class="color-option" style="background-color:#2F80ED;" data-color="#2F80ED" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#2F80ED')"></span>
+                    <span class="color-option" style="background-color:#8E44AD;" data-color="#8E44AD" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#8E44AD')"></span>
+                    <span class="color-option" style="background-color:#D24726;" data-color="#D24726" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#D24726')"></span>
+                </div>
+            </div>
 
-            <div style="margin-top: auto; padding-top: 15px; border-top: 1px solid #eee;">
-                <p style="font-size: 12px; color: #777;">Preview updates instantly.</p>
-            </div>
-        </div>
+            <div style="margin-top: auto; padding-top: 15px; border-top: 1px solid #eee;">
+                <p style="font-size: 12px; color: #777;">Preview updates instantly.</p>
+            </div>
+        </div>
 
-    </div>
-    <div class="modal-footer">
-      <button class="action-btn" style="background:#888;" onclick="closePreview()">Cancel</button>
-      <button class="action-btn ppt-btn" onclick="downloadPPT()">Download .PPTX</button>
-    </div>
-  </div>
+    </div>
+    <div class="modal-footer">
+      <button class="action-btn" style="background:#888;" onclick="closePreview()">Cancel</button>
+      <button class="action-btn ppt-btn" onclick="downloadPPT()">Download .PPTX</button>
+    </div>
+  </div>
 </div>
 
 <script>
 // --- CONFIG & STATE ---
-let nrData = []; // NEW: NR Data
-let nsaData = []; // NEW: NSA Data
-let allData = []; // Combined Data for timeline/site list compatibility
+let nrData = []; 
+let nsaData = [];
+let allData = [];
 let fuse = null;
-let allSites = []; // Holds gNodeB Names
-let siteCutoverMap = {}; // Maps gNodeB Name -> On-Air Date
-let linkedSiteMap = {}; // Maps eNodeB Name -> gNodeB Name
+let allSites = [];
+let siteCutoverMap = {}; // Maps eNodeB Name -> On-Air Date
 let allOnAirDates = [];
 let selectedOnAirDates = [];
 
-let selectedSites = []; // Holds selected gNodeB Names
-let currentTab = "both"; // 'both', 'nr', 'nsa'
-let graphsPerSlide = 2;	
+let selectedSites = [];
+let currentTab = "both"; // DEFAULT IS NOW 'BOTH'
+let graphsPerSlide = 2; 
 
-let chartExportColor = '#2F80ED'; 
-let chartExportTitleColor = '#333333'; 
+let chartExportColor = '#2F80ED'; // Default Line/Dot Color (Dark Blue)
+let chartExportTitleColor = '#333333'; // Default Title Color (Dark Gray/Black)
 
-// NR KPIs (Acceptance category from your original code)
 const nrKpis = [
-  "NSA Average User Number","SgNB Addition Success Rate (CU)(%)","SgNB TriSgNB Abnormal Release Rate(%)","SCG PSCell Change Success Rate(%)","Intra-SgNB IntraFreq PSCell Change Success Rate(%)",
+  "NSA Average User Number","SgNB Addition Success Rate (CU)(%)","SgNB TriSgNB Abnormal Release Rate(%)","SCG PSCell Change Success Rate(%)","Intra-SgNB IntraFreq PSCell Change Success Rate(%)",
   "Intra-SgNB Pscell Change Success Rate(%)","Inter-SgNB Pscell Change Success Rate(%)","Inter-SgNB PSCell IntraFreq Change Success Rate(%)","DL Avg Latency (ms)"
 ];
-
-// NSA KPIs (Example list for the NSA tab - you need to populate this based on your data)
 const nsaKpis = [
-  "RRC Re-establish Rate(%)","Avg NSA DC User Num","L.Thpt.bits.DL.McgSplit.MeNB","L.Thpt.bits.DL.McgSplit.SgNB",
+  "RRC Re-establish Rate(%)","Avg NSA DC User Num","L.Thpt.bits.DL.McgSplit.MeNB","L.Thpt.bits.DL.McgSplit.SgNB",
   "L.Thpt.bits.UL.McgSplit.MeNB","L.Thpt.bits.UL.McgSplit.SgNB","SCG Failure Rate(%)","NSA E-RAB Drop Rate(%)",
   "e-RAB Mod Success Rate(%)","SCG Mod Success Rate(4G initiated)(%)","SCG Mod Success Rate(5G initiated)(%)",
   "DL RB Utilization (NSA DC)(%)","UL RB Utilization (NSA DC)(%)","User Downlink Split Average Throughput (NSA DC)",
   "User Uplink Split Average Throughput (NSA DC)"
 ];
-
-
 let selectedKpis = {
-  nr: [...nrKpis],
-  nsa: [...nsaKpis]
+  nr: [...nrKpis],
+  nsa: [...nsaKpis]
 };
 
 // --- GLOBAL UTILITY FUNCTIONS ---
 
 /**
- * Switches the active tab (NR, NSA, All).
- * @param {string} tab - The tab identifier ('nr', 'nsa', 'both').
- */
-function switchTab(tab) {
-    document.querySelectorAll('.tab').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    document.querySelector(`.tab[onclick="switchTab('${tab}')"]`).classList.add('active');
-    currentTab = tab;
-    renderCharts(); 
-}
-
-// --- NEW HELPER FUNCTION TO PARSE CSV ---
-/**
- * Fetches and parses a single Google Sheet CSV URL.
- * @param {string} url - The public CSV export URL.
- * @returns {Promise<Array<Object>>} - An array of objects with header keys.
+ * Switches the active tab (nr, nsa, Both).
+ * @param {string} tab - The tab identifier ('nr', 'nsa', 'both').
  */
-async function fetchAndParse(url) {
-    const res = await fetch(url);
-    const text = await res.text();
-    const rows = text.trim().split('\n').map(r => r.split(','));
-    const headers = rows.shift().map(h => h.trim());
-
-    return rows.map(r => {
-        const obj = {};
-        headers.forEach((h, i) => {
-            const val = r[i] ? r[i].trim() : "";
-            obj[h] = val === "" ? null : (isNaN(val) ? val : parseFloat(val));
-        });
-        return obj;
+function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(btn => {
+        btn.classList.remove('active');
     });
+    document.querySelector(`.tab[onclick="switchTab('${tab}')"]`).classList.add('active');
+    currentTab = tab;
+    renderCharts(); 
 }
 
-
-// --- UPDATED DATA FETCHING & MAPPING (Loads 3 Sheets) ---
+// --- DATA FETCHING & MAPPING ---
 async function fetchData(){
-  try {
-    // --- 1. Define URLs for the three distinct sheets ---
-    // GID 1930867305 (Assumed NR KPI Data)
-    const nrUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=1930867305&single=true&output=csv&t=" + Date.now();
-    
-    // !!! CRITICAL: REPLACE YOUR_NSA_GID_HERE with the GID for your NSA KPI data sheet !!!
+  try {
+    // 1. Fetch KPI Data
+    const nrUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=1930867305&single=true&output=csv&t=" + Date.now();
     const nsaUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=670588387&single=true&output=csv&t=" + Date.now(); 
-
-    // GID 19616562 (Confirmed Cutover/Mapping Data)
-    const cutoverUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=19616562&single=true&output=csv&t=" + Date.now();
-    
-    
-    // --- 2. Fetch all three data sets concurrently using the helper ---
+    const cutoverUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=19616562&single=true&output=csv&t=" + Date.now();
+    // --- 2. Fetch all three data sets concurrently using the helper ---
     const [cutoverRawData, nrRawData, nsaRawData] = await Promise.all([
         fetchAndParse(cutoverUrl),
         fetchAndParse(nrUrl),
@@ -759,274 +723,406 @@ function renderCharts(){
 }
 
 function getRandomColor() {
-  const colors = ['#2F80ED', '#27AE60', '#D24726', '#8E44AD', '#F39C12', '#2980B9'];
-  return colors[Math.floor(Math.random() * colors.length)];
+  const colors = ['#2F80ED', '#27AE60', '#D24726', '#8E44AD', '#F39C12', '#2980B9'];
+  return colors[Math.floor(Math.random() * colors.length)];
 }
 
-// --- KPI DRAWER & UTILITY LOGIC (UPDATED FOR NR/NSA) ---
+// --- KPI DRAWER & UTILITY LOGIC ---
 
 function toggleDrawer(){
-  const d = document.getElementById("kpiDrawer");
-  d.classList.toggle("open");
-  if(d.classList.contains("open")) populateKpiOptions();
+  const d = document.getElementById("kpiDrawer");
+  d.classList.toggle("open");
+  if(d.classList.contains("open")) populateKpiOptions();
 }
 
 function populateKpiOptions(){
-  const list = document.getElementById("kpiOptionsList");
-  list.innerHTML = "";
-  
-  document.getElementById('drawerHeaderTitle').textContent = 'KPI Settings';
+  const list = document.getElementById("kpiOptionsList");
+  list.innerHTML = "";
+  
+  document.getElementById('drawerHeaderTitle').textContent = 'KPI Settings';
 
-  const nrSection = currentTab === 'nr' || currentTab === 'both';
-  const nsaSection = currentTab === 'nsa' || currentTab === 'both';
-  
-  const createGroup = (title, key, sourceArr) => {
-    const h4 = document.createElement("h4");
-    h4.textContent = title;
-    h4.style.marginTop = "15px";
-    list.appendChild(h4);
-    
-    sourceArr.forEach(kpi => {
-      const div = document.createElement("div");
-      const checked = selectedKpis[key].includes(kpi) ? "checked" : "";
-      div.innerHTML = `<input type='checkbox' class='kpi-chk' data-group='${key}' value='${kpi}' ${checked}> <span style='font-size:13px'>${kpi}</span>`;
-      div.onclick = (e) => {
-        if(e.target.tagName !== "INPUT") {
-            const chk = div.querySelector("input");
-            chk.checked = !chk.checked;
-        }
-        // No auto-apply here, user must click Apply
-      };
-      list.appendChild(div);
-    });
-  };
+  const nrSection = currentTab === 'nr' || currentTab === 'both';
+  const nSaSection = currentTab === 'nsa' || currentTab === 'both';
+  
+  const createGroup = (title, key, sourceArr) => {
+    const h4 = document.createElement("h4");
+    h4.textContent = title;
+    h4.style.marginTop = "15px";
+    list.appendChild(h4);
+    
+    sourceArr.forEach(kpi => {
+      const div = document.createElement("div");
+      const checked = selectedKpis[key].includes(kpi) ? "checked" : "";
+      div.innerHTML = `<input type='checkbox' class='kpi-chk' data-group='${key}' value='${kpi}' ${checked}> <span style='font-size:13px'>${kpi}</span>`;
+      div.onclick = (e) => {
+        if(e.target.tagName !== "INPUT") {
+            const chk = div.querySelector("input");
+            chk.checked = !chk.checked;
+        }
+        // No auto-apply here, user must click Apply
+      };
+      list.appendChild(div);
+    });
+  };
 
-  if (nrSection) createGroup("NR KPIs", "nr", nrKpis);
-  if (nsaSection) createGroup("NSA KPIs", "nsa", nsaKpis);
+  if (nrSection) createGroup("NR KPIs", "nr", nrKpis);
+  if (nsaSection) createGroup("NSA KPIs", "nsa", nsaKpis);
 }
 
 /**
- * Selects all visible KPI checkboxes and updates the internal state.
- */
+ * Selects all visible KPI checkboxes and updates the internal state.
+ */
 function selectVisibleKpis() {
-    const chks = document.getElementById("kpiOptionsList").querySelectorAll(".kpi-chk");
-    chks.forEach(c => c.checked = true);
-    applyKpis(false); // Apply but do not close
+    const chks = document.querySelectorAll(".kpi-chk");
+    
+    // 1. Update Checkboxes Visually
+    chks.forEach(c => {
+        c.checked = true;
+    });
+
+    // 2. Update Internal State
+    if (currentTab === 'nr' || currentTab === 'both') {
+        selectedKpis.nr = [...nrKpis];
+    }
+    if (currentTab === 'nsa' || currentTab === 'both') {
+        selectedKpis.nsa = [...nsaKpis];
+    }
 }
 
 /**
- * Clears all visible KPI checkboxes and updates the internal state.
- */
+ * Clears all visible KPI checkboxes and updates the internal state.
+ */
 function clearVisibleKpis() {
-    const chks = document.getElementById("kpiOptionsList").querySelectorAll(".kpi-chk");
-    chks.forEach(c => c.checked = false);
-    applyKpis(false); // Apply but do not close
-}
+    const chks = document.querySelectorAll(".kpi-chk");
+    
+    // 1. Update Checkboxes Visually
+    chks.forEach(c => {
+        c.checked = false;
+    });
 
-/**
- * Applies the selected KPIs to the global state and re-renders charts.
- */
-function applyKpis(shouldClose = true) {
-    const newSelectedKpis = { nr: [], nsa: [] };
-    const chks = document.getElementById("kpiOptionsList").querySelectorAll(".kpi-chk:checked");
-    
-    chks.forEach(c => {
-        const group = c.getAttribute('data-group');
-        newSelectedKpis[group].push(c.value);
-    });
-    
-    selectedKpis = newSelectedKpis;
-    renderCharts();
-
-    if (shouldClose) toggleDrawer();
+    // 2. Update Internal State
+    if (currentTab === 'nr' || currentTab === 'both') {
+        selectedKpis.nr = [];
+    }
+    if (currentTab === 'nsa' || currentTab === 'both') {
+        selectedKpis.nsa = [];
+    }
 }
 
 
-// --- PPT EXPORT LOGIC (UNCHANGED, relies on renderCharts structure) ---
+function applyKpis(){
+  const chks = document.querySelectorAll(".kpi-chk");
+  
+  // Start with existing selections for non-visible tabs
+  const tempnr = currentTab === 'nr' || currentTab === 'both' ? [] : [...selectedKpis.nr];
+  const tempnsa = currentTab === 'nsa' || currentTab === 'both' ? [] : [...selectedKpis.nsa];
+
+  // Apply checked status from the UI
+  chks.forEach(c => {
+    if(c.checked) {
+        if(c.dataset.group === 'nr') tempnr.push(c.value);
+        if(c.dataset.group === 'nsa') tempnsa.push(c.value);
+    }
+  });
+
+  selectedKpis.nr = tempnr;
+  selectedKpis.nsa = tempnsa;
+  
+  toggleDrawer();
+  renderCharts();
+}
+
+// --- PPT EXPORT CUSTOMIZATION & PREVIEW ---
+
+// Centralized Layout Logic: Ensures Preview and PPT match exactly
+function getLayoutConfig(count) {
+    // Standard PPT Slide: 10 inches x 5.625 inches
+    const slideWidth = 10.0;
+    const slideHeight = 5.625;
+    
+    // Margins & Spacing (Inches)
+    const marginX = 0.2;	
+    const marginTop = 0.9; // Space for Slide Title (Original - kept for chart size calculation)
+    const marginBottom = 0.2;
+    const gap = 0.15;	 	 // Space between charts
+
+    let rows, cols;
+
+    // Define Grid Logic
+    switch(parseInt(count)) {
+        case 1: rows = 1; cols = 1; break;
+        case 2: rows = 1; cols = 2; break;
+        case 3: rows = 2; cols = 2; break; // FIXED: 3 graphs now use 2x2 grid (not squished)
+        case 4: rows = 2; cols = 2; break;
+        case 6: rows = 2; cols = 3; break;
+        case 9: rows = 3; cols = 3; break; // FIXED: 9 graphs strictly calculated to fit height
+        default: rows = 2; cols = 2;
+    }
+
+    // Calculate Available Space
+    const usableW = slideWidth - (marginX * 2);
+    // Note: usableH uses the original marginTop (0.9) to calculate the chart dimensions (chartH).
+    // The charts will maintain this calculated size even if the actual PPT starting y-position moves up.
+    const usableH = slideHeight - marginTop - marginBottom;
+
+    // Calculate Individual Chart Dimensions
+    const chartW = (usableW - ((cols - 1) * gap)) / cols;
+    const chartH = (usableH - ((rows - 1) * gap)) / rows;
+
+    return { rows, cols, chartW, chartH, gap, marginX, marginTop, slideWidth, slideHeight };
+}
 
 function openPreview() {
-    if (document.getElementById('mainChartContainer').children.length === 0) {
-        alert("Please fetch data and select KPIs before exporting.");
-        return;
-    }
-    // Reset settings to default if needed, then render preview
-    updatePreviewSettings(2, chartExportColor, chartExportTitleColor);
-    document.getElementById('previewModal').style.display = 'flex';
+    const canvases = document.querySelectorAll("canvas");
+    if(canvases.length === 0) { alert("No charts to export."); return; }
+    
+    // Set defaults if not already set
+    if(!graphsPerSlide) graphsPerSlide = 2;	
+    
+    updatePreviewSettings(graphsPerSlide, chartExportColor, chartExportTitleColor);
+    document.getElementById("previewModal").style.display = "flex";
 }
 
-function closePreview() {
-    document.getElementById('previewModal').style.display = 'none';
+function highlightSettingButtons(count, lineColor, titleColor) {
+    document.querySelectorAll('.graph-options button').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.backgroundColor = '#2F80ED'; // Reset blue
+        btn.style.color = 'white';
+        if (parseInt(btn.dataset.count) === count) {
+            btn.classList.add('active');
+            btn.style.backgroundColor = '#27AE60'; // Active Green
+        }
+    });
+
+    document.querySelectorAll('#lineColorOptions .color-option').forEach(el => {
+        el.classList.remove('selected');
+        if (el.dataset.color === lineColor) el.classList.add('selected');
+    });
+
+    document.querySelectorAll('#titleColorOptions .color-option').forEach(el => {
+        el.classList.remove('selected');
+        if (el.dataset.color === titleColor) el.classList.add('selected');
+    });
 }
 
-function updatePreviewSettings(count, lineColor, titleColor) {
-    graphsPerSlide = count;
-    chartExportColor = lineColor;
-    chartExportTitleColor = titleColor;
+function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
+    if (newCount) graphsPerSlide = parseInt(newCount);
+    if (newLineColor) chartExportColor = newLineColor;
+    if (newTitleColor) chartExportTitleColor = newTitleColor;
 
-    // Update active button/color indicators
-    document.querySelectorAll('.graph-options button').forEach(btn => {
-        btn.classList.remove('active');
-        if (parseInt(btn.dataset.count) === count) btn.classList.add('active');
-    });
-    document.querySelectorAll('#lineColorOptions .color-option').forEach(span => {
-        span.classList.remove('selected');
-        if (span.dataset.color === lineColor) span.classList.add('selected');
-    });
-    document.querySelectorAll('#titleColorOptions .color-option').forEach(span => {
-        span.classList.remove('selected');
-        if (span.dataset.color === titleColor) span.classList.add('selected');
-    });
+    highlightSettingButtons(graphsPerSlide, chartExportColor, chartExportTitleColor);
+    
+    const count = graphsPerSlide;
+    const body = document.getElementById("previewBody");
+    const canvases = document.querySelectorAll("canvas");
+    
+    document.getElementById("previewTitle").textContent = `PPT Export Preview (${count} Graphs per Slide)`;
+    body.innerHTML = "";
 
-    renderPreview();
+    // Get layout config to ensure HTML CSS matches PPT Logic
+    const layout = getLayoutConfig(count);
+
+    // Generate CSS Grid Template based on calculated columns
+    const gridTemplateCols = `repeat(${layout.cols}, 1fr)`;
+
+    for(let i=0; i<canvases.length; i+=count){
+        const slideDiv = document.createElement("div");
+        slideDiv.className = "preview-slide";
+        
+        const slideTitle = document.createElement("div");
+        slideTitle.className = "preview-slide-title";
+        slideTitle.textContent = `Slide ${Math.floor(i/count) + 1}`;
+        slideDiv.appendChild(slideTitle);
+
+        const grid = document.createElement("div");
+        grid.className = "preview-grid";
+        grid.style.display = "grid";
+        grid.style.gridTemplateColumns = gridTemplateCols;
+        grid.style.gap = "10px";
+        grid.style.height = "100%";
+        grid.style.paddingTop = "30px"; // Visual padding for preview
+        grid.style.alignContent = "start"; // Prevent vertical stretching weirdness
+
+        for(let j=0; j<count; j++){
+            if(i+j < canvases.length){
+                const c = canvases[i+j];
+                const box = createPreviewBox(c, chartExportColor, chartExportTitleColor);	
+                
+                // --- PREVIEW FIX LOGIC ---
+                // Override layout.rows for preview to make 3/4 charts look bigger.
+                const chartsOnSlide = Math.min(count, canvases.length - i);
+                let previewRows = layout.rows;
+                
+                // If using a 2-row layout (3 or 4 charts) but we're rendering the preview,
+                // force it to act like a 1-row height to maximize chart size in the modal.
+                if (layout.rows === 2 && chartsOnSlide <= 4) {
+                    previewRows = 1; 
+                }
+                
+                // If only 3 charts, definitely force to 1 row height to maximize visibility
+                if (chartsOnSlide === 3) {
+                    previewRows = 1;
+                }
+                // --- END PREVIEW FIX LOGIC ---
+
+                // Adjust height for preview based on calculated rows
+                box.style.height = `calc((100% / ${previewRows}) - 15px)`;	
+                
+                grid.appendChild(box);
+            }
+        }
+        slideDiv.appendChild(grid);
+        body.appendChild(slideDiv);
+    }
 }
 
-async function renderPreview() {
-    const previewBody = document.getElementById('previewBody');
-    previewBody.innerHTML = '';
-    const charts = Array.from(document.querySelectorAll('.chart-card canvas'));
-    
-    if (charts.length === 0) return;
+function createPreviewBox(canvas, lineColor, titleColor) {
+    const box = document.createElement("div");
+    box.className = "preview-img-box";
+    
+    // Create a temp canvas to redraw with export colors
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+    const tempCtx = tempCanvas.getContext('2d');
+    
+    const chartInstance = Chart.getChart(canvas.id);
+    let imgData = '';
+    
+    if (chartInstance) {
+        const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
+        const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
+        const originalTitleColor = chartInstance.options.plugins.title.color;
+        
+        // Apply Export Styles
+        chartInstance.data.datasets.forEach(d => {	
+            d.borderColor = lineColor;	
+            d.pointBorderColor = lineColor;	
+            d.pointBackgroundColor = lineColor;	
+            d.pointRadius = 3;	
+            d.pointStyle = 'circle';	
+            d.spanGaps = true;	
+        });
 
-    for (let i = 0; i < charts.length; i += graphsPerSlide) {
-        const slide = document.createElement('div');
-        slide.className = 'preview-slide';
-        
-        const slideTitle = document.createElement('div');
-        slideTitle.className = 'preview-slide-title';
-        slideTitle.textContent = `Slide ${Math.ceil((i + 1) / graphsPerSlide)}/${Math.ceil(charts.length / graphsPerSlide)}`;
-        slide.appendChild(slideTitle);
+        chartInstance.options.plugins.title.color = titleColor;	
+        
+        chartInstance.update('none');	
+        
+        tempCtx.drawImage(canvas, 0, 0);
+        imgData = tempCanvas.toDataURL("image/png");
+        
+        // Revert Styles
+        chartInstance.data.datasets.forEach((d, index) => {	
+            d.borderColor = originalColors[index];	
+            d.pointBorderColor = originalPointColors[index];
+        });
+        chartInstance.options.plugins.title.color = originalTitleColor;
+        chartInstance.update('none');
+    }
 
-        const grid = document.createElement('div');
-        grid.className = 'preview-grid';
-        
-        let cols = 1;
-        if (graphsPerSlide === 2 || graphsPerSlide === 4 || graphsPerSlide === 6) cols = 2;
-        if (graphsPerSlide === 3 || graphsPerSlide === 9) cols = 3;
-        
-        // Adjust grid template columns based on the number of graphs per slide
-        grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-        grid.style.gridTemplateRows = `repeat(${Math.ceil(graphsPerSlide / cols)}, 1fr)`;
-        
-        const chartsOnSlide = charts.slice(i, i + graphsPerSlide);
-        
-        for (const chartCanvas of chartsOnSlide) {
-            const imgBox = document.createElement('div');
-            imgBox.className = 'preview-img-box';
-
-            const base64Image = await exportChartToImage(chartCanvas);
-            const img = document.createElement('img');
-            img.src = base64Image;
-            img.alt = chartCanvas.chart.options.plugins.title.text;
-
-            const label = document.createElement('div');
-            label.className = 'preview-label';
-            label.textContent = chartCanvas.chart.options.plugins.title.text;
-
-            imgBox.appendChild(img);
-            imgBox.appendChild(label);
-            grid.appendChild(imgBox);
-        }
-        
-        slide.appendChild(grid);
-        previewBody.appendChild(slide);
-    }
+    const img = document.createElement("img");
+    img.src = imgData;
+    img.style.maxHeight = "100%";
+    img.style.maxWidth = "100%";
+    img.style.objectFit = "contain";
+    
+    box.appendChild(img);
+    return box;
 }
 
-async function exportChartToImage(chartCanvas) {
-    // Get the current chart instance from the canvas
-    const chart = chartCanvas.chart;
-    
-    // Temporarily override chart options for high-quality PPTX export
-    const originalOptions = JSON.parse(JSON.stringify(chart.options)); // Deep copy
-    const originalData = JSON.parse(JSON.stringify(chart.data));
-    
-    // Apply export customizations
-    chart.options.plugins.title.color = chartExportTitleColor;
-    chart.data.datasets.forEach(dataset => {
-        dataset.borderColor = chartExportColor;
-        dataset.pointBackgroundColor = chartExportColor;
-        dataset.pointBorderColor = '#fff';
-        dataset.pointRadius = 5; 
-    });
-    chart.options.scales.x.ticks.color = '#555';
-    chart.options.scales.y.ticks.color = '#555';
-    chart.options.scales.y.grid.color = '#ddd';
+function closePreview(){ document.getElementById("previewModal").style.display = "none"; }
 
-    // Force update the chart before generating image
-    chart.update();
+async function downloadPPT(){
+    const pptx = new PptxGenJS();
+    pptx.layout = 'LAYOUT_16x9'; // 10 x 5.625 inches
+    
+    // Title Slide
+    let slide = pptx.addSlide();
+    slide.addText("LTE KPI Report", { x:0.5, y:2, fontSize:32, bold:true, color:'2F80ED' });
+    slide.addText(`Generated: ${new Date().toLocaleDateString()}`, { x:0.5, y:3, fontSize:14 });
 
-    // Generate the image (PNG for best quality in PPTX)
-    const base64Image = chartCanvas.toDataURL('image/png', 1.0);
+    const canvases = document.querySelectorAll("canvas");
+    const count = graphsPerSlide;
+    const lineColor = chartExportColor;	
+    const titleColor = chartExportTitleColor;
+    
+    // Get EXACT calculated layout
+    const layout = getLayoutConfig(count);
+    
+    // New effective margin since the slide title is removed
+    const effectiveMarginTop = 0.2; 
 
-    // Restore original options to maintain dashboard appearance
-    chart.options = originalOptions;
-    chart.data = originalData;
-    chart.update();
-    
-    return base64Image;
+    for(let i=0; i<canvases.length; i+=count){
+        let slide = pptx.addSlide();
+        
+        // REMOVED: Slide Header / Title for each new slide, as requested
+        /*
+        slide.addText("LTE KPI Dashboard Overview", {	
+            x: 0.2, y: 0.2, fontSize: 18, color: 'D24726', bold: true	
+        });
+        */
+
+        // Add Charts
+        for(let j=0; j<count; j++){
+            if(i+j < canvases.length){
+                const c = canvases[i+j];
+                
+                // Calculate Position based on Grid Logic
+                const colIndex = j % layout.cols;
+                const rowIndex = Math.floor(j / layout.cols);
+
+                const xPos = layout.marginX + (colIndex * (layout.chartW + layout.gap));
+                // Chart Y position starts from the new, smaller margin (0.2 in), 
+                // shifting charts up to fill the space of the removed title.
+                const yPos = effectiveMarginTop + (rowIndex * (layout.chartH + layout.gap));
+                
+                // --- PPT CHART EXPORT LOGIC ---
+                const chartInstance = Chart.getChart(c.id);
+                const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
+                const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
+                const originalTitleColor = chartInstance.options.plugins.title.color;
+                
+                // Override style for PPT export
+                chartInstance.data.datasets.forEach(d => {	
+                    d.borderColor = lineColor;	
+                    d.pointBorderColor = lineColor;	
+                    d.pointBackgroundColor = lineColor;	
+                    d.pointRadius = 3;
+                    d.spanGaps = true;	
+                });
+                chartInstance.options.plugins.title.color = titleColor;	
+                chartInstance.update('none');	
+                
+                const imgData = c.toDataURL("image/png");
+                
+                // Restore original styles
+                chartInstance.data.datasets.forEach((d, index) => {	
+                    d.borderColor = originalColors[index];	
+                    d.pointBorderColor = originalPointColors[index];
+                    d.spanGaps = true;	
+                });
+                chartInstance.options.plugins.title.color = originalTitleColor;
+                chartInstance.update('none');
+                // --- END PPT CHART EXPORT LOGIC ---
+                
+                // Add Image to Slide with calculated coordinates
+                slide.addImage({	
+                    data: imgData,	
+                    x: xPos,	
+                    y: yPos,	
+                    w: layout.chartW,	
+                    h: layout.chartH	
+                });
+            }
+        }
+    }
+
+    pptx.writeFile({ fileName: `KPI_Report_${new Date().getTime()}.pptx` });
+    closePreview();
 }
 
-
-async function downloadPPT() {
-    const pptx = new PptxGenJS();
-    pptx.layout = 'LAYOUT_16X9';
-    
-    const charts = Array.from(document.querySelectorAll('.chart-card canvas'));
-    const slides = [];
-    
-    // 1. Generate all images with custom PPT settings first
-    for (const chartCanvas of charts) {
-        const base64Image = await exportChartToImage(chartCanvas);
-        slides.push({ 
-            title: chartCanvas.chart.options.plugins.title.text,
-            base64: base64Image 
-        });
-    }
-
-    // 2. Create PPTX Slides
-    for (let i = 0; i < slides.length; i += graphsPerSlide) {
-        const slide = pptx.addSlide();
-        slide.background = { fill: 'FFFFFF' };
-        
-        const chartsOnSlide = slides.slice(i, i + graphsPerSlide);
-        
-        let cols = 1;
-        let rows = 1;
-        let w = 9.5; // full width
-        let h = 5.0; // max height
-
-        if (graphsPerSlide === 2) { cols = 2; rows = 1; w = 4.7; h = 5.0; }
-        else if (graphsPerSlide === 3) { cols = 3; rows = 1; w = 3.15; h = 5.0; }
-        else if (graphsPerSlide === 4) { cols = 2; rows = 2; w = 4.7; h = 2.5; }
-        else if (graphsPerSlide === 6) { cols = 3; rows = 2; w = 3.15; h = 2.5; }
-        else if (graphsPerSlide === 9) { cols = 3; rows = 3; w = 3.15; h = 1.66; }
-
-        const margin = 0.25;
-        
-        chartsOnSlide.forEach((chartData, chartIndex) => {
-            const colIndex = chartIndex % cols;
-            const rowIndex = Math.floor(chartIndex / cols);
-            
-            slide.addImage({
-                data: chartData.base64,
-                x: margin + (colIndex * w) + (colIndex * margin/2),
-                y: margin * 2 + (rowIndex * h) + (rowIndex * margin),
-                w: w,
-                h: h,
-                sizing: { type: 'contain', w: w, h: h }
-            });
-        });
-    }
-
-    // Final download
-    const now = new Date();
-    const fileName = `NR_NSA_KPI_Dashboard_${now.getFullYear()}${String(now.getMonth()+1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}.pptx`;
-    pptx.writeFile({ fileName: fileName }).then(closePreview);
-}
-
-// --- INIT ---
-document.addEventListener("DOMContentLoaded", fetchData);
-
+// Init
+fetchData();
 </script>
 </body>
 </html>
