@@ -371,6 +371,13 @@ function switchTab(tab) {
 }
 
 // --- DATA FETCHING & MAPPING ---
+// Restore previously selected sheet (site/group) from localStorage
+const savedSheet = localStorage.getItem('selectedSheet');
+if(savedSheet === 'group' || savedSheet === 'site') {
+    currentSheet = savedSheet;
+    if(currentSheet === 'group') sheetToggle.classList.add('active');
+    else sheetToggle.classList.remove('active');
+}
 
 function switchSheetToggle() {
     if(currentSheet === 'site') {
@@ -380,6 +387,10 @@ function switchSheetToggle() {
         currentSheet = 'site';
         sheetToggle.classList.remove('active');
     }
+
+    // Save current sheet to localStorage
+    localStorage.setItem('selectedSheet', currentSheet);
+
     fetchData(); // Refetch charts based on new sheet
 }
 
@@ -707,20 +718,24 @@ const dataPoints = timeline.map(date => {
     });
 
     let validValues = dataPoints.filter(v => v !== null);
-    let minVal = Math.min(...validValues);
-    let maxVal = Math.max(...validValues);
+let minVal = Math.min(...validValues);
+let maxVal = Math.max(...validValues);
 
-    // Special rule: if min >= 95 and max <= 100, set scale explicitly
-    if (minVal >= 95 && maxVal <= 100) {
-      minVal = 95;
-      maxVal = 100;
-    } else {
-      if (minVal < 40) minVal = Math.max(Math.floor(minVal), 42);
-      if (maxVal > 100) maxVal = 100;
+// FORCE MAX & MIN RULES
+const n = 10; // example: 10%
+const threshold = n / 100;
 
-      minVal = Math.floor(minVal / 5) * 5;
-      maxVal = Math.ceil(maxVal / 5) * 5;
-    }
+if (maxVal < 1) {
+    maxVal = Math.max(maxVal, threshold);
+}
+if (minVal !== 0) {
+    minVal = Math.max(minVal, threshold);
+}
+
+// Optional rounding
+minVal = Math.floor(minVal * 100) / 100;
+maxVal = Math.ceil(maxVal * 100) / 100;
+
 
     // Draw Chart with Animation
     new Chart(canvas.getContext("2d"), {
@@ -769,8 +784,10 @@ const dataPoints = timeline.map(date => {
                grid: {display:false} 
            },
            y: { 
-               beginAtZero: false, 
-               grid: {color:'#eee'},
+              beginAtZero: false,
+              grid: { color:'#eee' },
+              min: minVal,
+              max: maxVal
                // If no data points, fix the scale to prevent giant axes
                min: (finalSiteList.length === 0 || dataPoints.every(p => p === null)) ? 0 : undefined 
            }
