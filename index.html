@@ -33,6 +33,7 @@ button.action-btn:hover { background:#1f5ab5; }
 button.ppt-btn { background:#D24726; } /* PowerPoint Orange */
 button.ppt-btn:hover { background:#a8381e; }
 
+
 /* --- GRID LAYOUT (3 Graphs per row) --- */
 .chart-grid { 
   display:grid; 
@@ -49,6 +50,47 @@ button.ppt-btn:hover { background:#a8381e; }
 .chart-card { background:white; border-radius:8px; padding:15px; box-shadow:0 2px 8px rgba(0,0,0,0.08); display:flex; flex-direction:column; }
 .chart-title { display:none; } 
 .chart-container { position: relative; height: 280px; width: 100%; }
+
+  .toggle-switch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.toggle-switch .toggle-label {
+  user-select: none;
+}
+
+.toggle-switch .switch {
+  width: 50px;
+  height: 24px;
+  background: #ccc;
+  border-radius: 12px;
+  position: relative;
+  transition: background 0.3s;
+}
+
+.toggle-switch .switch .circle {
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: left 0.3s;
+}
+
+.toggle-switch.active .switch {
+  background: #2F80ED;
+}
+
+.toggle-switch.active .switch .circle {
+  left: 28px;
+}
+
 
 /* --- DROPDOWNS --- */
 #dropdown, #siteDropdownList, #onAirDateDropdownList { 
@@ -184,6 +226,15 @@ button.ppt-btn:hover { background:#a8381e; }
     <div id="siteDropdownList"></div>
   </div>
 
+  <div class="toggle-switch" id="sheetToggle">
+  <span class="toggle-label">Site Level</span>
+  <div class="switch" onclick="switchSheetToggle()">
+    <div class="circle"></div>
+  </div>
+  <span class="toggle-label">Group Level</span>
+</div>
+
+
   <button onclick="fetchData()" class="action-btn">Refresh</button>
   <button onclick="openPreview()" class="action-btn ppt-btn">Export PPT</button>
 </div>
@@ -281,6 +332,9 @@ let graphsPerSlide = 2;
 
 let chartExportColor = '#2F80ED'; // Default Line/Dot Color (Dark Blue)
 let chartExportTitleColor = '#333333'; // Default Title Color (Dark Gray/Black)
+  
+let currentSheet = 'site'; // Default
+const sheetToggle = document.getElementById("sheetToggle");
 
 const acceptanceKpis = [
   "LTE RRC Setup Success Rate(%)","ERAB Setup Success Rate(%)","LTE Call Setup Success Rate(%)","E-RAB Call Drop Rate(%)",
@@ -295,6 +349,7 @@ const monitoringKpis = [
   "LTE UL -USER Average Throughput (Mbit/s)","Downlink Packet Loss Rate (VoIP)(%)","Uplink Packet Loss Rate (VoIP)(%)",
   "VoLTE Traffic Erlang","VoLTE Traffic DL (MB)","VoLTE Traffic UL (MB)","DL BLER QCI1","UL BLER QCI1"
 ];
+
 let selectedKpis = {
   acceptance: [...acceptanceKpis],
   monitoring: [...monitoringKpis]
@@ -316,10 +371,28 @@ function switchTab(tab) {
 }
 
 // --- DATA FETCHING & MAPPING ---
+
+function switchSheetToggle() {
+    if(currentSheet === 'site') {
+        currentSheet = 'group';
+        sheetToggle.classList.add('active');
+    } else {
+        currentSheet = 'site';
+        sheetToggle.classList.remove('active');
+    }
+    fetchData(); // Refetch charts based on new sheet
+}
+
+
 async function fetchData(){
   try {
     // 1. Fetch KPI Data
-    const kpiUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=0&single=true&output=csv&t=" + Date.now();
+    const sheetUrls = {
+    site: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=0&single=true&output=csv",
+    group: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=893314169&single=true&output=csv"
+};
+  
+const kpiUrl = sheetUrls[currentSheet] + "&t=" + Date.now();
     const kpiRes = await fetch(kpiUrl);
     const kpiText = await kpiRes.text();
     
@@ -460,7 +533,7 @@ function updateDateFilterUI(options = {close: true}) {
     }
 }
 
-// --- FILTER UI LOGIC (eNodeB NAME) ---
+// --- FILTER UI LOGIC (eNodeB Name) ---
 
 function setupSiteDropdown(){
   const list = document.getElementById("siteDropdownList");
@@ -645,7 +718,6 @@ const dataPoints = timeline.map(date => {
       minVal = Math.floor(minVal / 5) * 5;
       maxVal = Math.ceil(maxVal / 5) * 5;
     }
-
 
     // Draw Chart with Animation
     new Chart(canvas.getContext("2d"), {
@@ -946,7 +1018,8 @@ function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
                 if (chartsOnSlide === 3) {
                     previewRows = 1;
                 }
-                // --- END PREVIEW FIX LOGIC ---               
+                // --- END PREVIEW FIX LOGIC ---
+                
                 grid.appendChild(box);
             }
         }
