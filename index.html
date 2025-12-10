@@ -822,10 +822,10 @@ function getLayoutConfig(count) {
     const slideHeight = 5.625;
     
     // Margins & Spacing (Inches)
-    const marginX = 0.2; 
-    const marginTop = 0.9; // Space for Slide Title
+    const marginX = 0.2;	
+    const marginTop = 0.9; // Space for Slide Title (Original - kept for chart size calculation)
     const marginBottom = 0.2;
-    const gap = 0.15;      // Space between charts
+    const gap = 0.15;	 	 // Space between charts
 
     let rows, cols;
 
@@ -842,6 +842,8 @@ function getLayoutConfig(count) {
 
     // Calculate Available Space
     const usableW = slideWidth - (marginX * 2);
+    // Note: usableH uses the original marginTop (0.9) to calculate the chart dimensions (chartH).
+    // The charts will maintain this calculated size even if the actual PPT starting y-position moves up.
     const usableH = slideHeight - marginTop - marginBottom;
 
     // Calculate Individual Chart Dimensions
@@ -856,7 +858,7 @@ function openPreview() {
     if(canvases.length === 0) { alert("No charts to export."); return; }
     
     // Set defaults if not already set
-    if(!graphsPerSlide) graphsPerSlide = 2; 
+    if(!graphsPerSlide) graphsPerSlide = 2;	
     
     updatePreviewSettings(graphsPerSlide, chartExportColor, chartExportTitleColor);
     document.getElementById("previewModal").style.display = "flex";
@@ -925,11 +927,27 @@ function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
         for(let j=0; j<count; j++){
             if(i+j < canvases.length){
                 const c = canvases[i+j];
-                const box = createPreviewBox(c, chartExportColor, chartExportTitleColor); 
+                const box = createPreviewBox(c, chartExportColor, chartExportTitleColor);	
                 
-                // Adjust height for preview based on row count
-                // We use percentage height in preview to mimic the PPT ratio
-                box.style.height = `calc((100% / ${layout.rows}) - 15px)`; 
+                // --- PREVIEW FIX LOGIC ---
+                // Override layout.rows for preview to make 3/4 charts look bigger.
+                const chartsOnSlide = Math.min(count, canvases.length - i);
+                let previewRows = layout.rows;
+                
+                // If using a 2-row layout (3 or 4 charts) but we're rendering the preview,
+                // force it to act like a 1-row height to maximize chart size in the modal.
+                if (layout.rows === 2 && chartsOnSlide <= 4) {
+                    previewRows = 1; 
+                }
+                
+                // If only 3 charts, definitely force to 1 row height to maximize visibility
+                if (chartsOnSlide === 3) {
+                    previewRows = 1;
+                }
+                // --- END PREVIEW FIX LOGIC ---
+
+                // Adjust height for preview based on calculated rows
+                box.style.height = `calc((100% / ${previewRows}) - 15px)`;	
                 
                 grid.appendChild(box);
             }
@@ -940,149 +958,148 @@ function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
 }
 
 function createPreviewBox(canvas, lineColor, titleColor) {
-  const box = document.createElement("div");
-  box.className = "preview-img-box";
-  
-  // Create a temp canvas to redraw with export colors
-  const tempCanvas = document.createElement('canvas');
-  tempCanvas.width = canvas.width;
-  tempCanvas.height = canvas.height;
-  const tempCtx = tempCanvas.getContext('2d');
-  
-  const chartInstance = Chart.getChart(canvas.id);
-  let imgData = '';
-  
-  if (chartInstance) {
-      const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
-      const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
-      const originalTitleColor = chartInstance.options.plugins.title.color;
-      
-      // Apply Export Styles
-      chartInstance.data.datasets.forEach(d => { 
-        d.borderColor = lineColor; 
-        d.pointBorderColor = lineColor; 
-        d.pointBackgroundColor = lineColor; 
-        d.pointRadius = 3; 
-        d.pointStyle = 'circle'; 
-        d.spanGaps = true; 
-      });
+    const box = document.createElement("div");
+    box.className = "preview-img-box";
+    
+    // Create a temp canvas to redraw with export colors
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+    const tempCtx = tempCanvas.getContext('2d');
+    
+    const chartInstance = Chart.getChart(canvas.id);
+    let imgData = '';
+    
+    if (chartInstance) {
+        const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
+        const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
+        const originalTitleColor = chartInstance.options.plugins.title.color;
+        
+        // Apply Export Styles
+        chartInstance.data.datasets.forEach(d => {	
+            d.borderColor = lineColor;	
+            d.pointBorderColor = lineColor;	
+            d.pointBackgroundColor = lineColor;	
+            d.pointRadius = 3;	
+            d.pointStyle = 'circle';	
+            d.spanGaps = true;	
+        });
 
-      chartInstance.options.plugins.title.color = titleColor; 
-      
-      chartInstance.update('none'); 
-      
-      tempCtx.drawImage(canvas, 0, 0);
-      imgData = tempCanvas.toDataURL("image/png");
-      
-      // Revert Styles
-      chartInstance.data.datasets.forEach((d, index) => { 
-        d.borderColor = originalColors[index]; 
-        d.pointBorderColor = originalPointColors[index];
-      });
-      chartInstance.options.plugins.title.color = originalTitleColor;
-      chartInstance.update('none');
-  }
+        chartInstance.options.plugins.title.color = titleColor;	
+        
+        chartInstance.update('none');	
+        
+        tempCtx.drawImage(canvas, 0, 0);
+        imgData = tempCanvas.toDataURL("image/png");
+        
+        // Revert Styles
+        chartInstance.data.datasets.forEach((d, index) => {	
+            d.borderColor = originalColors[index];	
+            d.pointBorderColor = originalPointColors[index];
+        });
+        chartInstance.options.plugins.title.color = originalTitleColor;
+        chartInstance.update('none');
+    }
 
-  const img = document.createElement("img");
-  img.src = imgData;
-  img.style.maxHeight = "100%";
-  img.style.maxWidth = "100%";
-  img.style.objectFit = "contain";
-  
-  box.appendChild(img);
-  return box;
+    const img = document.createElement("img");
+    img.src = imgData;
+    img.style.maxHeight = "100%";
+    img.style.maxWidth = "100%";
+    img.style.objectFit = "contain";
+    
+    box.appendChild(img);
+    return box;
 }
 
 function closePreview(){ document.getElementById("previewModal").style.display = "none"; }
 
 async function downloadPPT(){
-  const pptx = new PptxGenJS();
-  pptx.layout = 'LAYOUT_16x9'; // 10 x 5.625 inches
-  
-  // Title Slide
-  let slide = pptx.addSlide();
-  slide.addText("LTE KPI Report", { x:0.5, y:2, fontSize:32, bold:true, color:'2F80ED' });
-  slide.addText(`Generated: ${new Date().toLocaleDateString()}`, { x:0.5, y:3, fontSize:14 });
-
-  const canvases = document.querySelectorAll("canvas");
-  const count = graphsPerSlide;
-  const lineColor = chartExportColor; 
-  const titleColor = chartExportTitleColor;
-  
-  // Get EXACT calculated layout
-  const layout = getLayoutConfig(count);
-
-  for(let i=0; i<canvases.length; i+=count){
-    let slide = pptx.addSlide();
+    const pptx = new PptxGenJS();
+    pptx.layout = 'LAYOUT_16x9'; // 10 x 5.625 inches
     
-    // Slide Header
-    slide.addText("LTE KPI Dashboard Overview", { 
-        x: 0.2, y: 0.2, fontSize: 18, color: 'D24726', bold: true 
-    });
+    // Title Slide
+    let slide = pptx.addSlide();
+    slide.addText("LTE KPI Report", { x:0.5, y:2, fontSize:32, bold:true, color:'2F80ED' });
+    slide.addText(`Generated: ${new Date().toLocaleDateString()}`, { x:0.5, y:3, fontSize:14 });
 
-    // Add Charts
-    for(let j=0; j<count; j++){
-      if(i+j < canvases.length){
-        const c = canvases[i+j];
-        
-        // Calculate Position based on Grid Logic
-        const colIndex = j % layout.cols;
-        const rowIndex = Math.floor(j / layout.cols);
+    const canvases = document.querySelectorAll("canvas");
+    const count = graphsPerSlide;
+    const lineColor = chartExportColor;	
+    const titleColor = chartExportTitleColor;
+    
+    // Get EXACT calculated layout
+    const layout = getLayoutConfig(count);
+    
+    // New effective margin since the slide title is removed
+    const effectiveMarginTop = 0.2; 
 
-        const xPos = layout.marginX + (colIndex * (layout.chartW + layout.gap));
-        const yPos = layout.marginTop + (rowIndex * (layout.chartH + layout.gap));
+    for(let i=0; i<canvases.length; i+=count){
+        let slide = pptx.addSlide();
         
-        // --- PPT CHART EXPORT LOGIC ---
-        const chartInstance = Chart.getChart(c.id);
-        const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
-        const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
-        const originalTitleColor = chartInstance.options.plugins.title.color;
-        
-        // Override style for PPT export
-        chartInstance.data.datasets.forEach(d => { 
-          d.borderColor = lineColor; 
-          d.pointBorderColor = lineColor; 
-          d.pointBackgroundColor = lineColor; 
-          d.pointRadius = 3;
-          d.spanGaps = true; 
+        // REMOVED: Slide Header / Title for each new slide, as requested
+        /*
+        slide.addText("LTE KPI Dashboard Overview", {	
+            x: 0.2, y: 0.2, fontSize: 18, color: 'D24726', bold: true	
         });
-        chartInstance.options.plugins.title.color = titleColor; 
-        chartInstance.update('none'); 
-        
-        const imgData = c.toDataURL("image/png");
-        
-        // Restore original styles
-        chartInstance.data.datasets.forEach((d, index) => { 
-          d.borderColor = originalColors[index]; 
-          d.pointBorderColor = originalPointColors[index];
-          d.spanGaps = true; 
-        });
-        chartInstance.options.plugins.title.color = originalTitleColor;
-        chartInstance.update('none');
-        // --- END PPT CHART EXPORT LOGIC ---
-        
-        // Add Image to Slide with calculated coordinates
-        slide.addImage({ 
-          data: imgData, 
-          x: xPos, 
-          y: yPos, 
-          w: layout.chartW, 
-          h: layout.chartH 
-        });
-      }
+        */
+
+        // Add Charts
+        for(let j=0; j<count; j++){
+            if(i+j < canvases.length){
+                const c = canvases[i+j];
+                
+                // Calculate Position based on Grid Logic
+                const colIndex = j % layout.cols;
+                const rowIndex = Math.floor(j / layout.cols);
+
+                const xPos = layout.marginX + (colIndex * (layout.chartW + layout.gap));
+                // Chart Y position starts from the new, smaller margin (0.2 in), 
+                // shifting charts up to fill the space of the removed title.
+                const yPos = effectiveMarginTop + (rowIndex * (layout.chartH + layout.gap));
+                
+                // --- PPT CHART EXPORT LOGIC ---
+                const chartInstance = Chart.getChart(c.id);
+                const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
+                const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
+                const originalTitleColor = chartInstance.options.plugins.title.color;
+                
+                // Override style for PPT export
+                chartInstance.data.datasets.forEach(d => {	
+                    d.borderColor = lineColor;	
+                    d.pointBorderColor = lineColor;	
+                    d.pointBackgroundColor = lineColor;	
+                    d.pointRadius = 3;
+                    d.spanGaps = true;	
+                });
+                chartInstance.options.plugins.title.color = titleColor;	
+                chartInstance.update('none');	
+                
+                const imgData = c.toDataURL("image/png");
+                
+                // Restore original styles
+                chartInstance.data.datasets.forEach((d, index) => {	
+                    d.borderColor = originalColors[index];	
+                    d.pointBorderColor = originalPointColors[index];
+                    d.spanGaps = true;	
+                });
+                chartInstance.options.plugins.title.color = originalTitleColor;
+                chartInstance.update('none');
+                // --- END PPT CHART EXPORT LOGIC ---
+                
+                // Add Image to Slide with calculated coordinates
+                slide.addImage({	
+                    data: imgData,	
+                    x: xPos,	
+                    y: yPos,	
+                    w: layout.chartW,	
+                    h: layout.chartH	
+                });
+            }
+        }
     }
-  }
 
-  pptx.writeFile({ fileName: `KPI_Report_${new Date().getTime()}.pptx` });
-  closePreview();
-}
-
-// Init
-fetchData();
-</script>
-
-  pptx.writeFile({ fileName: `KPI_Report_${new Date().getTime()}.pptx` });
-  closePreview();
+    pptx.writeFile({ fileName: `KPI_Report_${new Date().getTime()}.pptx` });
+    closePreview();
 }
 
 // Init
