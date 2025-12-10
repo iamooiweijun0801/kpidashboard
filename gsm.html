@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -33,6 +34,39 @@ button.action-btn:hover { background:#1f5ab5; }
 button.ppt-btn { background:#D24726; } /* PowerPoint Orange */
 button.ppt-btn:hover { background:#a8381e; }
 
+/* --- DRAWER TOGGLE BUTTONS --- */
+.drawer-toggle-buttons {
+    position: fixed;
+    top: 140px;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 900;
+}
+
+.chartStyleDrawerToggle, .kpiDrawerToggle {
+    width: 36px;
+    height: 36px;
+    background: #8E44AD;
+    color: white;
+    border-radius: 6px 0 0 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    transition: 0.2s;
+}
+
+.kpiDrawerToggle {
+    background: #2F80ED;
+    margin-top: 8px;
+}
+
+.chartStyleDrawerToggle:hover, .kpiDrawerToggle:hover {
+    opacity: 0.9;
+}
 
 /* --- GRID LAYOUT (3 Graphs per row) --- */
 .chart-grid { 
@@ -109,37 +143,77 @@ button.ppt-btn:hover { background:#a8381e; }
 #dropdown div, #siteDropdownList div, #onAirDateDropdownList div { padding:6px 10px; cursor:pointer; font-size:13px; border-bottom:1px solid #eee; }
 #dropdown div:hover, #siteDropdownList div:hover, #onAirDateDropdownList div:hover { background:#f0f7ff; color:#2F80ED; }
 
-/* --- KPI Drawer Fixes --- */
-.kpiDrawerToggle { position:fixed; top:100px; right:0; width:36px; height:36px; background:#2F80ED; color:white; border-radius:6px 0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:20px; z-index:900; }
-.kpiDrawer { 
-  position:fixed; top:0; right:0; 
-  width:320px; 
-  height:100%; background:white; 
-  box-shadow:-2px 0 10px rgba(0,0,0,0.1); z-index:1000; 
-  transform:translateX(100%); transition:0.3s; padding:20px; 
-  display: flex; flex-direction: column; 
+/* --- DRAWERS --- */
+.chartStyleDrawer, .kpiDrawer {
+    position: fixed; 
+    top: 0; 
+    right: 0;
+    width: 320px;
+    height: 100%; 
+    background: white;
+    box-shadow: -2px 0 10px rgba(0,0,0,0.1); 
+    z-index: 1000;
+    transform: translateX(100%); 
+    transition: 0.3s; 
+    padding: 20px;
+    display: flex; 
+    flex-direction: column;
 }
-.kpiDrawer.open { transform:translateX(0); }
+
+.chartStyleDrawer.open, .kpiDrawer.open { 
+    transform: translateX(0); 
+}
+
 .drawer-header { 
     display: flex; 
     justify-content: space-between; 
     align-items: center; 
-    margin-bottom: 10px; 
+    margin-bottom: 15px; 
     padding-bottom: 10px; 
     border-bottom: 1px solid #eee; 
 }
+
 .drawer-header h3 { margin: 0; }
+
 .drawer-controls { 
     display: flex; 
-    gap: 5px; /* Reduced gap */
+    gap: 5px;
     align-items: center; 
 }
-.drawer-controls .action-btn { 
-    padding: 6px 10px; /* Smaller padding for density */
-    font-size: 13px; /* Smaller font for density */
-}
-.kpi-options-body { flex-grow: 1; overflow-y: auto; padding-right: 5px; padding-bottom: 40px; } 
 
+.drawer-controls .action-btn { 
+    padding: 6px 10px;
+    font-size: 13px;
+}
+
+.kpi-options-body, .style-options-body { 
+    flex-grow: 1; 
+    overflow-y: auto; 
+    padding-right: 5px; 
+    padding-bottom: 40px; 
+}
+
+.style-button { 
+    padding: 10px 12px; 
+    margin: 6px 0; 
+    background: #f5f5f5; 
+    border-radius: 6px; 
+    cursor: pointer; 
+    font-weight: 500;
+    border: 1px solid #ddd;
+    transition: 0.2s;
+}
+
+.style-button:hover { 
+    background: #e9e9e9; 
+}
+
+.style-button.active {
+    background: #8E44AD;
+    color: white;
+    border-color: #8E44AD;
+}
+  
 /* --- PREVIEW MODAL --- */
 .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:2000; display:none; align-items:center; justify-content:center; backdrop-filter:blur(3px); }
 .modal-content { 
@@ -234,28 +308,61 @@ button.ppt-btn:hover { background:#a8381e; }
   <span class="toggle-label">Site Level</span>
 </div>
 
-
   <button onclick="fetchData()" class="action-btn">Refresh</button>
   <button onclick="openPreview()" class="action-btn ppt-btn">Export PPT</button>
 </div>
 
 <div class="chart-grid" id="mainChartContainer"></div>
 
-<div class="kpiDrawerToggle" onclick="toggleDrawer()">⚙</div>
+<!-- DRAWER TOGGLE BUTTONS -->
+<div class="drawer-toggle-buttons">
+    <div class="chartStyleDrawerToggle" onclick="toggleChartStyleDrawer()">🎨</div>
+    <div class="kpiDrawerToggle" onclick="toggleDrawer()">⚙</div>
+</div>
+
+<!-- CHART STYLE DRAWER -->
+<div id="chartStyleDrawer" class="chartStyleDrawer">
+    <div class="drawer-header">
+        <h3>Chart Styles</h3>
+        <button onclick="toggleChartStyleDrawer()" style="border:none; background:none; font-size:22px; cursor:pointer;">✕</button>
+    </div>
+    
+    <div class="style-options-body">
+        <div class="style-button" onclick="applyChartStyle(0)">Style 1 – Clean Lines</div>
+        <div class="style-button" onclick="applyChartStyle(1)">Style 2 – Bold</div>
+        <div class="style-button" onclick="applyChartStyle(2)">Style 3 – Dotted</div>
+        <div class="style-button" onclick="applyChartStyle(3)">Style 4 – Thick + Soft</div>
+        <div class="style-button" onclick="applyChartStyle(4)">Style 5 – Minimalist</div>
+        <div class="style-button" onclick="applyChartStyle(5)">Style 6 – Dashed</div>
+        <div class="style-button" onclick="applyChartStyle(6)">Style 7 – Neon</div>
+        <div class="style-button" onclick="applyChartStyle(7)">Style 8 – Shadow Line</div>
+        <div class="style-button" onclick="applyChartStyle(8)">Style 9 – Rounded Dots</div>
+        <div class="style-button" onclick="applyChartStyle(9)">Style 10 – Random Colors</div>
+        
+        <hr style="margin:15px 0;">
+        
+        <label><b>Custom Color:</b></label>
+        <input type="color" id="customChartColor" onchange="applyCustomColor()" style="width:100%; height:40px; margin-top:6px;">
+    </div>
+</div>
+
+<!-- KPI SETTINGS DRAWER -->
 <div id="kpiDrawer" class="kpiDrawer">
   <div class="drawer-header">
     <h3 id="drawerHeaderTitle">KPI Settings</h3>
-    <div class="drawer-controls">
-        <button class="action-btn" onclick="selectVisibleKpis()" style="background:#5cb85c;">Select All</button>
-        <button class="action-btn" onclick="clearVisibleKpis()" style="background:#f0ad4e;">Clear All</button>
-        <button class="action-btn" onclick="applyKpis()">Apply</button>
-        <button onclick="toggleDrawer()" style="border:none; background:none; font-size:24px; cursor:pointer; color:#777;">✕</button>
-    </div>
+    <button onclick="toggleDrawer()" style="border:none; background:none; font-size:24px; cursor:pointer; color:#777;">✕</button>
   </div>
+  
+  <div class="drawer-controls">
+    <button class="action-btn" onclick="selectVisibleKpis()" style="background:#5cb85c;">Select All</button>
+    <button class="action-btn" onclick="clearVisibleKpis()" style="background:#f0ad4e;">Clear All</button>
+    <button class="action-btn" onclick="applyKpis()">Apply</button>
+  </div>
+  
   <div class="kpi-options-body" id="kpiOptionsList"></div>
 </div>
 
-
+<!-- PREVIEW MODAL -->
 <div id="previewModal" class="modal">
   <div class="modal-content">
     <div class="modal-header">
@@ -263,10 +370,7 @@ button.ppt-btn:hover { background:#a8381e; }
       <button onclick="closePreview()" style="border:none; background:none; font-size:20px; cursor:pointer;">✕</button>
     </div>
     <div class="modal-body">
-        
-        <div id="previewBody">
-          </div>
-
+        <div id="previewBody"></div>
         <div id="previewSettingsPanel">
             <h3>Export Settings</h3>
 
@@ -308,7 +412,6 @@ button.ppt-btn:hover { background:#a8381e; }
                 <p style="font-size: 12px; color: #777;">Preview updates instantly.</p>
             </div>
         </div>
-
     </div>
     <div class="modal-footer">
       <button class="action-btn" style="background:#888;" onclick="closePreview()">Cancel</button>
@@ -322,7 +425,7 @@ button.ppt-btn:hover { background:#a8381e; }
 let allData = [];
 let fuse = null;
 let allSites = [];
-let siteCutoverMap = {}; // Maps GBSC -> On-Air Date
+let siteCutoverMap = {}; // Maps eNodeB Name -> On-Air Date
 let allOnAirDates = [];
 let selectedOnAirDates = [];
 
@@ -352,12 +455,24 @@ let selectedKpis = {
   monitoring: [...monitoringKpis]
 };
 
-// --- GLOBAL UTILITY FUNCTIONS ---
+// Chart Styling
+let activeChartStyle = null;
+let activeCustomColor = null;
 
-/**
- * Switches the active tab (Acceptance, Monitoring, Both).
- * @param {string} tab - The tab identifier ('acceptance', 'monitoring', 'both').
- */
+const chartStyles = [
+    { borderWidth: 2, pointRadius: 3, borderDash: [], tension: 0.2, borderColor: null },
+    { borderWidth: 4, pointRadius: 5, borderDash: [], tension: 0.25, borderColor: null },
+    { borderWidth: 2, pointRadius: 0, borderDash: [6,3], tension: 0.1, borderColor: null },
+    { borderWidth: 3, pointRadius: 4, borderDash: [], tension: 0.4, borderColor: null },
+    { borderWidth: 1, pointRadius: 0, borderDash: [], tension: 0, borderColor: null },
+    { borderWidth: 2, pointRadius: 2, borderDash: [4,4], tension: 0.3, borderColor: null },
+    { borderWidth: 3, pointRadius: 6, borderDash: [], tension: 0.15, borderColor: null },
+    { borderWidth: 3, pointRadius: 3, borderDash: [], tension: 0.2, borderColor: null },
+    { borderWidth: 2, pointRadius: 8, borderDash: [], tension: 0.25, borderColor: null },
+    { borderWidth: 3, pointRadius: 5, borderDash: [], tension: 0.25, randomColor: true }
+];
+
+// --- GLOBAL UTILITY FUNCTIONS ---
 function switchTab(tab) {
     document.querySelectorAll('.tab').forEach(btn => {
         btn.classList.remove('active');
@@ -367,8 +482,6 @@ function switchTab(tab) {
     renderCharts(); 
 }
 
-// --- DATA FETCHING & MAPPING ---
-
 function switchSheetToggle() {
     if(currentSheet === 'site') {
         currentSheet = 'group';
@@ -377,19 +490,19 @@ function switchSheetToggle() {
         currentSheet = 'site';
         sheetToggle.classList.remove('active');
     }
-    fetchData(); // Refetch charts based on new sheet
+    fetchData();
 }
 
-
+// --- DATA FETCHING & MAPPING ---
 async function fetchData(){
   try {
     // 1. Fetch KPI Data
     const sheetUrls = {
-    site: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=1977848975&single=true&output=csv",
-    group: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=1930867305&single=true&output=csv"
+        site: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=1977848975&single=true&output=csv",
+        group: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=1930867305&single=true&output=csv"
 };
   
-const kpiUrl = sheetUrls[currentSheet] + "&t=" + Date.now();
+    const kpiUrl = sheetUrls[currentSheet] + "&t=" + Date.now();
     const kpiRes = await fetch(kpiUrl);
     const kpiText = await kpiRes.text();
     
@@ -405,7 +518,7 @@ const kpiUrl = sheetUrls[currentSheet] + "&t=" + Date.now();
     });
 
     // Determine all sites present in the KPI data
-    allSites = [...new Set(allData.map(d=>d["GBSC"]))].filter(s=>s).sort();
+    allSites = [...new Set(allData.map(d=>d["eNodeB Name"]))].filter(s=>s).sort();
 
     // 2. Fetch Cutover Data
     const cutoverUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=19616562&single=true&output=csv&t=" + Date.now();
@@ -417,10 +530,9 @@ const kpiUrl = sheetUrls[currentSheet] + "&t=" + Date.now();
     
     siteCutoverMap = {};
     cutoverRows.forEach(r => {
-        const siteName = r[cutoverHeaders.indexOf("GBSC")]?.trim();
+        const siteName = r[cutoverHeaders.indexOf("eNodeB Name")]?.trim();
         const onAirDate = r[cutoverHeaders.indexOf("On-Air Date")]?.trim();
         if (siteName && onAirDate) {
-            // Only map sites that exist in the KPI data to prevent issues
             if (allSites.includes(siteName)) {
                  siteCutoverMap[siteName] = onAirDate;
             }
@@ -441,7 +553,6 @@ const kpiUrl = sheetUrls[currentSheet] + "&t=" + Date.now();
 }
 
 // --- FILTER UI LOGIC (ON-AIR DATE) ---
-
 function setupOnAirDateDropdown(){
   const list = document.getElementById("onAirDateDropdownList");
   const btn = document.getElementById("onAirDateDropdownBtn");
@@ -449,21 +560,15 @@ function setupOnAirDateDropdown(){
   
   const setAll = () => { 
     selectedOnAirDates = [...allOnAirDates]; 
-    // When All Dates are selected, all sites MUST be selected as well
     const allActiveSites = allSites.filter(site => siteCutoverMap[site] && allOnAirDates.includes(siteCutoverMap[site]));
     selectedSites = [...allActiveSites]; 
-
-    // Update UI but DO NOT close the dropdown
     updateDateFilterUI({close: false}); 
-    setupSiteDropdown(); // This re-renders charts
+    setupSiteDropdown();
   };
 
   const clearAll = () => { 
     selectedOnAirDates = []; 
-    // When All Dates are cleared, all sites MUST be cleared
     selectedSites = []; 
-    
-    // Update UI but DO NOT close the dropdown
     updateDateFilterUI({close: false}); 
     setupSiteDropdown(); 
   };
@@ -482,31 +587,28 @@ function setupOnAirDateDropdown(){
           const chk = d.querySelector("input");
           chk.checked = !chk.checked;
        }
-       updateSelectedDates(); // Individual selection
+       updateSelectedDates();
     };
     list.appendChild(d);
   });
   
   btn.onclick = () => list.style.display = list.style.display==="block" ? "none" : "block";
   
-  // Expose helpers globally for inline HTML
   window.dateSetAll = setAll;
   window.dateClearAll = clearAll;
-  updateDateFilterUI({close: true}); // Initial UI update
+  updateDateFilterUI({close: true});
 }
 
 function updateSelectedDates() {
     const list = document.getElementById("onAirDateDropdownList");
     selectedOnAirDates = Array.from(list.querySelectorAll(".date-chk:checked")).map(c => c.value);
     
-    // Update the sites based on the new dates (select all sites under the new date scope)
     let activeSites = allSites.filter(site => {
         const date = siteCutoverMap[site];
         return date && selectedOnAirDates.includes(date);
     });
     selectedSites = [...activeSites]; 
     
-    // Do not close dropdown on individual check
     updateDateFilterUI({close: false}); 
     setupSiteDropdown(); 
 }
@@ -518,35 +620,28 @@ function updateDateFilterUI(options = {close: true}) {
     
     span.textContent = selectedOnAirDates.length === 0 ? "No Dates Selected" : (selectedOnAirDates.length === allOnAirDates.length ? "All On-Air Dates" : `Selected (${selectedOnAirDates.length})`);
     
-    // Update checkboxes visually
     list.querySelectorAll(".date-chk").forEach(c => c.checked = selectedOnAirDates.includes(c.value));
     
-    // Close dropdown only if requested
     if (options.close) {
         list.style.display = "none";
     } else {
-        // If not closing, ensure it's open
         list.style.display = "block";
     }
 }
 
-// --- FILTER UI LOGIC (GBSC) ---
-
+// --- FILTER UI LOGIC (eNodeB Name) ---
 function setupSiteDropdown(){
   const list = document.getElementById("siteDropdownList");
   const btn = document.getElementById("siteDropdownBtn");
   list.innerHTML = "";
 
-  // 1. Determine which sites are active based on the date filter
   let activeSites = allSites.filter(site => {
       const date = siteCutoverMap[site];
       return date && selectedOnAirDates.includes(date);
   });
   
-  // 2. Filter selectedSites to only include those that are currently active
   selectedSites = selectedSites.filter(site => activeSites.includes(site));
   
-  // Actions
   const setAll = () => { 
     selectedSites = [...activeSites]; 
     updateSiteFilterUI({close: false}); 
@@ -559,14 +654,11 @@ function setupSiteDropdown(){
     renderCharts(); 
   };
   
-  // Inject setAll/clearAll actions
   list.innerHTML += `<div onclick="window.siteSetAll()"><b>Select All (${activeSites.length})</b></div>`;
   list.innerHTML += `<div onclick="window.siteClearAll()"><b>Clear All</b></div>`;
 
-  // Options
   activeSites.forEach(site => {
     const d = document.createElement("div");
-    // Check if the site is in the current selectedSites list
     const checked = selectedSites.includes(site) ? "checked" : ""; 
     d.innerHTML = `<input type='checkbox' value='${site}' class='site-chk' ${checked}> ${site}`;
     d.onclick = (e) => {
@@ -574,27 +666,23 @@ function setupSiteDropdown(){
           const chk = d.querySelector("input");
           chk.checked = !chk.checked;
        }
-       updateSelectedSites(); // Individual selection
+       updateSelectedSites();
     };
     list.appendChild(d);
   });
   
   btn.onclick = () => list.style.display = list.style.display==="block" ? "none" : "block";
 
-  // Expose helpers globally for inline HTML
   window.siteSetAll = setAll;
   window.siteClearAll = clearAll;
   
-  // Initial UI update for site dropdown and rendering
   updateSiteFilterUI({close: true});
   renderCharts();
 }
 
 function updateSelectedSites() {
     const list = document.getElementById("siteDropdownList");
-    // Ensure we only look at the sites currently visible/active in the list
     selectedSites = Array.from(list.querySelectorAll(".site-chk:checked")).map(c => c.value);
-    // Do not close dropdown on individual check
     updateSiteFilterUI({close: false});
     renderCharts();
 }
@@ -614,20 +702,16 @@ function updateSiteFilterUI(options = {close: true}) {
     else if(selectedSites.length === 1) span.textContent = selectedSites[0];
     else span.textContent = `Selected (${selectedSites.length})`;
 
-    // Re-check all site checkboxes to reflect the selectedSites state 
     list.querySelectorAll(".site-chk").forEach(c => c.checked = selectedSites.includes(c.value));
     
-    // Close dropdown only if requested
     if (options.close) {
         list.style.display = "none";
     } else {
-        // If not closing, ensure it's open
         list.style.display = "block";
     }
 }
 
 // --- CHART RENDERING ---
-
 function renderCharts(){
   const container = document.getElementById("mainChartContainer");
   container.innerHTML = "";
@@ -637,7 +721,6 @@ function renderCharts(){
   else if(currentTab === "monitoring") kpisToShow = selectedKpis.monitoring;
   else if(currentTab === "both") kpisToShow = [...selectedKpis.acceptance, ...selectedKpis.monitoring];
 
-  // 1. Determine final list of sites based on date filter AND site filter
   let sitesFromDate = allSites.filter(site => {
       const date = siteCutoverMap[site];
       return selectedOnAirDates.includes(date);
@@ -645,17 +728,13 @@ function renderCharts(){
 
   let finalSiteList;
   if (selectedSites.length > 0) {
-      // Use specifically selected sites
       finalSiteList = selectedSites;
   } else {
-      // Use all sites allowed by the date filter (default behavior when no specific site is selected)
       finalSiteList = sitesFromDate;
   }
   
-  let filteredData = allData.filter(d => finalSiteList.includes(d["GBSC"]));
+  let filteredData = allData.filter(d => finalSiteList.includes(d["eNodeB Name"]));
 
-
-  // 2. Process Timeline (unchanged)
   const timeline = [...new Set(filteredData.map(d=>d["Date"]))].sort((a,b)=>{
     const [da,ma,ya]=a.split('/').map(Number);
     const [db,mb,yb]=b.split('/').map(Number);
@@ -665,10 +744,9 @@ function renderCharts(){
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const timelineLabels = timeline.map(d => {
       const [day, month] = d.split('/').map(Number);
-      return `${day} ${monthNames[month - 1]}`; // e.g., "5 Jan"
+      return `${day} ${monthNames[month - 1]}`;
   });
 
-  // 3. Generate Charts
   kpisToShow.forEach((kpi, idx) => {
     const card = document.createElement("div");
     card.className = "chart-card";
@@ -683,23 +761,21 @@ function renderCharts(){
     card.appendChild(wrapper);
     container.appendChild(card);
 
-    // Calculate Data
-const dataPoints = timeline.map(date => {
+    const dataPoints = timeline.map(date => {
       const values = filteredData
-  .filter(d => d["Date"] === date)
-  .map(d => d[kpi])                // take raw value
-  .filter(v => v !== null && v !== "") // keep only actual values
-  .map(Number)                     // convert remaining to number
-  .filter(v => !isNaN(v));         // remove any NaN
-
+        .filter(d => d["Date"] === date)
+        .map(d => d[kpi])
+        .filter(v => v !== null && v !== "")
+        .map(Number)
+        .filter(v => !isNaN(v));
 
       if (values.length === 0) return null;
 
       const kpiLower = kpi.toLowerCase();
       if (kpiLower.includes('%') || kpiLower.includes('rate') || kpiLower.includes('avg') || kpiLower.includes('average') || kpiLower.includes('max')) {
-        return values.reduce((a, b) => a + b, 0) / values.length; // AVERAGE
+        return values.reduce((a, b) => a + b, 0) / values.length;
       } else {
-        return values.reduce((a, b) => a + b, 0); // SUM
+        return values.reduce((a, b) => a + b, 0);
       }
     });
 
@@ -707,7 +783,6 @@ const dataPoints = timeline.map(date => {
     let minVal = Math.min(...validValues);
     let maxVal = Math.max(...validValues);
 
-    // Special rule: if min >= 95 and max <= 100, set scale explicitly
     if (minVal >= 95 && maxVal <= 100) {
       minVal = 95;
       maxVal = 100;
@@ -719,15 +794,27 @@ const dataPoints = timeline.map(date => {
       maxVal = Math.ceil(maxVal / 5) * 5;
     }
 
-    // Draw Chart with Animation
-    new Chart(canvas.getContext("2d"), {
+    // Determine chart color
+    let chartColor;
+    if (activeCustomColor) {
+        chartColor = activeCustomColor;
+    } else if (activeChartStyle && activeChartStyle.randomColor) {
+        chartColor = getRandomColor();
+    } else if (activeChartStyle && activeChartStyle.borderColor) {
+        chartColor = activeChartStyle.borderColor;
+    } else {
+        chartColor = getRandomColor();
+    }
+
+    // Create chart configuration
+    const chartConfig = {
       type: 'line',
       data: {
         labels: timelineLabels,
         datasets: [{
           label: (finalSiteList.length > 0 && dataPoints.some(p => p !== null)) ? "Aggregate" : "No Data",
           data: dataPoints,
-          borderColor: getRandomColor(),
+          borderColor: chartColor,
           backgroundColor: 'transparent',
           borderWidth: 2,
           pointRadius: 3,
@@ -750,7 +837,7 @@ const dataPoints = timeline.map(date => {
         },
         plugins: { 
             legend: { display: false },
-            title: { // Chart.js built-in title
+            title: {
                 display: true,
                 text: kpi,
                 font: {
@@ -768,12 +855,27 @@ const dataPoints = timeline.map(date => {
            y: { 
                beginAtZero: false, 
                grid: {color:'#eee'},
-               // If no data points, fix the scale to prevent giant axes
                min: (finalSiteList.length === 0 || dataPoints.every(p => p === null)) ? 0 : undefined 
            }
         }
       }
-    });
+    };
+
+    // Apply active chart style if set
+    if (activeChartStyle) {
+        const style = activeChartStyle;
+        chartConfig.data.datasets[0].borderWidth = style.borderWidth;
+        chartConfig.data.datasets[0].pointRadius = style.pointRadius;
+        chartConfig.data.datasets[0].borderDash = style.borderDash;
+        chartConfig.data.datasets[0].tension = style.tension;
+        
+        if (!activeCustomColor && !style.randomColor && style.borderColor) {
+            chartConfig.data.datasets[0].borderColor = style.borderColor;
+        }
+    }
+
+    // Create chart
+    const chart = new Chart(canvas.getContext("2d"), chartConfig);
   });
 }
 
@@ -782,14 +884,40 @@ function getRandomColor() {
   return colors[Math.floor(Math.random() * colors.length)];
 }
 
-// --- KPI DRAWER & UTILITY LOGIC ---
-
+// --- DRAWER FUNCTIONS ---
 function toggleDrawer(){
   const d = document.getElementById("kpiDrawer");
   d.classList.toggle("open");
   if(d.classList.contains("open")) populateKpiOptions();
 }
 
+function toggleChartStyleDrawer(){
+  const d = document.getElementById("chartStyleDrawer");
+  d.classList.toggle("open");
+}
+
+// --- CHART STYLING FUNCTIONS ---
+function applyChartStyle(styleIndex){
+    activeChartStyle = chartStyles[styleIndex];
+    
+    // Update UI to show active style
+    document.querySelectorAll('.style-button').forEach((btn, idx) => {
+        if (idx === styleIndex) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    
+    renderCharts();
+}
+
+function applyCustomColor(){
+    activeCustomColor = document.getElementById("customChartColor").value;
+    renderCharts();
+}
+
+// --- KPI DRAWER FUNCTIONS ---
 function populateKpiOptions(){
   const list = document.getElementById("kpiOptionsList");
   list.innerHTML = "";
@@ -814,7 +942,6 @@ function populateKpiOptions(){
             const chk = div.querySelector("input");
             chk.checked = !chk.checked;
         }
-        // No auto-apply here, user must click Apply
       };
       list.appendChild(div);
     });
@@ -824,18 +951,13 @@ function populateKpiOptions(){
   if (monitoringSection) createGroup("Monitoring KPIs", "monitoring", monitoringKpis);
 }
 
-/**
- * Selects all visible KPI checkboxes and updates the internal state.
- */
 function selectVisibleKpis() {
     const chks = document.querySelectorAll(".kpi-chk");
     
-    // 1. Update Checkboxes Visually
     chks.forEach(c => {
         c.checked = true;
     });
 
-    // 2. Update Internal State
     if (currentTab === 'acceptance' || currentTab === 'both') {
         selectedKpis.acceptance = [...acceptanceKpis];
     }
@@ -844,18 +966,13 @@ function selectVisibleKpis() {
     }
 }
 
-/**
- * Clears all visible KPI checkboxes and updates the internal state.
- */
 function clearVisibleKpis() {
     const chks = document.querySelectorAll(".kpi-chk");
     
-    // 1. Update Checkboxes Visually
     chks.forEach(c => {
         c.checked = false;
     });
 
-    // 2. Update Internal State
     if (currentTab === 'acceptance' || currentTab === 'both') {
         selectedKpis.acceptance = [];
     }
@@ -864,15 +981,12 @@ function clearVisibleKpis() {
     }
 }
 
-
 function applyKpis(){
   const chks = document.querySelectorAll(".kpi-chk");
   
-  // Start with existing selections for non-visible tabs
   const tempAcceptance = currentTab === 'acceptance' || currentTab === 'both' ? [] : [...selectedKpis.acceptance];
   const tempMonitoring = currentTab === 'monitoring' || currentTab === 'both' ? [] : [...selectedKpis.monitoring];
 
-  // Apply checked status from the UI
   chks.forEach(c => {
     if(c.checked) {
         if(c.dataset.group === 'acceptance') tempAcceptance.push(c.value);
@@ -888,39 +1002,30 @@ function applyKpis(){
 }
 
 // --- PPT EXPORT CUSTOMIZATION & PREVIEW ---
-
-// Centralized Layout Logic: Ensures Preview and PPT match exactly
 function getLayoutConfig(count) {
-    // Standard PPT Slide: 10 inches x 5.625 inches
     const slideWidth = 10.0;
     const slideHeight = 5.625;
     
-    // Margins & Spacing (Inches)
     const marginX = 0.2;	
-    const marginTop = 0.9; // Space for Slide Title (Original - kept for chart size calculation)
+    const marginTop = 0.9;
     const marginBottom = 0.2;
-    const gap = 0.15;	 	 // Space between charts
+    const gap = 0.15;
 
     let rows, cols;
 
-    // Define Grid Logic
     switch(parseInt(count)) {
         case 1: rows = 1; cols = 1; break;
         case 2: rows = 1; cols = 2; break;
-        case 3: rows = 2; cols = 2; break; // FIXED: 3 graphs now use 2x2 grid (not squished)
+        case 3: rows = 2; cols = 2; break;
         case 4: rows = 2; cols = 2; break;
         case 6: rows = 2; cols = 3; break;
-        case 9: rows = 3; cols = 3; break; // FIXED: 9 graphs strictly calculated to fit height
+        case 9: rows = 3; cols = 3; break;
         default: rows = 2; cols = 2;
     }
 
-    // Calculate Available Space
     const usableW = slideWidth - (marginX * 2);
-    // Note: usableH uses the original marginTop (0.9) to calculate the chart dimensions (chartH).
-    // The charts will maintain this calculated size even if the actual PPT starting y-position moves up.
     const usableH = slideHeight - marginTop - marginBottom;
 
-    // Calculate Individual Chart Dimensions
     const chartW = (usableW - ((cols - 1) * gap)) / cols;
     const chartH = (usableH - ((rows - 1) * gap)) / rows;
 
@@ -931,7 +1036,6 @@ function openPreview() {
     const canvases = document.querySelectorAll("canvas");
     if(canvases.length === 0) { alert("No charts to export."); return; }
     
-    // Set defaults if not already set
     if(!graphsPerSlide) graphsPerSlide = 2;	
     
     updatePreviewSettings(graphsPerSlide, chartExportColor, chartExportTitleColor);
@@ -941,11 +1045,11 @@ function openPreview() {
 function highlightSettingButtons(count, lineColor, titleColor) {
     document.querySelectorAll('.graph-options button').forEach(btn => {
         btn.classList.remove('active');
-        btn.style.backgroundColor = '#2F80ED'; // Reset blue
+        btn.style.backgroundColor = '#2F80ED';
         btn.style.color = 'white';
         if (parseInt(btn.dataset.count) === count) {
             btn.classList.add('active');
-            btn.style.backgroundColor = '#27AE60'; // Active Green
+            btn.style.backgroundColor = '#27AE60';
         }
     });
 
@@ -974,10 +1078,7 @@ function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
     document.getElementById("previewTitle").textContent = `PPT Export Preview (${count} Graphs per Slide)`;
     body.innerHTML = "";
 
-    // Get layout config to ensure HTML CSS matches PPT Logic
     const layout = getLayoutConfig(count);
-
-    // Generate CSS Grid Template based on calculated columns
     const gridTemplateCols = `repeat(${layout.cols}, 1fr)`;
 
     for(let i=0; i<canvases.length; i+=count){
@@ -995,30 +1096,24 @@ function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
         grid.style.gridTemplateColumns = gridTemplateCols;
         grid.style.gap = "10px";
         grid.style.height = "100%";
-        grid.style.paddingTop = "30px"; // Visual padding for preview
-        grid.style.alignContent = "start"; // Prevent vertical stretching weirdness
+        grid.style.paddingTop = "30px";
+        grid.style.alignContent = "start";
 
         for(let j=0; j<count; j++){
             if(i+j < canvases.length){
                 const c = canvases[i+j];
                 const box = createPreviewBox(c, chartExportColor, chartExportTitleColor);	
                 
-                // --- PREVIEW FIX LOGIC ---
-                // Override layout.rows for preview to make 3/4 charts look bigger.
                 const chartsOnSlide = Math.min(count, canvases.length - i);
                 let previewRows = layout.rows;
                 
-                // If using a 2-row layout (3 or 4 charts) but we're rendering the preview,
-                // force it to act like a 1-row height to maximize chart size in the modal.
                 if (layout.rows === 2 && chartsOnSlide <= 4) {
                     previewRows = 1; 
                 }
                 
-                // If only 3 charts, definitely force to 1 row height to maximize visibility
                 if (chartsOnSlide === 3) {
                     previewRows = 1;
                 }
-                // --- END PREVIEW FIX LOGIC ---
                 
                 grid.appendChild(box);
             }
@@ -1032,7 +1127,6 @@ function createPreviewBox(canvas, lineColor, titleColor) {
     const box = document.createElement("div");
     box.className = "preview-img-box";
     
-    // Create a temp canvas to redraw with export colors
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = canvas.width;
     tempCanvas.height = canvas.height;
@@ -1046,7 +1140,6 @@ function createPreviewBox(canvas, lineColor, titleColor) {
         const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
         const originalTitleColor = chartInstance.options.plugins.title.color;
         
-        // Apply Export Styles
         chartInstance.data.datasets.forEach(d => {	
             d.borderColor = lineColor;	
             d.pointBorderColor = lineColor;	
@@ -1063,7 +1156,6 @@ function createPreviewBox(canvas, lineColor, titleColor) {
         tempCtx.drawImage(canvas, 0, 0);
         imgData = tempCanvas.toDataURL("image/png");
         
-        // Revert Styles
         chartInstance.data.datasets.forEach((d, index) => {	
             d.borderColor = originalColors[index];	
             d.pointBorderColor = originalPointColors[index];
@@ -1086,11 +1178,10 @@ function closePreview(){ document.getElementById("previewModal").style.display =
 
 async function downloadPPT(){
     const pptx = new PptxGenJS();
-    pptx.layout = 'LAYOUT_16x9'; // 10 x 5.625 inches
+    pptx.layout = 'LAYOUT_16x9';
     
-    // Title Slide
     let slide = pptx.addSlide();
-    slide.addText("LTE KPI Report", { x:0.5, y:2, fontSize:32, bold:true, color:'2F80ED' });
+    slide.addText("GSM KPI Report", { x:0.5, y:2, fontSize:32, bold:true, color:'2F80ED' });
     slide.addText(`Generated: ${new Date().toLocaleDateString()}`, { x:0.5, y:3, fontSize:14 });
 
     const canvases = document.querySelectorAll("canvas");
@@ -1098,43 +1189,27 @@ async function downloadPPT(){
     const lineColor = chartExportColor;	
     const titleColor = chartExportTitleColor;
     
-    // Get EXACT calculated layout
     const layout = getLayoutConfig(count);
-    
-    // New effective margin since the slide title is removed
-    const effectiveMarginTop = 0.2; 
+    const effectiveMarginTop = 0.2;
 
     for(let i=0; i<canvases.length; i+=count){
         let slide = pptx.addSlide();
-        
-        // REMOVED: Slide Header / Title for each new slide, as requested
-        /*
-        slide.addText("LTE KPI Dashboard Overview", {	
-            x: 0.2, y: 0.2, fontSize: 18, color: 'D24726', bold: true	
-        });
-        */
 
-        // Add Charts
         for(let j=0; j<count; j++){
             if(i+j < canvases.length){
                 const c = canvases[i+j];
                 
-                // Calculate Position based on Grid Logic
                 const colIndex = j % layout.cols;
                 const rowIndex = Math.floor(j / layout.cols);
 
                 const xPos = layout.marginX + (colIndex * (layout.chartW + layout.gap));
-                // Chart Y position starts from the new, smaller margin (0.2 in), 
-                // shifting charts up to fill the space of the removed title.
                 const yPos = effectiveMarginTop + (rowIndex * (layout.chartH + layout.gap));
                 
-                // --- PPT CHART EXPORT LOGIC ---
                 const chartInstance = Chart.getChart(c.id);
                 const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
                 const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
                 const originalTitleColor = chartInstance.options.plugins.title.color;
                 
-                // Override style for PPT export
                 chartInstance.data.datasets.forEach(d => {	
                     d.borderColor = lineColor;	
                     d.pointBorderColor = lineColor;	
@@ -1147,7 +1222,6 @@ async function downloadPPT(){
                 
                 const imgData = c.toDataURL("image/png");
                 
-                // Restore original styles
                 chartInstance.data.datasets.forEach((d, index) => {	
                     d.borderColor = originalColors[index];	
                     d.pointBorderColor = originalPointColors[index];
@@ -1155,9 +1229,7 @@ async function downloadPPT(){
                 });
                 chartInstance.options.plugins.title.color = originalTitleColor;
                 chartInstance.update('none');
-                // --- END PPT CHART EXPORT LOGIC ---
                 
-                // Add Image to Slide with calculated coordinates
                 slide.addImage({	
                     data: imgData,	
                     x: xPos,	
@@ -1173,7 +1245,7 @@ async function downloadPPT(){
     closePreview();
 }
 
-// Init
+// Initialize
 fetchData();
 </script>
 </body>
