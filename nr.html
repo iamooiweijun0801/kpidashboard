@@ -319,7 +319,7 @@ function switchTab(tab) {
 async function fetchData(){
   try {
     // 1. Fetch KPI Data
-    const nrUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=1930867305&single=true&output=csv&t=" + Date.now();
+    const nrUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=1617739873&single=true&output=csv&t=" + Date.now();
     const nsaUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=670588387&single=true&output=csv&t=" + Date.now(); 
     const cutoverUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=19616562&single=true&output=csv&t=" + Date.now();
     // --- 2. Fetch all three data sets concurrently using the helper ---
