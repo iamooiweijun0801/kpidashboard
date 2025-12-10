@@ -935,17 +935,13 @@ function renderCharts(){
                grid: {display:false} 
            },
            y: {
-            grid: { color: '#eee' },
+    grid: { color: '#eee' },
 
-    // NEW LOGIC:
-    // If max < 10 ⇒ force start at zero
+    // ONLY RULE YOU WANT:
     beginAtZero: maxVal < 10,
+    min: maxVal < 10 ? 0 : minVal,
 
-    min: (maxVal < 10)
-        ? 0              // start from zero for small KPIs
-        : minVal,        // your computed min range
-
-    max: maxVal          // your computed max range
+    max: maxVal
 }
         }
       }
