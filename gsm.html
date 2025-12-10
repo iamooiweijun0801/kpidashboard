@@ -612,35 +612,36 @@ function renderCharts(){
 
     // Calculate Data
 const dataPoints = timeline.map(date => {
-  const values = filteredData
-    .filter(d => d["Date"] === date)
-    .map(d => Number(d[kpi]))
-    .filter(v => !isNaN(v));
+      const values = filteredData
+        .filter(d => d["Date"] === date)
+        .map(d => Number(d[kpi]))
+        .filter(v => !isNaN(v));
 
-  if(values.length === 0) return null;
+      if (values.length === 0) return null;
 
-  const avg = values.reduce((a,b) => a+b, 0) / values.length;
-  return avg;
-});
+      const kpiLower = kpi.toLowerCase();
+      if (kpiLower.includes('%') || kpiLower.includes('rate') || kpiLower.includes('avg') || kpiLower.includes('average') || kpiLower.includes('max')) {
+        return values.reduce((a, b) => a + b, 0) / values.length; // AVERAGE
+      } else {
+        return values.reduce((a, b) => a + b, 0); // SUM
+      }
+    });
 
-let validValues = dataPoints.filter(v => v !== null);
-let minVal = Math.min(...validValues);
-let maxVal = Math.max(...validValues);
+    let validValues = dataPoints.filter(v => v !== null);
+    let minVal = Math.min(...validValues);
+    let maxVal = Math.max(...validValues);
 
-// Special rule: if min >= 95 and max <= 100, set scale explicitly
-if(minVal >= 95 && maxVal <= 100) {
-    minVal = 95;
-    maxVal = 100;
-} else {
-    // Apply your normal rules
-    if(minVal < 40) minVal = Math.max(Math.floor(minVal), 42);
-    if(maxVal > 100) maxVal = 100;
+    // Special rule: if min >= 95 and max <= 100, set scale explicitly
+    if (minVal >= 95 && maxVal <= 100) {
+      minVal = 95;
+      maxVal = 100;
+    } else {
+      if (minVal < 40) minVal = Math.max(Math.floor(minVal), 42);
+      if (maxVal > 100) maxVal = 100;
 
-    // Optionally round to nearest 5 for nicer axis
-    minVal = Math.floor(minVal / 5) * 5;
-    maxVal = Math.ceil(maxVal / 5) * 5;
-}
-
+      minVal = Math.floor(minVal / 5) * 5;
+      maxVal = Math.ceil(maxVal / 5) * 5;
+    }
 
     // Draw Chart with Animation
     new Chart(canvas.getContext("2d"), {
