@@ -844,108 +844,106 @@ function renderCharts(){
     container.appendChild(card);
 
     const dataPoints = timeline.map(date => {
-      const values = filteredData
-        .filter(d => d["Date"] === date)
-        .map(d => d[kpi])
-        .filter(v => v !== null && v !== "")
-        .map(Number)
-        .filter(v => !isNaN(v));
+  const values = filteredData
+    .filter(d => d["Date"] === date)
+    .map(d => d[kpi])
+    .filter(v => v !== null && v !== "")
+    .map(Number)
+    .filter(v => !isNaN(v));
 
-      if (values.length === 0) return null;
+  if (values.length === 0) return null;
 
-      const kpiLower = kpi.toLowerCase();
-      if (kpiLower.includes('%') || kpiLower.includes('rate') || kpiLower.includes('avg') || kpiLower.includes('average') || kpiLower.includes('max')) {
-        return values.reduce((a, b) => a + b, 0) / values.length;
-      } else {
-        return values.reduce((a, b) => a + b, 0);
-      }
-    });
+  const kpiLower = kpi.toLowerCase();
+  if (
+    kpiLower.includes('%') ||
+    kpiLower.includes('rate') ||
+    kpiLower.includes('avg') ||
+    kpiLower.includes('average') ||
+    kpiLower.includes('max')
+  ) {
+    // Average for percentage-type KPIs
+    return values.reduce((a, b) => a + b, 0) / values.length;
+  } else {
+    // SUM for counters
+    return values.reduce((a, b) => a + b, 0);
+  }
+});
 
-    let validValues = dataPoints.filter(v => v !== null);
-    let minVal = Math.min(...validValues);
-    let maxVal = Math.max(...validValues);
+// Only get valid values
+let validValues = dataPoints.filter(v => v !== null);
 
-    if (minVal >= 95 && maxVal <= 100) {
-      minVal = 95;
-      maxVal = 100;
-    } else {
-      if (minVal < 40) minVal = Math.max(Math.floor(minVal), 42);
-      if (maxVal > 100) maxVal = 100;
+// Compute min/max but do NOT manipulate them
+let minVal = Math.min(...validValues);
+let maxVal = Math.max(...validValues);
 
-      minVal = Math.floor(minVal / 5) * 5;
-      maxVal = Math.ceil(maxVal / 5) * 5;
-    }
-
-    // Determine chart color
-    let chartColor;
-    if (activeCustomColor) {
-        chartColor = activeCustomColor;
-    } else if (activeChartStyle && activeChartStyle.randomColor) {
-        chartColor = getRandomColor();
-    } else if (activeChartStyle && activeChartStyle.borderColor) {
-        chartColor = activeChartStyle.borderColor;
-    } else {
-        chartColor = getRandomColor();
-    }
-
-    // Create chart configuration
-    const chartConfig = {
-      type: 'line',
-      data: {
-        labels: timelineLabels,
-        datasets: [{
-          label: (finalSiteList.length > 0 && dataPoints.some(p => p !== null)) ? "Aggregate" : "No Data",
-          data: dataPoints,
-          borderColor: chartColor,
-          backgroundColor: 'transparent',
-          borderWidth: 2,
-          pointRadius: 3,
-          tension: 0.1,
-          spanGaps: true 
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: {
-            x: {
-                type: 'number',
-                easing: 'linear',
-                duration: 500,
-                from: NaN,
-                delay: (ctx) => ctx.index * 30 
-            },
-            y: { duration: 0 }
-        },
-        plugins: { 
-            legend: { display: false },
-            title: {
-                display: true,
-                text: kpi,
-                font: {
-                    size: 14,
-                    weight: 'bold'
-                },
-                color: '#333'
-            }
-        },
-        scales: {
-           x: { 
-               ticks: { font: {size:8} }, 
-               grid: {display:false} 
-           },
-           y: {
-    grid: { color: '#eee' },
-
-    // ONLY RULE YOU WANT:
-    beginAtZero: maxVal < 10,
-    min: maxVal < 10 ? 0 : minVal,
-
-    max: maxVal
+// Pick chart color
+let chartColor;
+if (activeCustomColor) {
+  chartColor = activeCustomColor;
+} else if (activeChartStyle && activeChartStyle.randomColor) {
+  chartColor = getRandomColor();
+} else if (activeChartStyle && activeChartStyle.borderColor) {
+  chartColor = activeChartStyle.borderColor;
+} else {
+  chartColor = getRandomColor();
 }
-        }
+
+// Chart config
+const chartConfig = {
+  type: 'line',
+  data: {
+    labels: timelineLabels,
+    datasets: [{
+      label: (finalSiteList.length > 0 && dataPoints.some(p => p !== null)) ? "Aggregate" : "No Data",
+      data: dataPoints,
+      borderColor: chartColor,
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      pointRadius: 3,
+      tension: 0.1,
+      spanGaps: true
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: {
+      x: {
+        type: 'number',
+        easing: 'linear',
+        duration: 500,
+        from: NaN,
+        delay: (ctx) => ctx.index * 30
+      },
+      y: { duration: 0 }
+    },
+    plugins: {
+      legend: { display: false },
+      title: {
+        display: true,
+        text: kpi,
+        font: { size: 14, weight: 'bold' },
+        color: '#333'
       }
-    };
+    },
+    scales: {
+      x: {
+        ticks: { font: { size: 8 } },
+        grid: { display: false }
+      },
+      y: {
+        grid: { color: '#eee' },
+
+        // ⭐ THE ONLY RULE ⭐
+        beginAtZero: maxVal < 10,
+        min: maxVal < 10 ? 0 : minVal,
+
+        // Let max always follow the real data max
+        max: maxVal
+      }
+    }
+  }
+};
 
     // Apply active chart style if set
     if (activeChartStyle) {
