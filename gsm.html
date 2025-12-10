@@ -684,10 +684,14 @@ function renderCharts(){
 
     // Calculate Data
 const dataPoints = timeline.map(date => {
+      const dataPoints = timeline.map(date => {
       const values = filteredData
-        .filter(d => d["Date"] === date)
-        .map(d => Number(d[kpi]))
-        .filter(v => !isNaN(v));
+  .filter(d => d["Date"] === date)
+  .map(d => d[kpi])                // take raw value
+  .filter(v => v !== null && v !== "") // keep only actual values
+  .map(Number)                     // convert remaining to number
+  .filter(v => !isNaN(v));         // remove any NaN
+
 
       if (values.length === 0) return null;
 
