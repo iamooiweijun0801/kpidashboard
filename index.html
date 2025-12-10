@@ -371,13 +371,6 @@ function switchTab(tab) {
 }
 
 // --- DATA FETCHING & MAPPING ---
-// Restore previously selected sheet (site/group) from localStorage
-const savedSheet = localStorage.getItem('selectedSheet');
-if(savedSheet === 'group' || savedSheet === 'site') {
-    currentSheet = savedSheet;
-    if(currentSheet === 'group') sheetToggle.classList.add('active');
-    else sheetToggle.classList.remove('active');
-}
 
 function switchSheetToggle() {
     if(currentSheet === 'site') {
@@ -387,10 +380,6 @@ function switchSheetToggle() {
         currentSheet = 'site';
         sheetToggle.classList.remove('active');
     }
-
-    // Save current sheet to localStorage
-    localStorage.setItem('selectedSheet', currentSheet);
-
     fetchData(); // Refetch charts based on new sheet
 }
 
@@ -736,6 +725,7 @@ if (minVal !== 0) {
 minVal = Math.floor(minVal * 100) / 100;
 maxVal = Math.ceil(maxVal * 100) / 100;
 
+    }
 
     // Draw Chart with Animation
     new Chart(canvas.getContext("2d"), {
@@ -784,10 +774,10 @@ maxVal = Math.ceil(maxVal * 100) / 100;
                grid: {display:false} 
            },
            y: { 
-              beginAtZero: false,
-              grid: { color:'#eee' },
-              min: minVal,
-              max: maxVal
+               beginAtZero: false, 
+               grid: {color:'#eee'},
+             min: minVal,
+      max: maxVal,
                // If no data points, fix the scale to prevent giant axes
                min: (finalSiteList.length === 0 || dataPoints.every(p => p === null)) ? 0 : undefined 
            }
