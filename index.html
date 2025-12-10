@@ -34,201 +34,110 @@ button.ppt-btn { background:#D24726; } /* PowerPoint Orange */
 button.ppt-btn:hover { background:#a8381e; }
 
 /* --- GRID LAYOUT (3 Graphs per row) --- */
-.chart-grid { 
-  display:grid; 
-  grid-template-columns: repeat(3, 1fr); 
-  gap:20px; 
-  padding:0 20px 40px 20px; 
-  max-width: 1800px; 
-  margin: 0 auto; 
+.chart-grid { 
+  display:grid; 
+  grid-template-columns: repeat(3, 1fr); 
+  gap:20px; 
+  padding:0 20px 40px 20px; 
+  max-width: 1800px; 
+  margin: 0 auto; 
 }
 @media (max-width: 1400px) { .chart-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 768px) { .chart-grid { grid-template-columns: 1fr; } }
 
 /* --- CARDS & CHARTS --- */
 .chart-card { background:white; border-radius:8px; padding:15px; box-shadow:0 2px 8px rgba(0,0,0,0.08); display:flex; flex-direction:column; }
-.chart-title { display:none; } 
+.chart-title { display:none; } 
 .chart-container { position: relative; height: 280px; width: 100%; }
 
 /* --- DROPDOWNS --- */
-#dropdown, #siteDropdownList, #onAirDateDropdownList { 
-  position:absolute; 
-  background:white; 
-  border:1px solid #ccc; 
-  max-height:200px; 
-  overflow-y:auto; 
-  display:none; 
-  z-index:100; 
-  width:100%; 
-  top:105%; 
-  border-radius:6px; 
-  box-shadow:0 4px 10px rgba(0,0,0,0.1); 
+#dropdown, #siteDropdownList, #onAirDateDropdownList { 
+  position:absolute; 
+  background:white; 
+  border:1px solid #ccc; 
+  max-height:200px; 
+  overflow-y:auto; 
+  display:none; 
+  z-index:100; 
+  width:100%; 
+  top:105%; 
+  border-radius:6px; 
+  box-shadow:0 4px 10px rgba(0,0,0,0.1); 
 }
 #dropdown div, #siteDropdownList div, #onAirDateDropdownList div { padding:6px 10px; cursor:pointer; font-size:13px; border-bottom:1px solid #eee; }
 #dropdown div:hover, #siteDropdownList div:hover, #onAirDateDropdownList div:hover { background:#f0f7ff; color:#2F80ED; }
 
-/* --- DRAWER TOGGLES (FIXED BUTTONS) --- */
-
-/* Graph Style Toggle Button (TOP: 60px) */
-.graphStyleToggle {
-    position: fixed;
-    top: 60px;
-    right: 0;
-    width: 36px;
-    height: 36px;
-    background: #F39C12; /* Orange */
-    color: white;
-    border-radius: 6px 0 0 6px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    z-index: 900;
+/* --- KPI Drawer Fixes --- */
+.kpiDrawerToggle { position:fixed; top:100px; right:0; width:36px; height:36px; background:#2F80ED; color:white; border-radius:6px 0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:20px; z-index:900; }
+.kpiDrawer { 
+  position:fixed; top:0; right:0; 
+  width:320px; 
+  height:100%; background:white; 
+  box-shadow:-2px 0 10px rgba(0,0,0,0.1); z-index:1000; 
+  transform:translateX(100%); transition:0.3s; padding:20px; 
+  display: flex; flex-direction: column; 
 }
-
-/* KPI Settings Toggle Button (TOP: 100px) */
-.kpiDrawerToggle { 
-    position:fixed; 
-    top:100px; 
-    right:0; 
-    width:36px; 
-    height:36px; 
-    background:#2F80ED; 
-    color:white; 
-    border-radius:6px 0 0 6px; 
-    cursor:pointer; 
-    display:flex; 
-    align-items:center; 
-    justify-content:center; 
-    font-size:20px; 
-    z-index:900; 
-}
-
-
-/* --- DRAWER PANELS (FIXED & FULL HEIGHT) --- */
-
-/* Graph Style Drawer Panel */
-.graphDrawer {
-    position:fixed; 
-    top:0; 
-    right:0;
-    width:320px;
-    height:100%; /* Corrected to full height */
-    background:white;
-    box-shadow:-2px 0 10px rgba(0,0,0,0.1); 
-    z-index:1000;
-    transform:translateX(100%); 
-    transition:0.3s; 
-    padding:20px;
-    display: flex; 
-    flex-direction: column;
-}
-.graphDrawer.open { 
-    transform:translateX(0); 
-}
-
-/* KPI Settings Drawer Panel */
-.kpiDrawer { 
-    position:fixed; 
-    top:0; 
-    right:0; 
-    width:320px; 
-    height:100%; /* Corrected to full height */
-    background:white; 
-    box-shadow:-2px 0 10px rgba(0,0,0,0.1); 
-    z-index:1000; 
-    transform:translateX(100%); 
-    transition:0.3s; 
-    padding:20px; 
-    display: flex; 
-    flex-direction: column; 
-}
-.kpiDrawer.open { 
-    transform:translateX(0); 
-}
-
-/* --- DRAWER CONTENTS/CONTROLS --- */
-.drawer-header { 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    margin-bottom: 10px; 
-    padding-bottom: 10px; 
-    border-bottom: 1px solid #eee; 
+.kpiDrawer.open { transform:translateX(0); }
+.drawer-header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 10px; 
+    padding-bottom: 10px; 
+    border-bottom: 1px solid #eee; 
 }
 .drawer-header h3 { margin: 0; }
-.drawer-controls { 
-    display: flex; 
-    gap: 5px; 
-    align-items: center; 
+.drawer-controls { 
+    display: flex; 
+    gap: 5px; /* Reduced gap */
+    align-items: center; 
 }
-.drawer-controls .action-btn { 
-    padding: 6px 10px; 
-    font-size: 13px; 
+.drawer-controls .action-btn { 
+    padding: 6px 10px; /* Smaller padding for density */
+    font-size: 13px; /* Smaller font for density */
 }
-.kpi-options-body { flex-grow: 1; overflow-y: auto; padding-right: 5px; padding-bottom: 40px; }
-
-/* Style buttons inside the drawer */
-.style-btn {
-    padding: 8px 12px;
-    margin: 5px 0;
-    cursor: pointer;
-    border: 1px solid #ccc;
-    background: white;
-    color: #333;
-    border-radius: 6px;
-    font-weight: 600;
-    transition: 0.2s;
-    width: 100%;
-    text-align: left;
-}
-.style-btn.active {
-    background: #2F80ED;
-    color: white;
-    border-color: #2F80ED;
-}
-
+.kpi-options-body { flex-grow: 1; overflow-y: auto; padding-right: 5px; padding-bottom: 40px; } 
 
 /* --- PREVIEW MODAL --- */
 .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:2000; display:none; align-items:center; justify-content:center; backdrop-filter:blur(3px); }
-.modal-content { 
-    background:white; 
-    width:95%; 
-    max-width: 1400px; 
-    height:90vh; 
-    border-radius:12px; 
-    display:flex; 
-    flex-direction:column; 
-    box-shadow:0 10px 25px rgba(0,0,0,0.3); 
+.modal-content { 
+    background:white; 
+    width:95%; 
+    max-width: 1400px; 
+    height:90vh; 
+    border-radius:12px; 
+    display:flex; 
+    flex-direction:column; 
+    box-shadow:0 10px 25px rgba(0,0,0,0.3); 
 }
 .modal-header { padding:15px 20px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; font-weight:bold; font-size:18px; }
-.modal-body { flex:1; display: flex; padding:0; overflow: hidden; } 
+.modal-body { flex:1; display: flex; padding:0; overflow: hidden; } 
 
 /* Preview Side */
-#previewBody { 
-    flex: 1; 
-    overflow-y:auto; 
-    padding:20px; 
-    background:#f5f5f5; 
+#previewBody { 
+    flex: 1; 
+    overflow-y:auto; 
+    padding:20px; 
+    background:#f5f5f5; 
 }
 .preview-slide { background:white; border:1px solid #ddd; margin-bottom:20px; padding:20px; box-shadow:0 2px 5px rgba(0,0,0,0.05); aspect-ratio: 16/9; position:relative; }
 .preview-slide-title { position:absolute; top:10px; left:20px; font-size:16px; font-weight:bold; color:#D24726; }
 .preview-grid { display:grid; height:100%; align-items:center; padding-top:30px; }
 .preview-img-box { text-align:center; padding:5px; height:100%; display:flex; flex-direction:column; justify-content:center; }
 .preview-img-box img { max-width:100%; max-height:calc(100% - 20px); object-fit:contain; border:1px solid #eee; }
-.preview-label { display: none; } 
+.preview-label { display: none; } 
 
 /* Settings Side (Fixed, not scrollable) */
 #previewSettingsPanel {
-    width: 250px;
-    background: #fff;
-    border-left: 1px solid #eee;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0; 
+    width: 250px;
+    background: #fff;
+    border-left: 1px solid #eee;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0; 
 }
+.settings-group { margin-bottom: 20px; }
 .settings-group h4 { margin-top: 0; margin-bottom: 10px; font-size: 14px; color: #555; border-bottom: 1px solid #eee; padding-bottom: 5px; }
 .graph-options button { margin: 5px; width: 100px; padding: 6px; font-size: 13px; }
 
@@ -236,11 +145,11 @@ button.ppt-btn:hover { background:#a8381e; }
 .color-option { margin: 5px; display: inline-block; cursor: pointer; border: 2px solid transparent; border-radius: 50%; width: 25px; height: 25px; transition: border 0.1s; }
 .color-option.selected { border-color: #333; }
 
-.modal-footer { 
-    padding:15px 20px; 
-    border-top:1px solid #eee; 
-    text-align:right;
-    flex-shrink: 0; 
+.modal-footer { 
+    padding:15px 20px; 
+    border-top:1px solid #eee; 
+    text-align:right;
+    flex-shrink: 0; 
 }
 </style>
 </head>
@@ -280,20 +189,6 @@ button.ppt-btn:hover { background:#a8381e; }
 </div>
 
 <div class="chart-grid" id="mainChartContainer"></div>
-
-<div class="graphStyleToggle" onclick="toggleGraphStyleDrawer()">🎨</div>
-
-<div id="graphDrawer" class="graphDrawer">
-  <div class="drawer-header">
-    <h3 id="graphDrawerHeaderTitle">Graph Style</h3>
-    <div class="drawer-controls">
-        <button onclick="toggleGraphStyleDrawer()" style="border:none; background:none; font-size:24px; cursor:pointer; color:#777;">✕</button>
-    </div>
-  </div>
-  <div class="kpi-options-body" id="graphStyleOptionsList">
-        <h4>Chart Style Selection</h4>
-        </div>
-</div>
 
 <div class="kpiDrawerToggle" onclick="toggleDrawer()">⚙</div>
 <div id="kpiDrawer" class="kpiDrawer">
@@ -386,21 +281,6 @@ let graphsPerSlide = 2;
 
 let chartExportColor = '#2F80ED'; // Default Line/Dot Color (Dark Blue)
 let chartExportTitleColor = '#333333'; // Default Title Color (Dark Gray/Black)
-let chartStyleKey = 'line_basic'; // Default chart style
-
-// NEW: 10 Chart Styles Configuration
-const CHART_STYLES = {
-    'line_basic': { name: "1. Line Basic", type: 'line', stepped: false, tension: 0.0, fill: false, borderDash: [], borderWidth: 2, pointRadius: 3, defaultColor: '#2F80ED' },
-    'line_smooth': { name: "2. Line Smooth", type: 'line', stepped: false, tension: 0.4, fill: false, borderDash: [], borderWidth: 2, pointRadius: 3, defaultColor: '#27AE60' },
-    'line_step': { name: "3. Line Step", type: 'line', stepped: 'before', tension: 0.0, fill: false, borderDash: [], borderWidth: 2, pointRadius: 3, defaultColor: '#D24726' },
-    'area_filled': { name: "4. Area Filled", type: 'line', stepped: false, tension: 0.4, fill: 'origin', borderDash: [], borderWidth: 2, pointRadius: 3, defaultColor: '#8E44AD' },
-    'bar_basic': { name: "5. Bar Basic", type: 'bar', stepped: false, tension: 0.0, fill: false, borderDash: [], borderWidth: 1, pointRadius: 0, defaultColor: '#F39C12' },
-    'bar_outline': { name: "6. Bar Outline", type: 'bar', stepped: false, tension: 0.0, fill: false, borderDash: [], borderWidth: 2, pointRadius: 0, defaultColor: '#2980B9', backgroundColor: 'transparent' },
-    'line_monochrome': { name: "7. Monochrome", type: 'line', stepped: false, tension: 0.0, fill: false, borderDash: [], borderWidth: 2, pointRadius: 3, defaultColor: '#444444' },
-    'line_dotted': { name: "8. Line Dotted", type: 'line', stepped: false, tension: 0.0, fill: false, borderDash: [5, 5], borderWidth: 2, pointRadius: 3, defaultColor: '#16A085' },
-    'point_only': { name: "9. Point Only", type: 'line', stepped: false, tension: 0.0, fill: false, borderDash: [], borderWidth: 0, pointRadius: 6, defaultColor: '#C0392B' },
-    'area_step': { name: "10. Area Step", type: 'line', stepped: 'before', tension: 0.0, fill: 'origin', borderDash: [], borderWidth: 2, pointRadius: 3, defaultColor: '#9B59B6' }
-};
 
 const acceptanceKpis = [
   "LTE RRC Setup Success Rate(%)","ERAB Setup Success Rate(%)","LTE Call Setup Success Rate(%)","E-RAB Call Drop Rate(%)",
@@ -486,7 +366,6 @@ async function fetchData(){
     setupOnAirDateDropdown();
     setupSiteDropdown();
     renderCharts();
-    populateGraphStyleOptions();
 
   } catch(e) { console.error(e); alert("Failed to load data."); }
 }
@@ -682,7 +561,7 @@ function updateSiteFilterUI(options = {close: true}) {
 function renderCharts(){
   const container = document.getElementById("mainChartContainer");
   container.innerHTML = "";
-  const styleConfig = CHART_STYLES[chartStyleKey];
+  
   let kpisToShow = [];
   if(currentTab === "acceptance") kpisToShow = selectedKpis.acceptance;
   else if(currentTab === "monitoring") kpisToShow = selectedKpis.monitoring;
@@ -768,23 +647,20 @@ if(minVal >= 95 && maxVal <= 100) {
 
     // Draw Chart with Animation
     new Chart(canvas.getContext("2d"), {
-      type: styleConfig.type, // MODIFIED: Use the configured type
-      data: {
-        labels: timelineLabels,
-        datasets: [{
-          label: (finalSiteList.length > 0 && dataPoints.some(p => p !== null)) ? "Aggregate" : "No Data",
-          data: dataPoints,
-          borderColor: styleConfig.defaultColor, // MODIFIED: Use style-specific default color
-          backgroundColor: styleConfig.fill ? (styleConfig.defaultColor + '80') : (styleConfig.backgroundColor || 'transparent'), // MODIFIED: Handle fill/transparency
-             tension: styleConfig.tension, // NEW
-             stepped: styleConfig.stepped || false, // NEW
-             fill: styleConfig.fill || false, // NEW
-             borderDash: styleConfig.borderDash, // NEW
-             borderWidth: styleConfig.borderWidth, // NEW
-             pointRadius: styleConfig.pointRadius, // NEW
-          spanGaps: true 
-        }]
-      },
+      type: 'line',
+      data: {
+        labels: timelineLabels,
+        datasets: [{
+          label: (finalSiteList.length > 0 && dataPoints.some(p => p !== null)) ? "Aggregate" : "No Data",
+          data: dataPoints,
+          borderColor: getRandomColor(),
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          pointRadius: 3,
+          tension: 0.1,
+          spanGaps: true 
+        }]
+      },
       options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -828,36 +704,8 @@ if(minVal >= 95 && maxVal <= 100) {
 }
 
 function getRandomColor() {
-  // MODIFIED: We now use the style's default color instead of a random one for consistency.
-  return CHART_STYLES[chartStyleKey].defaultColor;
-}
-function toggleGraphStyleDrawer(){
-    const d = document.getElementById("graphDrawer");
-    d.classList.toggle("open");
-    if(d.classList.contains("open")) populateGraphStyleOptions();
-}
-
-/**
- * Dynamically creates 10 style buttons based on the CHART_STYLES config.
- */
-function populateGraphStyleOptions() {
-    const list = document.getElementById('graphStyleOptionsList');
-    list.innerHTML = ''; // Clear list
-    
-    Object.entries(CHART_STYLES).forEach(([key, config]) => {
-        const btn = document.createElement('button');
-        btn.className = `style-btn ${chartStyleKey === key ? 'active' : ''}`;
-        btn.textContent = config.name;
-        btn.setAttribute('onclick', `setChartStyle('${key}')`);
-        list.appendChild(btn);
-    });
-}
-
-function setChartStyle(key) {
-    chartStyleKey = key;
-    populateGraphStyleOptions(); // Update button look
-    toggleGraphStyleDrawer(); // Close the drawer
-    renderCharts(); // Re-render all charts with the new style
+  const colors = ['#2F80ED', '#27AE60', '#D24726', '#8E44AD', '#F39C12', '#2980B9'];
+  return colors[Math.floor(Math.random() * colors.length)];
 }
 
 // --- KPI DRAWER & UTILITY LOGIC ---
@@ -1092,86 +940,50 @@ function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
 }
 
 function createPreviewBox(canvas, lineColor, titleColor) {
-  const box = document.createElement("div");
-  box.className = "preview-img-box";
-  
-  // Create a temp canvas to redraw with export colors
-  const tempCanvas = document.createElement('canvas');
-  tempCanvas.width = canvas.width;
-  tempCanvas.height = canvas.height;
-  const tempCtx = tempCanvas.getContext('2d');
-  
-  const chartInstance = Chart.getChart(canvas.id);
-  let imgData = '';
-  
-  if (chartInstance) {
-        // NEW: Get current style config
-        const styleConfig = CHART_STYLES[chartStyleKey];
+  const box = document.createElement("div");
+  box.className = "preview-img-box";
+  
+  // Create a temp canvas to redraw with export colors
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = canvas.width;
+  tempCanvas.height = canvas.height;
+  const tempCtx = tempCanvas.getContext('2d');
+  
+  const chartInstance = Chart.getChart(canvas.id);
+  let imgData = '';
+  
+  if (chartInstance) {
+      const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
+      const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
+      const originalTitleColor = chartInstance.options.plugins.title.color;
+      
+      // Apply Export Styles
+      chartInstance.data.datasets.forEach(d => { 
+        d.borderColor = lineColor; 
+        d.pointBorderColor = lineColor; 
+        d.pointBackgroundColor = lineColor; 
+        d.pointRadius = 3; 
+        d.pointStyle = 'circle'; 
+        d.spanGaps = true; 
+      });
 
-        // Store original values before export
-        const originalDatasetProps = chartInstance.data.datasets.map(d => ({
-            borderColor: d.borderColor,
-            pointBorderColor: d.pointBorderColor,
-            pointBackgroundColor: d.pointBackgroundColor,
-            pointRadius: d.pointRadius,
-            borderWidth: d.borderWidth,
-            tension: d.tension,
-            stepped: d.stepped,
-            fill: d.fill,
-            borderDash: d.borderDash,
-            backgroundColor: d.backgroundColor,
-            type: chartInstance.config.type // Store original chart type
-        }));
-        const originalTitleColor = chartInstance.options.plugins.title.color;
-        
-        // --- Apply Export Styles ---
-        chartInstance.config.type = styleConfig.type; // NEW: Apply new chart type
+      chartInstance.options.plugins.title.color = titleColor; 
+      
+      chartInstance.update('none'); 
+      
+      tempCtx.drawImage(canvas, 0, 0);
+      imgData = tempCanvas.toDataURL("image/png");
+      
+      // Revert Styles
+      chartInstance.data.datasets.forEach((d, index) => { 
+        d.borderColor = originalColors[index]; 
+        d.pointBorderColor = originalPointColors[index];
+      });
+      chartInstance.options.plugins.title.color = originalTitleColor;
+      chartInstance.update('none');
+  }
 
-        chartInstance.data.datasets.forEach(d => { 
-          d.borderColor = lineColor; 
-          d.pointBorderColor = lineColor; 
-          d.pointBackgroundColor = lineColor; 
-          
-            // NEW: Apply Style Configuration
-            d.tension = styleConfig.tension;
-            d.stepped = styleConfig.stepped || false;
-            d.fill = styleConfig.fill || false;
-            d.borderDash = styleConfig.borderDash;
-            d.borderWidth = styleConfig.borderWidth;
-            d.pointRadius = styleConfig.pointRadius;
-            d.backgroundColor = styleConfig.fill ? (lineColor + '80') : (styleConfig.backgroundColor || 'transparent');
-            
-          d.spanGaps = true; 
-        });
-
-      chartInstance.options.plugins.title.color = titleColor; 
-      
-      chartInstance.update('none'); 
-      
-      tempCtx.drawImage(canvas, 0, 0);
-      imgData = tempCanvas.toDataURL("image/png");
-      
-      // --- Revert Styles ---
-        chartInstance.config.type = originalDatasetProps[0].type; // NEW: Revert chart type
-
-        chartInstance.data.datasets.forEach((d, index) => { 
-            d.borderColor = originalDatasetProps[index].borderColor; 
-            d.pointBorderColor = originalDatasetProps[index].pointBorderColor;
-            d.pointBackgroundColor = originalDatasetProps[index].pointBackgroundColor;
-            d.pointRadius = originalDatasetProps[index].pointRadius;
-            d.borderWidth = originalDatasetProps[index].borderWidth;
-            d.tension = originalDatasetProps[index].tension;
-            d.stepped = originalDatasetProps[index].stepped;
-            d.fill = originalDatasetProps[index].fill;
-            d.borderDash = originalDatasetProps[index].borderDash;
-            d.backgroundColor = originalDatasetProps[index].backgroundColor;
-          d.spanGaps = true; 
-        });
-      chartInstance.options.plugins.title.color = originalTitleColor;
-      chartInstance.update('none');
-  }
-
-  const img = document.createElement("img");
+  const img = document.createElement("img");
   img.src = imgData;
   img.style.maxHeight = "100%";
   img.style.maxWidth = "100%";
@@ -1196,7 +1008,6 @@ async function downloadPPT(){
   const count = graphsPerSlide;
   const lineColor = chartExportColor; 
   const titleColor = chartExportTitleColor;
-  const styleConfig = CHART_STYLES[chartStyleKey];
   
   // Get EXACT calculated layout
   const layout = getLayoutConfig(count);
@@ -1222,67 +1033,32 @@ async function downloadPPT(){
         const yPos = layout.marginTop + (rowIndex * (layout.chartH + layout.gap));
         
         // --- PPT CHART EXPORT LOGIC ---
-        const chartInstance = Chart.getChart(c.id);
-
-        // Store original values before export
-        const originalDatasetProps = chartInstance.data.datasets.map(d => ({
-            borderColor: d.borderColor,
-            pointBorderColor: d.pointBorderColor,
-            pointBackgroundColor: d.pointBackgroundColor,
-            pointRadius: d.pointRadius,
-            borderWidth: d.borderWidth,
-            tension: d.tension,
-            stepped: d.stepped,
-            fill: d.fill,
-            borderDash: d.borderDash,
-            backgroundColor: d.backgroundColor,
-            type: chartInstance.config.type
-        }));
-        const originalTitleColor = chartInstance.options.plugins.title.color;
-        
-        // NEW: Override chart type for export
-        chartInstance.config.type = styleConfig.type;
+        const chartInstance = Chart.getChart(c.id);
+        const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
+        const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
+        const originalTitleColor = chartInstance.options.plugins.title.color;
         
-        // Override style for PPT export
-        chartInstance.data.datasets.forEach(d => { 
-          d.borderColor = lineColor; 
-          d.pointBorderColor = lineColor; 
-          d.pointBackgroundColor = lineColor; 
-          
-            // NEW: Apply Style Configuration
-            d.tension = styleConfig.tension;
-            d.stepped = styleConfig.stepped || false;
-            d.fill = styleConfig.fill || false;
-            d.borderDash = styleConfig.borderDash;
-            d.borderWidth = styleConfig.borderWidth;
-            d.pointRadius = styleConfig.pointRadius;
-            d.backgroundColor = styleConfig.fill ? (lineColor + '80') : (styleConfig.backgroundColor || 'transparent');
-            
-          d.spanGaps = true; 
-        });
-        chartInstance.options.plugins.title.color = titleColor; 
-        chartInstance.update('none'); 
-        
-        const imgData = c.toDataURL("image/png");
-        
-        // Restore original styles
-        chartInstance.config.type = originalDatasetProps[0].type; // Revert chart type
-
-        chartInstance.data.datasets.forEach((d, index) => { 
-            d.borderColor = originalDatasetProps[index].borderColor; 
-            d.pointBorderColor = originalDatasetProps[index].pointBorderColor;
-            d.pointBackgroundColor = originalDatasetProps[index].pointBackgroundColor;
-            d.pointRadius = originalDatasetProps[index].pointRadius;
-            d.borderWidth = originalDatasetProps[index].borderWidth;
-            d.tension = originalDatasetProps[index].tension;
-            d.stepped = originalDatasetProps[index].stepped;
-            d.fill = originalDatasetProps[index].fill;
-            d.borderDash = originalDatasetProps[index].borderDash;
-            d.backgroundColor = originalDatasetProps[index].backgroundColor;
-          d.spanGaps = true; 
-        });
-        chartInstance.options.plugins.title.color = originalTitleColor;
-        chartInstance.update('none');
+        // Override style for PPT export
+        chartInstance.data.datasets.forEach(d => { 
+          d.borderColor = lineColor; 
+          d.pointBorderColor = lineColor; 
+          d.pointBackgroundColor = lineColor; 
+          d.pointRadius = 3;
+          d.spanGaps = true; 
+        });
+        chartInstance.options.plugins.title.color = titleColor; 
+        chartInstance.update('none'); 
+        
+        const imgData = c.toDataURL("image/png");
+        
+        // Restore original styles
+        chartInstance.data.datasets.forEach((d, index) => { 
+          d.borderColor = originalColors[index]; 
+          d.pointBorderColor = originalPointColors[index];
+          d.spanGaps = true; 
+        });
+        chartInstance.options.plugins.title.color = originalTitleColor;
+        chartInstance.update('none');
         // --- END PPT CHART EXPORT LOGIC ---
         
         // Add Image to Slide with calculated coordinates
@@ -1296,6 +1072,14 @@ async function downloadPPT(){
       }
     }
   }
+
+  pptx.writeFile({ fileName: `KPI_Report_${new Date().getTime()}.pptx` });
+  closePreview();
+}
+
+// Init
+fetchData();
+</script>
 
   pptx.writeFile({ fileName: `KPI_Report_${new Date().getTime()}.pptx` });
   closePreview();
