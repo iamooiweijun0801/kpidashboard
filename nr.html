@@ -1,1128 +1,741 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>LTE KPI Dashboard</title>
+<meta charset="utf-8" />
+<title>NR & NSA KPI Dashboard (fixed - eNodeB only)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.6.2/fuse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
-
 <style>
-/* --- BASE STYLES --- */
-body { font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin:0; padding:0; background:#f4f7f6; overflow-x:hidden; }
+/* Minimal CSS kept from your previous file (cleaned) */
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin:0; padding:0; background:#f4f7f6; }
 header { text-align:center; padding:15px 0; font-size:28px; font-weight:700; color:#333; background:white; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-bottom:15px; }
-
-/* --- NAVIGATION --- */
 .navbar { display:flex; justify-content:center; gap:12px; margin-bottom:15px; }
-.nav-btn { padding:8px 24px; cursor:pointer; border:1px solid #ccc; background:white; color:#555; border-radius:20px; font-weight:600; text-decoration:none; transition:0.2s; display:inline-block; }
-.nav-btn:hover { background:#f0f0f0; color:#333; }
+.nav-btn { padding:8px 24px; cursor:pointer; border-radius:20px; border:1px solid #ccc; background:white; color:#555; text-decoration:none; font-weight:600; }
 .nav-btn.active { background:#2F80ED; color:white; border-color:#2F80ED; }
-
-/* --- TABS --- */
-.tabs { display:flex; justify-content:center; margin-bottom:20px; gap:8px; }
-.tab { padding:8px 20px; cursor:pointer; border-radius:6px; background:#e0e0e0; color:#555; font-weight:bold; border:none; transition:0.2s; }
-.tab:hover { background:#d0d0d0; }
+.tabs { display:flex; justify-content:center; gap:8px; margin-bottom:20px; }
+.tab { padding:8px 20px; cursor:pointer; border-radius:6px; background:#e0e0e0; color:#555; font-weight:bold; border:none; }
 .tab.active { background:#2F80ED; color:white; }
-
-/* --- CONTROLS --- */
 .controls { display:flex; justify-content:center; gap:10px; margin-bottom:20px; flex-wrap:wrap; align-items:center; }
 .control-group { position:relative; }
-input, select { padding:8px; border-radius:6px; border:1px solid #ccc; font-size:14px; outline:none; }
-button.action-btn { padding:8px 16px; cursor:pointer; border:none; background:#2F80ED; color:white; border-radius:6px; font-weight:600; transition:0.2s; }
-button.action-btn:hover { background:#1f5ab5; }
-button.ppt-btn { background:#D24726; } /* PowerPoint Orange */
-button.ppt-btn:hover { background:#a8381e; }
-
-/* --- GRID LAYOUT (3 Graphs per row) --- */
-.chart-grid { 
-  display:grid; 
-  grid-template-columns: repeat(3, 1fr); 
-  gap:20px; 
-  padding:0 20px 40px 20px; 
-  max-width: 1800px; 
-  margin: 0 auto; 
-}
-@media (max-width: 1400px) { .chart-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 768px) { .chart-grid { grid-template-columns: 1fr; } }
-
-/* --- CARDS & CHARTS --- */
-.chart-card { background:white; border-radius:8px; padding:15px; box-shadow:0 2px 8px rgba(0,0,0,0.08); display:flex; flex-direction:column; }
-.chart-title { display:none; } 
-.chart-container { position: relative; height: 280px; width: 100%; }
-
-/* --- DROPDOWNS --- */
-#dropdown, #siteDropdownList, #onAirDateDropdownList { 
-  position:absolute; 
-  background:white; 
-  border:1px solid #ccc; 
-  max-height:200px; 
-  overflow-y:auto; 
-  display:none; 
-  z-index:100; 
-  width:100%; 
-  top:105%; 
-  border-radius:6px; 
-  box-shadow:0 4px 10px rgba(0,0,0,0.1); 
-}
-#dropdown div, #siteDropdownList div, #onAirDateDropdownList div { padding:6px 10px; cursor:pointer; font-size:13px; border-bottom:1px solid #eee; }
-#dropdown div:hover, #siteDropdownList div:hover, #onAirDateDropdownList div:hover { background:#f0f7ff; color:#2F80ED; }
-
-/* --- KPI Drawer Fixes --- */
-.kpiDrawerToggle { position:fixed; top:100px; right:0; width:36px; height:36px; background:#2F80ED; color:white; border-radius:6px 0 0 6px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:20px; z-index:900; }
-.kpiDrawer { 
-  position:fixed; top:0; right:0; 
-  width:320px; 
-  height:100%; background:white; 
-  box-shadow:-2px 0 10px rgba(0,0,0,0.1); z-index:1000; 
-  transform:translateX(100%); transition:0.3s; padding:20px; 
-  display: flex; flex-direction: column; 
-}
+button.action-btn { padding:8px 16px; cursor:pointer; border:none; background:#2F80ED; color:white; border-radius:6px; font-weight:600; }
+button.ppt-btn { background:#D24726; color:white; }
+.chart-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:20px; padding:0 20px 40px 20px; max-width:1800px; margin:0 auto; }
+@media (max-width:1400px){ .chart-grid{ grid-template-columns: repeat(2,1fr);} }
+@media (max-width:768px){ .chart-grid{ grid-template-columns: 1fr; } }
+.chart-card { background:white; border-radius:8px; padding:12px; box-shadow:0 2px 8px rgba(0,0,0,0.08); display:flex; flex-direction:column; }
+.chart-container { position:relative; height:280px; width:100%; }
+#dropdown,#siteDropdownList,#onAirDateDropdownList { position:absolute; background:white; border:1px solid #ccc; max-height:240px; overflow-y:auto; display:none; z-index:200; width:100%; top:105%; border-radius:6px; box-shadow:0 4px 10px rgba(0,0,0,0.08); }
+#dropdown div,#siteDropdownList div,#onAirDateDropdownList div { padding:6px 10px; cursor:pointer; border-bottom:1px solid #eee; }
+.kpiDrawerToggle { position:fixed; top:100px; right:0; width:36px; height:36px; background:#2F80ED; color:white; border-radius:6px 0 0 6px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:900; }
+.kpiDrawer { position:fixed; top:0; right:0; width:320px; height:100%; background:white; box-shadow:-2px 0 10px rgba(0,0,0,0.1); transform:translateX(100%); transition:0.3s; padding:20px; display:flex; flex-direction:column; z-index:1000; }
 .kpiDrawer.open { transform:translateX(0); }
-.drawer-header { 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    margin-bottom: 10px; 
-    padding-bottom: 10px; 
-    border-bottom: 1px solid #eee; 
-}
-.drawer-header h3 { margin: 0; }
-.drawer-controls { 
-    display: flex; 
-    gap: 5px; /* Reduced gap */
-    align-items: center; 
-}
-.drawer-controls .action-btn { 
-    padding: 6px 10px; /* Smaller padding for density */
-    font-size: 13px; /* Smaller font for density */
-}
-.kpi-options-body { flex-grow: 1; overflow-y: auto; padding-right: 5px; padding-bottom: 40px; } 
-
-/* --- PREVIEW MODAL --- */
-.modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:2000; display:none; align-items:center; justify-content:center; backdrop-filter:blur(3px); }
-.modal-content { 
-    background:white; 
-    width:95%; 
-    max-width: 1400px; 
-    height:90vh; 
-    border-radius:12px; 
-    display:flex; 
-    flex-direction:column; 
-    box-shadow:0 10px 25px rgba(0,0,0,0.3); 
-}
-.modal-header { padding:15px 20px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; font-weight:bold; font-size:18px; }
-.modal-body { flex:1; display: flex; padding:0; overflow: hidden; } 
-
-/* Preview Side */
-#previewBody { 
-    flex: 1; 
-    overflow-y:auto; 
-    padding:20px; 
-    background:#f5f5f5; 
-}
-.preview-slide { background:white; border:1px solid #ddd; margin-bottom:20px; padding:20px; box-shadow:0 2px 5px rgba(0,0,0,0.05); aspect-ratio: 16/9; position:relative; }
-.preview-slide-title { position:absolute; top:10px; left:20px; font-size:16px; font-weight:bold; color:#D24726; }
-.preview-grid { display:grid; height:100%; align-items:center; padding-top:30px; }
-.preview-img-box { text-align:center; padding:5px; height:100%; display:flex; flex-direction:column; justify-content:center; }
-.preview-img-box img { max-width:100%; max-height:calc(100% - 20px); object-fit:contain; border:1px solid #eee; }
-.preview-label { display: none; } 
-
-/* Settings Side (Fixed, not scrollable) */
-#previewSettingsPanel {
-    width: 250px;
-    background: #fff;
-    border-left: 1px solid #eee;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0; 
-}
-.settings-group { margin-bottom: 20px; }
-.settings-group h4 { margin-top: 0; margin-bottom: 10px; font-size: 14px; color: #555; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-.graph-options button { margin: 5px; width: 100px; padding: 6px; font-size: 13px; }
-
-/* Color Selector */
-.color-option { margin: 5px; display: inline-block; cursor: pointer; border: 2px solid transparent; border-radius: 50%; width: 25px; height: 25px; transition: border 0.1s; }
-.color-option.selected { border-color: #333; }
-
-.modal-footer { 
-    padding:15px 20px; 
-    border-top:1px solid #eee; 
-    text-align:right;
-    flex-shrink: 0; 
-}
+.kpi-options-body { flex:1; overflow:auto; padding-right:6px; }
+.modal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.6); z-index:2000; }
+.modal-content { width:95%; max-width:1200px; height:85vh; background:#fff; border-radius:12px; display:flex; flex-direction:column; overflow:hidden; }
+.modal-body { display:flex; flex:1; overflow:hidden; }
+#previewBody { flex:1; overflow:auto; padding:20px; background:#f5f5f5; }
+#previewSettingsPanel { width:260px; background:#fff; border-left:1px solid #eee; padding:18px; }
+.preview-slide { background:#fff; border:1px solid #ddd; margin-bottom:18px; padding:14px; box-shadow:0 2px 5px rgba(0,0,0,0.05); aspect-ratio:16/9; position:relative; }
+.preview-grid { display:grid; gap:10px; height:100%; align-items:center; }
+.preview-img-box { display:flex; align-items:center; justify-content:center; background:#fff; padding:8px; border-radius:6px; }
+.color-option { width:25px; height:25px; border-radius:50%; display:inline-block; margin-right:6px; cursor:pointer; border:2px solid transparent; }
+.color-option.selected{ border-color:#333; }
+.modal-footer { padding:12px; border-top:1px solid #eee; text-align:right; }
 </style>
 </head>
 <body>
-
-<header>NR KPI Dashboard</header>
+<header>NR & NSA KPI Dashboard</header>
 
 <div class="navbar">
-  <a href="gsm.html" class="nav-btn">GSM</a>
-  <a href="index.html" class="nav-btn">LTE</a>
-  <a href="nr.html" class="nav-btn active">NR</a>
+  <a class="nav-btn" href="gsm.html">GSM</a>
+  <a class="nav-btn" href="index.html">LTE</a>
+  <a class="nav-btn active" href="nr.html">NR</a>
 </div>
 
 <div class="tabs">
-  <button class="tab active" onclick="switchTab('both')">All KPIs(NR & NSA) </button> 
+  <button class="tab active" onclick="switchTab('both')">All KPIs (NR & NSA)</button>
   <button class="tab" onclick="switchTab('nr')">NR KPIs</button>
   <button class="tab" onclick="switchTab('nsa')">NSA KPIs</button>
 </div>
 
 <div class="controls">
-  <div class="control-group" style="width:200px;">
-    <button id="onAirDateDropdownBtn" class="action-btn" style="background:white; color:#333; border:1px solid #ccc; width:100%; text-align:left; display:flex; justify-content:space-between;">
-      <span id="onAirDateBtnLabel">All On-Air Dates</span> <span>▼</span>
+  <div class="control-group" style="width:220px;">
+    <button id="onAirDateDropdownBtn" class="action-btn" style="background:white;color:#333;border:1px solid #ccc;width:100%;text-align:left;display:flex;justify-content:space-between;">
+      <span id="onAirDateBtnLabel">All On-Air Dates</span><span>▼</span>
     </button>
     <div id="onAirDateDropdownList"></div>
   </div>
 
-  <div class="control-group" style="width:200px;">
-    <button id="siteDropdownBtn" class="action-btn" style="background:white; color:#333; border:1px solid #ccc; width:100%; text-align:left; display:flex; justify-content:space-between;">
-      <span id="siteBtnLabel">All Sites</span> <span>▼</span>
+  <div class="control-group" style="width:220px;">
+    <button id="siteDropdownBtn" class="action-btn" style="background:white;color:#333;border:1px solid #ccc;width:100%;text-align:left;display:flex;justify-content:space-between;">
+      <span id="siteBtnLabel">All Sites</span><span>▼</span>
     </button>
     <div id="siteDropdownList"></div>
   </div>
 
-  <button onclick="fetchData()" class="action-btn">Refresh</button>
-  <button onclick="openPreview()" class="action-btn ppt-btn">Export PPT</button>
+  <button class="action-btn" onclick="fetchData()">Refresh</button>
+  <button class="action-btn ppt-btn" onclick="openPreview()">Export PPT</button>
 </div>
 
 <div class="chart-grid" id="mainChartContainer"></div>
 
 <div class="kpiDrawerToggle" onclick="toggleDrawer()">⚙</div>
 <div id="kpiDrawer" class="kpiDrawer">
-  <div class="drawer-header">
-    <h3 id="drawerHeaderTitle">KPI Settings</h3>
-    <div class="drawer-controls">
-        <button class="action-btn" onclick="selectVisibleKpis()" style="background:#5cb85c;">Select All</button>
-        <button class="action-btn" onclick="clearVisibleKpis()" style="background:#f0ad4e;">Clear All</button>
-        <button class="action-btn" onclick="applyKpis()">Apply</button>
-        <button onclick="toggleDrawer()" style="border:none; background:none; font-size:24px; cursor:pointer; color:#777;">✕</button>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+    <h3 style="margin:0;">KPI Settings</h3>
+    <div>
+      <button class="action-btn" onclick="selectVisibleKpis()" style="background:#5cb85c;margin-right:6px;">Select All</button>
+      <button class="action-btn" onclick="clearVisibleKpis()" style="background:#f0ad4e;">Clear All</button>
     </div>
   </div>
   <div class="kpi-options-body" id="kpiOptionsList"></div>
+  <div style="padding-top:8px;">
+    <button class="action-btn" onclick="applyKpis()">Apply</button>
+    <button class="action-btn" style="background:#888;margin-left:8px;" onclick="toggleDrawer()">Close</button>
+  </div>
 </div>
-
 
 <div id="previewModal" class="modal">
   <div class="modal-content">
-    <div class="modal-header">
-      <span id="previewTitle">PPT Export Preview</span>
-      <button onclick="closePreview()" style="border:none; background:none; font-size:20px; cursor:pointer;">✕</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid #eee;">
+      <strong id="previewTitle">PPT Export Preview</strong>
+      <button onclick="closePreview()" style="border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
     </div>
+
     <div class="modal-body">
-        
-        <div id="previewBody">
+      <div id="previewBody"></div>
+      <div id="previewSettingsPanel">
+        <h4 style="margin-top:0;">Export Settings</h4>
+        <div style="margin-bottom:12px;">
+          <label><strong>Graphs per Slide</strong></label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">
+            <button class="action-btn" data-count="1" onclick="updatePreviewSettings(1, chartExportColor, chartExportTitleColor)">1</button>
+            <button class="action-btn" data-count="2" onclick="updatePreviewSettings(2, chartExportColor, chartExportTitleColor)">2</button>
+            <button class="action-btn" data-count="3" onclick="updatePreviewSettings(3, chartExportColor, chartExportTitleColor)">3</button>
+            <button class="action-btn" data-count="4" onclick="updatePreviewSettings(4, chartExportColor, chartExportTitleColor)">4</button>
+            <button class="action-btn" data-count="6" onclick="updatePreviewSettings(6, chartExportColor, chartExportTitleColor)">6</button>
+            <button class="action-btn" data-count="9" onclick="updatePreviewSettings(9, chartExportColor, chartExportTitleColor)">9</button>
           </div>
-
-        <div id="previewSettingsPanel">
-            <h3>Export Settings</h3>
-
-            <div class="settings-group">
-                <h4>Graphs per Slide (Rows)</h4>
-                <div class="graph-options">
-                    <button class="action-btn" data-count="1" onclick="updatePreviewSettings(1, chartExportColor, chartExportTitleColor)">1 Graph</button>
-                    <button class="action-btn" data-count="2" onclick="updatePreviewSettings(2, chartExportColor, chartExportTitleColor)">2 Graphs</button>
-                    <button class="action-btn" data-count="3" onclick="updatePreviewSettings(3, chartExportColor, chartExportTitleColor)">3 Graphs</button>
-                    <button class="action-btn" data-count="4" onclick="updatePreviewSettings(4, chartExportColor, chartExportTitleColor)">4 Graphs</button>
-                    <button class="action-btn" data-count="6" onclick="updatePreviewSettings(6, chartExportColor, chartExportTitleColor)">6 Graphs</button>
-                    <button class="action-btn" data-count="9" onclick="updatePreviewSettings(9, chartExportColor, chartExportTitleColor)">9 Graphs</button>
-                </div>
-            </div>
-
-            <div class="settings-group">
-                <h4>Line & Dot Color for PPT</h4>
-                <div id="lineColorOptions">
-                    <span class="color-option" style="background-color:#2F80ED;" data-color="#2F80ED" onclick="updatePreviewSettings(graphsPerSlide, '#2F80ED', chartExportTitleColor)"></span>
-                    <span class="color-option" style="background-color:#27AE60;" data-color="#27AE60" onclick="updatePreviewSettings(graphsPerSlide, '#27AE60', chartExportTitleColor)"></span>
-                    <span class="color-option" style="background-color:#D24726;" data-color="#D24726" onclick="updatePreviewSettings(graphsPerSlide, '#D24726', chartExportTitleColor)"></span>
-                    <span class="color-option" style="background-color:#8E44AD;" data-color="#8E44AD" onclick="updatePreviewSettings(graphsPerSlide, '#8E44AD', chartExportTitleColor)"></span>
-                    <span class="color-option" style="background-color:#F39C12;" data-color="#F39C12" onclick="updatePreviewSettings(graphsPerSlide, '#F39C12', chartExportTitleColor)"></span>
-                </div>
-            </div>
-
-            <div class="settings-group">
-                <h4>Chart Title Color for PPT</h4>
-                <div id="titleColorOptions">
-                    <span class="color-option" style="background-color:#333333;" data-color="#333333" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#333333')"></span>
-                    <span class="color-option" style="background-color:#000000;" data-color="#000000" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#000000')"></span>
-                    <span class="color-option" style="background-color:#2F80ED;" data-color="#2F80ED" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#2F80ED')"></span>
-                    <span class="color-option" style="background-color:#8E44AD;" data-color="#8E44AD" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#8E44AD')"></span>
-                    <span class="color-option" style="background-color:#D24726;" data-color="#D24726" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#D24726')"></span>
-                </div>
-            </div>
-
-            <div style="margin-top: auto; padding-top: 15px; border-top: 1px solid #eee;">
-                <p style="font-size: 12px; color: #777;">Preview updates instantly.</p>
-            </div>
         </div>
 
+        <div style="margin-bottom:12px;">
+          <label><strong>Line Color</strong></label>
+          <div style="display:flex;gap:6px;margin-top:8px;">
+            <span class="color-option" style="background:#2F80ED" data-color="#2F80ED" onclick="updatePreviewSettings(graphsPerSlide, '#2F80ED', chartExportTitleColor)"></span>
+            <span class="color-option" style="background:#27AE60" data-color="#27AE60" onclick="updatePreviewSettings(graphsPerSlide, '#27AE60', chartExportTitleColor)"></span>
+            <span class="color-option" style="background:#D24726" data-color="#D24726" onclick="updatePreviewSettings(graphsPerSlide, '#D24726', chartExportTitleColor)"></span>
+            <span class="color-option" style="background:#8E44AD" data-color="#8E44AD" onclick="updatePreviewSettings(graphsPerSlide, '#8E44AD', chartExportTitleColor)"></span>
+          </div>
+        </div>
+
+        <div>
+          <label><strong>Title Color</strong></label>
+          <div style="display:flex;gap:6px;margin-top:8px;">
+            <span class="color-option" style="background:#333333" data-color="#333333" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#333333')"></span>
+            <span class="color-option" style="background:#D24726" data-color="#D24726" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#D24726')"></span>
+            <span class="color-option" style="background:#2F80ED" data-color="#2F80ED" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#2F80ED')"></span>
+          </div>
+        </div>
+
+      </div>
     </div>
+
     <div class="modal-footer">
-      <button class="action-btn" style="background:#888;" onclick="closePreview()">Cancel</button>
+      <button class="action-btn" style="background:#888" onclick="closePreview()">Cancel</button>
       <button class="action-btn ppt-btn" onclick="downloadPPT()">Download .PPTX</button>
     </div>
   </div>
 </div>
 
 <script>
-// --- CONFIG & STATE ---
-let nrData = []; 
+/* =========================
+   CONFIG / STATE
+   ========================= */
+let nrData = [];
 let nsaData = [];
-let allData = [];
-let fuse = null;
 let allSites = [];
-let siteCutoverMap = {}; // Maps eNodeB Name -> On-Air Date
+let siteCutoverMap = {};      // eNodeB Name -> On-Air Date
 let allOnAirDates = [];
 let selectedOnAirDates = [];
-
 let selectedSites = [];
-let currentTab = "both"; // DEFAULT IS NOW 'BOTH'
-let graphsPerSlide = 2; 
-
-let chartExportColor = '#2F80ED'; // Default Line/Dot Color (Dark Blue)
-let chartExportTitleColor = '#333333'; // Default Title Color (Dark Gray/Black)
+let currentTab = 'both';
+let graphsPerSlide = 2;
+let chartExportColor = '#2F80ED';
+let chartExportTitleColor = '#333333';
 
 const nrKpis = [
-  "NSA Average User Number","SgNB Addition Success Rate (CU)(%)","SgNB TriSgNB Abnormal Release Rate(%)","SCG PSCell Change Success Rate(%)","Intra-SgNB IntraFreq PSCell Change Success Rate(%)",
-  "Intra-SgNB Pscell Change Success Rate(%)","Inter-SgNB Pscell Change Success Rate(%)","Inter-SgNB PSCell IntraFreq Change Success Rate(%)","DL Avg Latency (ms)"
+  "NSA Average User Number","SgNB Addition Success Rate (CU)(%)","SgNB TriSgNB Abnormal Release Rate(%)","SCG PSCell Change Success Rate(%)",
+  "Intra-SgNB IntraFreq PSCell Change Success Rate(%)","Intra-SgNB Pscell Change Success Rate(%)","Inter-SgNB Pscell Change Success Rate(%)",
+  "Inter-SgNB PSCell IntraFreq Change Success Rate(%)","DL Avg Latency (ms)"
 ];
 const nsaKpis = [
   "RRC Re-establish Rate(%)","Avg NSA DC User Num","L.Thpt.bits.DL.McgSplit.MeNB","L.Thpt.bits.DL.McgSplit.SgNB",
-  "L.Thpt.bits.UL.McgSplit.MeNB","L.Thpt.bits.UL.McgSplit.SgNB","SCG Failure Rate(%)","NSA E-RAB Drop Rate(%)",
-  "e-RAB Mod Success Rate(%)","SCG Mod Success Rate(4G initiated)(%)","SCG Mod Success Rate(5G initiated)(%)",
-  "DL RB Utilization (NSA DC)(%)","UL RB Utilization (NSA DC)(%)","User Downlink Split Average Throughput (NSA DC)",
-  "User Uplink Split Average Throughput (NSA DC)"
+  "L.Thpt.bits.UL.McgSplit.MeNB","L.Thpt.bits.UL.McgSplit.SgNB","SCG Failure Rate(%)","NSA E-RAB Drop Rate(%)",
+  "e-RAB Mod Success Rate(%)","SCG Mod Success Rate(4G initiated)(%)","SCG Mod Success Rate(5G initiated)(%)",
+  "DL RB Utilization (NSA DC)(%)","UL RB Utilization (NSA DC)(%)","User Downlink Split Average Throughput (NSA DC)",
+  "User Uplink Split Average Throughput (NSA DC)"
 ];
-let selectedKpis = {
-  nr: [...nrKpis],
-  nsa: [...nsaKpis]
-};
 
-// --- GLOBAL UTILITY FUNCTIONS ---
+let selectedKpis = { nr: [...nrKpis], nsa: [...nsaKpis] };
 
-/**
- * Switches the active tab (nr, nsa, Both).
- * @param {string} tab - The tab identifier ('nr', 'nsa', 'both').
- */
-function switchTab(tab) {
-    document.querySelectorAll('.tab').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    document.querySelector(`.tab[onclick="switchTab('${tab}')"]`).classList.add('active');
-    currentTab = tab;
-    renderCharts(); 
+/* =========================
+   HELPERS
+   ========================= */
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  const btn = document.querySelector(`.tab[onclick="switchTab('${tab}')"]`);
+  if(btn) btn.classList.add('active');
+  currentTab = tab;
+  renderCharts();
 }
 
-// --- DATA FETCHING & MAPPING ---
+async function fetchAndParse(url){
+  const res = await fetch(url);
+  const txt = await res.text();
+  // fallback: parse CSV simple where fields may contain commas - but assume simple CSV
+  const rows = txt.trim().split('\n').map(r => r.split(','));
+  const headers = rows.shift().map(h => h.trim());
+  return rows.map(r => {
+    const obj = {};
+    headers.forEach((h,i)=> {
+      const val = r[i] ? r[i].trim() : '';
+      obj[h] = val === '' ? null : (isNaN(val) ? val : parseFloat(val));
+    });
+    return obj;
+  });
+}
+
+function parseCSVwithPapa(text){
+  // use PapaParse if available (safer), otherwise fallback (not likely needed)
+  if(window.Papa) {
+    return Papa.parse(text, { header:true, skipEmptyLines:true }).data;
+  }
+  const rows = text.trim().split('\n').map(r => r.split(','));
+  const headers = rows.shift().map(h=>h.trim());
+  return rows.map(r=>{
+    const o={};
+    headers.forEach((h,i)=> o[h] = r[i]? r[i].trim():null);
+    return o;
+  });
+}
+
+/* =========================
+   DATA FETCH
+   ========================= */
+/* Replace these published CSV URLs with your actual ones if different */
+const NR_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=1617739873&single=true&output=csv";
+const NSA_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=670588387&single=true&output=csv";
+const CUTOVER_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=19616562&single=true&output=csv";
+
 async function fetchData(){
   try {
-    // 1. Fetch KPI Data
-    const nrUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=1617739873&single=true&output=csv&t=" + Date.now();
-    const nsaUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=670588387&single=true&output=csv&t=" + Date.now(); 
-    const cutoverUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=19616562&single=true&output=csv&t=" + Date.now();
-    // --- 2. Fetch all three data sets concurrently using the helper ---
-    const [cutoverRawData, nrRawData, nsaRawData] = await Promise.all([
-        fetchAndParse(cutoverUrl),
-        fetchAndParse(nrUrl),
-        fetchAndParse(nsaUrl)
+    const t = Date.now();
+    const [cutoverRes, nrRes, nsaRes] = await Promise.all([
+      fetch(CUTOVER_CSV_URL + "&_t=" + t),
+      fetch(NR_CSV_URL + "&_t=" + t),
+      fetch(NSA_CSV_URL + "&_t=" + t)
     ]);
+    const [cutoverTxt, nrTxt, nsaTxt] = await Promise.all([cutoverRes.text(), nrRes.text(), nsaRes.text()]);
 
-    // Store separate and combined data
-    nrData = nrRawData;
-    nsaData = nsaRawData;
-    allData = [...nrData, ...nsaData]; // Combine for full timeline and site list generation
+    const cutoverRows = parseCSVwithPapa(cutoverTxt);
+    const nrRows = parseCSVwithPapa(nrTxt);
+    const nsaRows = parseCSVwithPapa(nsaTxt);
 
-    // Determine all gNodeB sites present in the NR data
-    allSites = [...new Set(nrData.map(d=>d["gNodeB Name"]))].filter(s=>s).sort();
+    // Normalize: both NR and NSA use eNodeB field name (you said eNodeB only)
+    // We expect a header called "eNodeB Name" in both NR & NSA sheets.
+    nrData = nrRows.map(r => r);
+    nsaData = nsaRows.map(r => r);
 
-    // --- 3. Process Cutover Data for Mapping/Dates ---
-    siteCutoverMap = {};
-    linkedSiteMap = {}; // eNodeB Name -> gNodeB Name
-    cutoverRawData.forEach(r => {
-        // Check for required headers and existence
-        const gNodeB = r["gNodeB Name"];
-        const eNodeB = r["eNodeB Name"];
-        const onAirDate = r["On-Air Date"];
-        
-        if (gNodeB && onAirDate && allSites.includes(gNodeB)) {
-            siteCutoverMap[gNodeB] = onAirDate;
-        }
-        // Create the link: NSA site (eNodeB) is linked to NR site (gNodeB)
-        if (eNodeB && gNodeB) {
-            linkedSiteMap[eNodeB] = gNodeB;
-        }
-    });
+    // Build siteCutoverMap using eNodeB Name column
+    siteCutoverMap = {};
+    cutoverRows.forEach(r => {
+      const enb = (r["eNodeB Name"] || r["eNodeB"] || r["Site Name"] || r["Site"]) && String(r["eNodeB Name"] || r["eNodeB"] || r["Site Name"] || r["Site"]).trim();
+      const onAir = (r["On-Air Date"] || r["On Air Date"] || r["OnAirDate"]) && String(r["On-Air Date"] || r["On Air Date"] || r["OnAirDate"]).trim();
+      if(enb && onAir) siteCutoverMap[enb] = onAir;
+    });
 
+    // Determine all sites that exist in either NR or NSA datasets
+    const nrSites = nrData.map(d => d["eNodeB Name"] || d["eNodeB"] || d["Site Name"]).filter(s => s).map(String);
+    const nsaSites = nsaData.map(d => d["eNodeB Name"] || d["eNodeB"] || d["Site Name"]).filter(s => s).map(String);
+    allSites = Array.from(new Set([...nrSites, ...nsaSites])).sort();
 
-    // 4. Initialize Date Filter Options and State
-    allOnAirDates = [...new Set(Object.values(siteCutoverMap))].filter(d => d).sort();
-    selectedOnAirDates = [...allOnAirDates]; // Default: Select All Dates
-    selectedSites = []; // Reset site selection
+    // Build allOnAirDates from siteCutoverMap (only dates for known sites)
+    allOnAirDates = Array.from(new Set(Object.keys(siteCutoverMap).filter(s => allSites.includes(s)).map(s => siteCutoverMap[s]))).filter(d => d).sort();
+    selectedOnAirDates = [...allOnAirDates];
+    selectedSites = []; // reset
 
-    // 5. Update UI
-    setupOnAirDateDropdown();
-    setupSiteDropdown();
-    renderCharts();
-
-  } catch(e) { console.error(e); alert("Failed to load data. Please ensure your 3 Google Sheets are published as CSV and links are correct."); }
+    setupOnAirDateDropdown();
+    setupSiteDropdown();
+    renderCharts();
+  } catch(e){
+    console.error('fetchData error', e);
+    alert('Failed to fetch data. Check CSV URLs and network console.');
+  }
 }
 
-// --- FILTER UI LOGIC (ON-AIR DATE) - UNCHANGED FOR SIMPLICITY ---
-
+/* =========================
+   FILTER UI: On-Air Dates
+   ========================= */
 function setupOnAirDateDropdown(){
-  const list = document.getElementById("onAirDateDropdownList");
-  const btn = document.getElementById("onAirDateDropdownBtn");
-  list.innerHTML = "";
-  
-  const setAll = () => { 
-    selectedOnAirDates = [...allOnAirDates]; 
-    // When All Dates are selected, all sites MUST be selected as well
-    const allActiveSites = allSites.filter(site => siteCutoverMap[site] && allOnAirDates.includes(siteCutoverMap[site]));
-    selectedSites = [...allActiveSites]; 
+  const list = document.getElementById('onAirDateDropdownList');
+  const btn = document.getElementById('onAirDateDropdownBtn');
+  list.innerHTML = '';
+  list.innerHTML += `<div style="font-weight:600;padding:8px 10px;">Actions</div>`;
+  list.innerHTML += `<div onclick="dateSetAll()" style="padding:8px 10px;cursor:pointer;"><b>Select All</b></div>`;
+  list.innerHTML += `<div onclick="dateClearAll()" style="padding:8px 10px;cursor:pointer;"><b>Clear All</b></div>`;
 
-    // Update UI but DO NOT close the dropdown
-    updateDateFilterUI({close: false}); 
-    setupSiteDropdown(); // This re-renders charts
-  };
+  allOnAirDates.forEach(d => {
+    const row = document.createElement('div');
+    row.innerHTML = `<input class="date-chk" type="checkbox" value="${d}" ${selectedOnAirDates.includes(d) ? 'checked' : ''}> ${d}`;
+    row.onclick = (e) => {
+      if(e.target.tagName !== 'INPUT'){
+        const chk = row.querySelector('input');
+        chk.checked = !chk.checked;
+      }
+      updateSelectedDates();
+    };
+    list.appendChild(row);
+  });
 
-  const clearAll = () => { 
-    selectedOnAirDates = []; 
-    // When All Dates are cleared, all sites MUST be cleared
-    selectedSites = []; 
-    
-    // Update UI but DO NOT close the dropdown
-    updateDateFilterUI({close: false}); 
-    setupSiteDropdown(); 
-  };
-  
-  // Actions
-  list.innerHTML += `<div onclick="window.dateSetAll()"><b>Select All</b></div>`;
-  list.innerHTML += `<div onclick="window.dateClearAll()"><b>Clear All</b></div>`;
-
-  // Options
-  allOnAirDates.forEach(date => {
-    const d = document.createElement("div");
-    const checked = selectedOnAirDates.includes(date) ? "checked" : "";
-    d.innerHTML = `<input type='checkbox' value='${date}' class='date-chk' ${checked}> ${date}`;
-    d.onclick = (e) => {
-       if(e.target.tagName !== "INPUT") {
-          const chk = d.querySelector("input");
-          chk.checked = !chk.checked;
-       }
-       updateSelectedDates(); // Individual selection
-    };
-    list.appendChild(d);
-  });
-  
-  btn.onclick = () => list.style.display = list.style.display==="block" ? "none" : "block";
-  
-  // Expose helpers globally for inline HTML
-  window.dateSetAll = setAll;
-  window.dateClearAll = clearAll;
-  updateDateFilterUI({close: true}); // Initial UI update
+  btn.onclick = () => list.style.display = list.style.display === 'block' ? 'none' : 'block';
+  window.dateSetAll = () => { selectedOnAirDates = [...allOnAirDates]; updateDateFilterUI({close:false}); setupSiteDropdown(); };
+  window.dateClearAll = () => { selectedOnAirDates = []; updateDateFilterUI({close:false}); selectedSites = []; setupSiteDropdown(); };
+  updateDateFilterUI({close:true});
 }
 
-function updateSelectedDates() {
-    const list = document.getElementById("onAirDateDropdownList");
-    selectedOnAirDates = Array.from(list.querySelectorAll(".date-chk:checked")).map(c => c.value);
-    
-    // Update the sites based on the new dates (select all sites under the new date scope)
-    let activeSites = allSites.filter(site => {
-        const date = siteCutoverMap[site];
-        return date && selectedOnAirDates.includes(date);
-    });
-    selectedSites = [...activeSites]; 
-    
-    // Do not close dropdown on individual check
-    updateDateFilterUI({close: false}); 
-    setupSiteDropdown(); 
+function updateSelectedDates(){
+  const list = document.getElementById('onAirDateDropdownList');
+  selectedOnAirDates = Array.from(list.querySelectorAll('.date-chk:checked')).map(c => c.value);
+  // when dates selected, auto-select sites under those dates
+  const activeSites = allSites.filter(site => selectedOnAirDates.includes(siteCutoverMap[site]));
+  selectedSites = [...activeSites];
+  updateDateFilterUI({close:false});
+  setupSiteDropdown();
 }
 
-function updateDateFilterUI(options = {close: true}) {
-    const btn = document.getElementById("onAirDateDropdownBtn");
-    const span = document.getElementById("onAirDateBtnLabel");
-    const list = document.getElementById("onAirDateDropdownList");
-    
-    span.textContent = selectedOnAirDates.length === 0 ? "No Dates Selected" : (selectedOnAirDates.length === allOnAirDates.length ? "All On-Air Dates" : `Selected (${selectedOnAirDates.length})`);
-    
-    // Update checkboxes visually
-    list.querySelectorAll(".date-chk").forEach(c => c.checked = selectedOnAirDates.includes(c.value));
-    
-    // Close dropdown only if requested
-    if (options.close) {
-        list.style.display = "none";
-    } else {
-        // If not closing, ensure it's open
-        list.style.display = "block";
-    }
+function updateDateFilterUI(options = {close:true}){
+  const span = document.getElementById('onAirDateBtnLabel');
+  if(selectedOnAirDates.length === 0) span.textContent = 'No Dates Selected';
+  else if(selectedOnAirDates.length === allOnAirDates.length) span.textContent = 'All On-Air Dates';
+  else span.textContent = `Selected (${selectedOnAirDates.length})`;
+  const list = document.getElementById('onAirDateDropdownList');
+  list.querySelectorAll('.date-chk').forEach(c => c.checked = selectedOnAirDates.includes(c.value));
+  if(options.close) list.style.display = 'none'; else list.style.display = 'block';
 }
 
-// --- FILTER UI LOGIC (gNodeB Name) - UNCHANGED FOR SIMPLICITY ---
-
+/* =========================
+   FILTER UI: Sites
+   ========================= */
 function setupSiteDropdown(){
-  const list = document.getElementById("siteDropdownList");
-  const btn = document.getElementById("siteDropdownBtn");
-  list.innerHTML = "";
+  const list = document.getElementById('siteDropdownList');
+  const btn = document.getElementById('siteDropdownBtn');
+  list.innerHTML = '';
 
-  // 1. Determine which gNodeB sites are active based on the date filter
-  let activeSites = allSites.filter(site => {
-      const date = siteCutoverMap[site];
-      return date && selectedOnAirDates.includes(date);
-  });
-  
-  // 2. Filter selectedSites to only include those that are currently active
-  selectedSites = selectedSites.filter(site => activeSites.includes(site));
-  
-  // Actions
-  const setAll = () => { 
-    selectedSites = [...activeSites]; 
-    updateSiteFilterUI({close: false}); 
-    renderCharts();
-  }; 
+  // Sites active under selectedOnAirDates
+  const activeSites = allSites.filter(s => !selectedOnAirDates.length || selectedOnAirDates.includes(siteCutoverMap[s]));
+  // keep selectedSites that are active
+  selectedSites = selectedSites.filter(s => activeSites.includes(s));
 
-  const clearAll = () => { 
-    selectedSites = []; 
-    updateSiteFilterUI({close: false}); 
-    renderCharts(); 
-  };
-  
-  // Inject setAll/clearAll actions
-  list.innerHTML += `<div onclick="window.siteSetAll()"><b>Select All (${activeSites.length})</b></div>`;
-  list.innerHTML += `<div onclick="window.siteClearAll()"><b>Clear All</b></div>`;
+  list.innerHTML += `<div style="font-weight:600;padding:8px 10px;">Actions</div>`;
+  list.innerHTML += `<div onclick="siteSetAll()" style="padding:8px 10px;cursor:pointer;"><b>Select All (${activeSites.length})</b></div>`;
+  list.innerHTML += `<div onclick="siteClearAll()" style="padding:8px 10px;cursor:pointer;"><b>Clear All</b></div>`;
 
-  // Options
-  activeSites.forEach(site => {
-    const d = document.createElement("div");
-    // Check if the site is in the current selectedSites list
-    const checked = selectedSites.includes(site) ? "checked" : ""; 
-    d.innerHTML = `<input type='checkbox' value='${site}' class='site-chk' ${checked}> ${site}`;
-    d.onclick = (e) => {
-       if(e.target.tagName !== "INPUT") {
-          const chk = d.querySelector("input");
-          chk.checked = !chk.checked;
-       }
-       updateSelectedSites(); // Individual selection
-    };
-    list.appendChild(d);
-  });
-  
-  btn.onclick = () => list.style.display = list.style.display==="block" ? "none" : "block";
+  activeSites.forEach(site => {
+    const row = document.createElement('div');
+    const checked = selectedSites.includes(site) ? 'checked' : '';
+    row.innerHTML = `<input class="site-chk" type="checkbox" value="${site}" ${checked}> ${site}`;
+    row.onclick = (e) => {
+      if(e.target.tagName !== 'INPUT'){
+        const chk = row.querySelector('input');
+        chk.checked = !chk.checked;
+      }
+      updateSelectedSites();
+    };
+    list.appendChild(row);
+  });
 
-  // Expose helpers globally for inline HTML
-  window.siteSetAll = setAll;
-  window.siteClearAll = clearAll;
-  
-  // Initial UI update for site dropdown and rendering
-  updateSiteFilterUI({close: true});
-  renderCharts();
+  btn.onclick = () => list.style.display = list.style.display === 'block' ? 'none' : 'block';
+  window.siteSetAll = () => { selectedSites = [...activeSites]; updateSiteFilterUI({close:false}); renderCharts(); };
+  window.siteClearAll = () => { selectedSites = []; updateSiteFilterUI({close:false}); renderCharts(); };
+
+  updateSiteFilterUI({close:true});
+  renderCharts();
 }
 
-function updateSelectedSites() {
-    const list = document.getElementById("siteDropdownList");
-    // Ensure we only look at the sites currently visible/active in the list
-    selectedSites = Array.from(list.querySelectorAll(".site-chk:checked")).map(c => c.value);
-    // Do not close dropdown on individual check
-    updateSiteFilterUI({close: false});
-    renderCharts();
+function updateSelectedSites(){
+  const list = document.getElementById('siteDropdownList');
+  selectedSites = Array.from(list.querySelectorAll('.site-chk:checked')).map(c => c.value);
+  updateSiteFilterUI({close:false});
+  renderCharts();
 }
 
-function updateSiteFilterUI(options = {close: true}) {
-    const btn = document.getElementById("siteDropdownBtn");
-    const span = document.getElementById("siteBtnLabel");
-    const list = document.getElementById("siteDropdownList");
-    
-    let activeSites = allSites.filter(site => {
-        const date = siteCutoverMap[site];
-        return selectedOnAirDates.includes(date);
-    });
+function updateSiteFilterUI(options = {close:true}){
+  const span = document.getElementById('siteBtnLabel');
+  const activeSites = allSites.filter(s => !selectedOnAirDates.length || selectedOnAirDates.includes(siteCutoverMap[s]));
+  if(selectedSites.length === 0) span.textContent = `All Active Sites`;
+  else if(selectedSites.length === activeSites.length) span.textContent = `All Active Sites (${selectedSites.length})`;
+  else if(selectedSites.length === 1) span.textContent = selectedSites[0];
+  else span.textContent = `Selected (${selectedSites.length})`;
 
-    if(selectedSites.length === 0) span.textContent = "All Active Sites";
-    else if(selectedSites.length === activeSites.length) span.textContent = `All Active Sites (${selectedSites.length})`;
-    else if(selectedSites.length === 1) span.textContent = selectedSites[0];
-    else span.textContent = `Selected (${selectedSites.length})`;
-
-    // Re-check all site checkboxes to reflect the selectedSites state 
-    list.querySelectorAll(".site-chk").forEach(c => c.checked = selectedSites.includes(c.value));
-    
-    // Close dropdown only if requested
-    if (options.close) {
-        list.style.display = "none";
-    } else {
-        // If not closing, ensure it's open
-        list.style.display = "block";
-    }
+  const list = document.getElementById('siteDropdownList');
+  list.querySelectorAll('.site-chk').forEach(c => c.checked = selectedSites.includes(c.value));
+  if(options.close) list.style.display = 'none'; else list.style.display = 'block';
 }
 
-// --- UPDATED CHART RENDERING (OPTIMIZED FOR NR/NSA SEPARATION) ---
-
+/* =========================
+   CHART RENDERING
+   ========================= */
 function renderCharts(){
-  const container = document.getElementById("mainChartContainer");
-  container.innerHTML = "";
-  
-  let kpisToShow = [];
-  if(currentTab === "nr") kpisToShow = selectedKpis.nr.map(k => ({kpi: k, type: 'nr'}));
-  else if(currentTab === "nsa") kpisToShow = selectedKpis.nsa.map(k => ({kpi: k, type: 'nsa'}));
-  else if(currentTab === "both") kpisToShow = [
-    ...selectedKpis.nr.map(k => ({kpi: k, type: 'nr'})),
-    ...selectedKpis.nsa.map(k => ({kpi: k, type: 'nsa'}))
-  ];
+  const container = document.getElementById('mainChartContainer');
+  container.innerHTML = '';
 
-  // 1. Determine final list of gNodeB sites based on date filter AND site filter
-  let sitesFromDate = allSites.filter(site => {
-      const date = siteCutoverMap[site];
-      return selectedOnAirDates.includes(date);
-  });
+  // KPIs list based on tab
+  let kpisToShow = [];
+  if(currentTab === 'nr') kpisToShow = selectedKpis.nr.map(k => ({kpi:k, type:'nr'}));
+  else if(currentTab === 'nsa') kpisToShow = selectedKpis.nsa.map(k => ({kpi:k, type:'nsa'}));
+  else kpisToShow = [...selectedKpis.nr.map(k => ({kpi:k,type:'nr'})), ...selectedKpis.nsa.map(k => ({kpi:k,type:'nsa'}))];
 
-  let finalGNodeBList;
-  if (selectedSites.length > 0) {
-      finalGNodeBList = selectedSites;
-  } else {
-      finalGNodeBList = sitesFromDate;
-  }
-  
-  // 2. Determine the corresponding eNodeB sites for the filter
-  const finalENodeBList = Object.keys(linkedSiteMap).filter(eNodeB => 
-      finalGNodeBList.includes(linkedSiteMap[eNodeB])
-  );
-  
-  // 3. Pre-filter the data by selected sites only once (using the separate arrays)
-  const filteredNRData = nrData.filter(d => finalGNodeBList.includes(d["gNodeB Name"]));
-  const filteredNSAData = nsaData.filter(d => finalENodeBList.includes(d["eNodeB Name"]));
-  const combinedFilteredData = [...filteredNRData, ...filteredNSAData];
+  // 1) determine final site list (eNodeB names)
+  const sitesFromDate = allSites.filter(site => !selectedOnAirDates.length || selectedOnAirDates.includes(siteCutoverMap[site]));
+  const finalSiteList = selectedSites.length ? selectedSites : sitesFromDate;
 
+  // 2) prefilter datasets by eNodeB Name
+  // Both nrData and nsaData use "eNodeB Name" (or nearby header aliases).
+  function siteMatches(row){
+    const candidates = [row["eNodeB Name"], row["eNodeB"], row["Site Name"], row["Site"]].filter(Boolean).map(String);
+    return candidates.some(c => finalSiteList.includes(c));
+  }
+  const filteredNR = nrData.filter(siteMatches);
+  const filteredNSA = nsaData.filter(siteMatches);
+  const combined = [...filteredNR, ...filteredNSA];
 
-  // 4. Process Timeline - Use the combined filtered data for date range
-  const timeline = [...new Set(combinedFilteredData.map(d=>d["Date"]))].filter(d => d).sort((a,b)=>{
-    const [da,ma,ya]=a.split('/').map(Number);
-    const [db,mb,yb]=b.split('/').map(Number);
-    return new Date(ya,ma-1,da)-new Date(yb,mb-1,db);
-  });
+  // timeline derived from combined filtered data
+  const timelineRaw = Array.from(new Set(combined.map(d => d["Date"]).filter(Boolean)));
+  // parse dd/mm/yyyy -> sort by date
+  const timeline = timelineRaw.sort((a,b) => {
+    const toDate = s => { const p = String(s).split('/').map(Number); if(p.length<3) return new Date(s); return new Date(p[2], (p[1]||1)-1, p[0]||1); };
+    return toDate(a) - toDate(b);
+  });
 
-  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const timelineLabels = timeline.map(d => {
-      const [day, month] = d.split('/').map(Number);
-      return `${day} ${monthNames[month - 1]}`; // e.g., "5 Jan"
-  });
+  const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const timelineLabels = timeline.map(d => {
+    const p = String(d).split('/').map(Number);
+    const day = p[0] || 1; const month = p[1] || 1;
+    return `${day} ${monthNames[month-1]}`;
+  });
 
-  // 5. Generate Charts
-  kpisToShow.forEach((kpiInfo, idx) => {
-    const { kpi, type } = kpiInfo;
-    
-    const card = document.createElement("div");
-    card.className = "chart-card";
-    
-    const wrapper = document.createElement("div");
-    wrapper.className = "chart-container";
-    
-    const canvas = document.createElement("canvas");
-    canvas.id = `chart_${idx}`;
-    
-    wrapper.appendChild(canvas);
-    card.appendChild(wrapper);
-    container.appendChild(card);
+  // Create one chart per KPI
+  kpisToShow.forEach((ki, idx) => {
+    const kpi = ki.kpi;
+    const type = ki.type;
 
-    // Get the correct data source for aggregation
-    const sourceData = (type === 'nr') ? filteredNRData : filteredNSAData;
-    const filteredSiteList = (type === 'nr') ? finalGNodeBList : finalENodeBList;
+    const card = document.createElement('div'); card.className='chart-card';
+    const wrapper = document.createElement('div'); wrapper.className='chart-container';
+    const canvas = document.createElement('canvas'); canvas.id = `chart_${idx}`;
+    wrapper.appendChild(canvas); card.appendChild(wrapper); container.appendChild(card);
 
+    // choose source: nr -> filteredNR, nsa -> filteredNSA (aggregation done per-kpi)
+    const source = (type === 'nr') ? filteredNR : filteredNSA;
 
-    // Calculate Data
-    const dataPoints = timeline.map(date => {
-      const values = sourceData
-        .filter(d => d["Date"] === date)
-        .map(d => Number(d[kpi]))
-        .filter(v => !isNaN(v));
+    const dataPoints = timeline.map(date => {
+      const values = source.filter(r => r["Date"] === date).map(r => {
+        const raw = r[kpi] !== undefined ? r[kpi] : (r[kpi] === 0 ? 0 : r[kpi]);
+        const n = Number(raw);
+        return Number.isFinite(n) ? n : NaN;
+      }).filter(v => !Number.isNaN(v));
+      if(values.length === 0) return null;
+      const avg = values.reduce((a,b) => a + b, 0) / values.length;
+      return avg;
+    });
 
-      if(values.length === 0) return null;
+    const valid = dataPoints.filter(v => v !== null);
+    let minVal = valid.length ? Math.min(...valid) : 0;
+    let maxVal = valid.length ? Math.max(...valid) : 100;
 
-      const avg = values.reduce((a,b) => a+b, 0) / values.length;
-      return avg;
-    });
+    // Special percentage handling: if KPI name looks like percent/success and numbers in high range
+    const looksLikePercent = /%|Success Rate|Rate/i.test(kpi);
+    if(looksLikePercent && valid.length){
+      if(minVal >= 95 && maxVal <= 100){
+        minVal = 95; maxVal = 100;
+      } else {
+        minVal = Math.floor(minVal / 5) * 5;
+        maxVal = Math.ceil(maxVal / 5) * 5;
+      }
+    } else if(valid.length){
+      // add small buffer
+      const buffer = (maxVal - minVal) * 0.05 || Math.max(1, Math.abs(minVal) * 0.05);
+      minVal = Math.floor(minVal - buffer);
+      maxVal = Math.ceil(maxVal + buffer);
+    } else {
+      minVal = 0; maxVal = 100;
+    }
 
-    let validValues = dataPoints.filter(v => v !== null);
-    let minVal = Math.min(...validValues);
-    let maxVal = Math.max(...validValues);
+    // guard against equal min/max
+    if(minVal === maxVal){
+      minVal = Math.max(0, minVal - 1);
+      maxVal = Math.min(100, maxVal + 1);
+    }
 
-    // Special rule: if min >= 95 and max <= 100, set scale explicitly (for percentage metrics)
-    if(kpi.includes('Success Rate') || kpi.includes('%')) {
-        if(minVal >= 95 && maxVal <= 100) {
-            minVal = 95;
-            maxVal = 100;
-        } else {
-            minVal = Math.floor(minVal / 5) * 5;
-            maxVal = Math.ceil(maxVal / 5) * 5;
-        }
-    } else {
-        // Generic scaling logic for non-percentage KPIs
-        if (validValues.length > 0) {
-            minVal = Math.floor(minVal * 0.95); // 5% buffer below min
-            maxVal = Math.ceil(maxVal * 1.05); // 5% buffer above max
-        } else {
-            minVal = 0; maxVal = 100;
-        }
-    }
+    // Build chart options including special 95..100 ticks
+    const yTicks = {};
+    if(looksLikePercent && minVal >= 95 && maxVal <= 100){
+      yTicks.stepSize = 1;
+      yTicks.callback = function(value){ if(value >= 95 && value <= 100) return value; return null; };
+    }
 
-    // Draw Chart with Animation
-    new Chart(canvas.getContext("2d"), {
-      type: 'line',
-      data: {
-        labels: timelineLabels,
-        datasets: [{
-          label: (filteredSiteList.length > 0 && dataPoints.some(p => p !== null)) ? `${type.toUpperCase()} Aggregate` : "No Data",
-          data: dataPoints,
-          borderColor: getRandomColor(),
-          backgroundColor: 'transparent',
-          borderWidth: 2,
-          pointRadius: 3,
-          tension: 0.1,
-          spanGaps: true 
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: {
-            x: {
-                type: 'number',
-                easing: 'linear',
-                duration: 500,
-                from: NaN,
-                delay: (ctx) => ctx.index * 30 
-            },
-            y: { duration: 0 }
-        },
-        plugins: { 
-            legend: { display: false },
-            title: { // Chart.js built-in title
-                display: true,
-                text: kpi,
-                font: {
-                    size: 14,
-                    weight: 'bold'
-                },
-                color: '#333'
-            }
-        },
-        scales: {
-           x: { 
-               ticks: { font: {size:8} }, 
-               grid: {display:false} 
-           },
-           y: { 
-               beginAtZero: false, 
-               grid: {color:'#eee'},
-               min: (filteredSiteList.length === 0 || dataPoints.every(p => p === null)) ? 0 : minVal,
-               max: (filteredSiteList.length === 0 || dataPoints.every(p => p === null)) ? 100 : maxVal
-           }
-        }
-      }
-    });
-  });
+    new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: timelineLabels,
+        datasets: [{
+          label: (finalSiteList.length > 0 && dataPoints.some(p => p !== null)) ? `${type.toUpperCase()} Aggregate` : 'No Data',
+          data: dataPoints,
+          borderColor: getRandomColor(),
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          pointRadius: 3,
+          tension: 0.1,
+          spanGaps: true
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          title: { display: true, text: kpi, color: '#333', font: { size: 14, weight: 'bold' } }
+        },
+        scales: {
+          x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+          y: {
+            grid: { color: '#eee' },
+            beginAtZero: false,
+            min: (finalSiteList.length === 0 || dataPoints.every(p => p === null)) ? 0 : minVal,
+            max: (finalSiteList.length === 0 || dataPoints.every(p => p === null)) ? 100 : maxVal,
+            ticks: yTicks
+          }
+        },
+        animation: {
+          x: { duration: 500, easing: 'linear', from: NaN, delay: ctx => (ctx.index || 0) * 15 },
+          y: { duration: 0 }
+        }
+      }
+    });
+  });
 }
 
-function getRandomColor() {
-  const colors = ['#2F80ED', '#27AE60', '#D24726', '#8E44AD', '#F39C12', '#2980B9'];
-  return colors[Math.floor(Math.random() * colors.length)];
-}
-
-// --- KPI DRAWER & UTILITY LOGIC ---
-
+/* =========================
+   KPI Drawer
+   ========================= */
 function toggleDrawer(){
-  const d = document.getElementById("kpiDrawer");
-  d.classList.toggle("open");
-  if(d.classList.contains("open")) populateKpiOptions();
+  const d = document.getElementById('kpiDrawer');
+  d.classList.toggle('open');
+  if(d.classList.contains('open')) populateKpiOptions();
 }
 
 function populateKpiOptions(){
-  const list = document.getElementById("kpiOptionsList");
-  list.innerHTML = "";
-  
-  document.getElementById('drawerHeaderTitle').textContent = 'KPI Settings';
-
+  const list = document.getElementById('kpiOptionsList'); list.innerHTML = '';
   const nrSection = currentTab === 'nr' || currentTab === 'both';
-  const nSaSection = currentTab === 'nsa' || currentTab === 'both';
-  
-  const createGroup = (title, key, sourceArr) => {
-    const h4 = document.createElement("h4");
-    h4.textContent = title;
-    h4.style.marginTop = "15px";
-    list.appendChild(h4);
-    
-    sourceArr.forEach(kpi => {
-      const div = document.createElement("div");
-      const checked = selectedKpis[key].includes(kpi) ? "checked" : "";
-      div.innerHTML = `<input type='checkbox' class='kpi-chk' data-group='${key}' value='${kpi}' ${checked}> <span style='font-size:13px'>${kpi}</span>`;
-      div.onclick = (e) => {
-        if(e.target.tagName !== "INPUT") {
-            const chk = div.querySelector("input");
-            chk.checked = !chk.checked;
-        }
-        // No auto-apply here, user must click Apply
-      };
+  const nsaSection = currentTab === 'nsa' || currentTab === 'both';
+
+  function makeGroup(title, key, arr){
+    const h = document.createElement('h4'); h.textContent = title; h.style.marginTop='8px'; list.appendChild(h);
+    arr.forEach(k => {
+      const div = document.createElement('div');
+      const checked = selectedKpis[key].includes(k) ? 'checked' : '';
+      div.innerHTML = `<input type="checkbox" class="kpi-chk" data-group="${key}" value="${k}" ${checked}> <span style="font-size:13px">${k}</span>`;
+      div.onclick = (e) => { if(e.target.tagName !== 'INPUT'){ const chk = div.querySelector('input'); chk.checked = !chk.checked; } };
       list.appendChild(div);
     });
-  };
-
-  if (nrSection) createGroup("NR KPIs", "nr", nrKpis);
-  if (nsaSection) createGroup("NSA KPIs", "nsa", nsaKpis);
+  }
+  if(nrSection) makeGroup('NR KPIs','nr', nrKpis);
+  if(nsaSection) makeGroup('NSA KPIs','nsa', nsaKpis);
 }
 
-/**
- * Selects all visible KPI checkboxes and updates the internal state.
- */
-function selectVisibleKpis() {
-    const chks = document.querySelectorAll(".kpi-chk");
-    
-    // 1. Update Checkboxes Visually
-    chks.forEach(c => {
-        c.checked = true;
-    });
-
-    // 2. Update Internal State
-    if (currentTab === 'nr' || currentTab === 'both') {
-        selectedKpis.nr = [...nrKpis];
-    }
-    if (currentTab === 'nsa' || currentTab === 'both') {
-        selectedKpis.nsa = [...nsaKpis];
-    }
+function selectVisibleKpis(){
+  document.querySelectorAll('.kpi-chk').forEach(c => c.checked = true);
+  if(currentTab === 'nr' || currentTab === 'both') selectedKpis.nr = [...nrKpis];
+  if(currentTab === 'nsa' || currentTab === 'both') selectedKpis.nsa = [...nsaKpis];
 }
-
-/**
- * Clears all visible KPI checkboxes and updates the internal state.
- */
-function clearVisibleKpis() {
-    const chks = document.querySelectorAll(".kpi-chk");
-    
-    // 1. Update Checkboxes Visually
-    chks.forEach(c => {
-        c.checked = false;
-    });
-
-    // 2. Update Internal State
-    if (currentTab === 'nr' || currentTab === 'both') {
-        selectedKpis.nr = [];
-    }
-    if (currentTab === 'nsa' || currentTab === 'both') {
-        selectedKpis.nsa = [];
-    }
+function clearVisibleKpis(){
+  document.querySelectorAll('.kpi-chk').forEach(c => c.checked = false);
+  if(currentTab === 'nr' || currentTab === 'both') selectedKpis.nr = [];
+  if(currentTab === 'nsa' || currentTab === 'both') selectedKpis.nsa = [];
 }
-
-
 function applyKpis(){
-  const chks = document.querySelectorAll(".kpi-chk");
-  
-  // Start with existing selections for non-visible tabs
-  const tempnr = currentTab === 'nr' || currentTab === 'both' ? [] : [...selectedKpis.nr];
-  const tempnsa = currentTab === 'nsa' || currentTab === 'both' ? [] : [...selectedKpis.nsa];
-
-  // Apply checked status from the UI
-  chks.forEach(c => {
-    if(c.checked) {
-        if(c.dataset.group === 'nr') tempnr.push(c.value);
-        if(c.dataset.group === 'nsa') tempnsa.push(c.value);
-    }
-  });
-
-  selectedKpis.nr = tempnr;
-  selectedKpis.nsa = tempnsa;
-  
+  const chks = document.querySelectorAll('.kpi-chk');
+  const tempnr = (currentTab === 'nr' || currentTab === 'both') ? [] : [...selectedKpis.nr];
+  const tempnsa = (currentTab === 'nsa' || currentTab === 'both') ? [] : [...selectedKpis.nsa];
+  chks.forEach(c => { if(c.checked){ if(c.dataset.group === 'nr') tempnr.push(c.value); if(c.dataset.group === 'nsa') tempnsa.push(c.value); }});
+  selectedKpis.nr = tempnr; selectedKpis.nsa = tempnsa;
   toggleDrawer();
   renderCharts();
 }
 
-// --- PPT EXPORT CUSTOMIZATION & PREVIEW ---
+/* =========================
+   Preview & PPT Export (kept simple & consistent)
+   ========================= */
+function updatePreviewSettings(newCount, newLineColor, newTitleColor){
+  if(newCount) graphsPerSlide = parseInt(newCount);
+  if(newLineColor) chartExportColor = newLineColor;
+  if(newTitleColor) chartExportTitleColor = newTitleColor;
+  highlightSettingButtons(graphsPerSlide, chartExportColor, chartExportTitleColor);
 
-// Centralized Layout Logic: Ensures Preview and PPT match exactly
-function getLayoutConfig(count) {
-    // Standard PPT Slide: 10 inches x 5.625 inches
-    const slideWidth = 10.0;
-    const slideHeight = 5.625;
-    
-    // Margins & Spacing (Inches)
-    const marginX = 0.2;	
-    const marginTop = 0.9; // Space for Slide Title (Original - kept for chart size calculation)
-    const marginBottom = 0.2;
-    const gap = 0.15;	 	 // Space between charts
+  const canvases = document.querySelectorAll('canvas');
+  const body = document.getElementById('previewBody');
+  body.innerHTML = '';
+  const layout = getLayoutConfig(graphsPerSlide);
+  const gridCols = `repeat(${layout.cols}, 1fr)`;
 
-    let rows, cols;
-
-    // Define Grid Logic
-    switch(parseInt(count)) {
-        case 1: rows = 1; cols = 1; break;
-        case 2: rows = 1; cols = 2; break;
-        case 3: rows = 2; cols = 2; break; // FIXED: 3 graphs now use 2x2 grid (not squished)
-        case 4: rows = 2; cols = 2; break;
-        case 6: rows = 2; cols = 3; break;
-        case 9: rows = 3; cols = 3; break; // FIXED: 9 graphs strictly calculated to fit height
-        default: rows = 2; cols = 2;
+  for(let i=0;i<canvases.length;i+=graphsPerSlide){
+    const slideDiv = document.createElement('div'); slideDiv.className = 'preview-slide';
+    const slideTitle = document.createElement('div'); slideTitle.className = 'preview-slide-title';
+    slideTitle.textContent = `Slide ${Math.floor(i/graphsPerSlide)+1}`; slideDiv.appendChild(slideTitle);
+    const grid = document.createElement('div'); grid.className = 'preview-grid';
+    grid.style.gridTemplateColumns = gridCols;
+    grid.style.height = '100%';
+    for(let j=0;j<graphsPerSlide;j++){
+      if(i+j < canvases.length){
+        const c = canvases[i+j];
+        const box = createPreviewBox(c, chartExportColor, chartExportTitleColor);
+        box.style.height = 'auto';
+        grid.appendChild(box);
+      }
     }
-
-    // Calculate Available Space
-    const usableW = slideWidth - (marginX * 2);
-    // Note: usableH uses the original marginTop (0.9) to calculate the chart dimensions (chartH).
-    // The charts will maintain this calculated size even if the actual PPT starting y-position moves up.
-    const usableH = slideHeight - marginTop - marginBottom;
-
-    // Calculate Individual Chart Dimensions
-    const chartW = (usableW - ((cols - 1) * gap)) / cols;
-    const chartH = (usableH - ((rows - 1) * gap)) / rows;
-
-    return { rows, cols, chartW, chartH, gap, marginX, marginTop, slideWidth, slideHeight };
+    slideDiv.appendChild(grid); body.appendChild(slideDiv);
+  }
 }
 
-function openPreview() {
-    const canvases = document.querySelectorAll("canvas");
-    if(canvases.length === 0) { alert("No charts to export."); return; }
-    
-    // Set defaults if not already set
-    if(!graphsPerSlide) graphsPerSlide = 2;	
-    
-    updatePreviewSettings(graphsPerSlide, chartExportColor, chartExportTitleColor);
-    document.getElementById("previewModal").style.display = "flex";
+function highlightSettingButtons(count, lineColor, titleColor){
+  document.querySelectorAll('.graph-options button').forEach(btn => {
+    btn.classList.remove('active'); btn.style.backgroundColor = '#2F80ED'; btn.style.color = 'white';
+    if(parseInt(btn.dataset.count) === count){ btn.classList.add('active'); btn.style.backgroundColor = '#27AE60'; }
+  });
+  document.querySelectorAll('#previewSettingsPanel .color-option').forEach(el => {
+    el.classList.remove('selected');
+    if(el.dataset.color === lineColor || el.dataset.color === titleColor) el.classList.add('selected');
+  });
 }
 
-function highlightSettingButtons(count, lineColor, titleColor) {
-    document.querySelectorAll('.graph-options button').forEach(btn => {
-        btn.classList.remove('active');
-        btn.style.backgroundColor = '#2F80ED'; // Reset blue
-        btn.style.color = 'white';
-        if (parseInt(btn.dataset.count) === count) {
-            btn.classList.add('active');
-            btn.style.backgroundColor = '#27AE60'; // Active Green
-        }
+function createPreviewBox(canvas, lineColor, titleColor){
+  const box = document.createElement('div'); box.className='preview-img-box';
+  const tempCanvas = document.createElement('canvas'); tempCanvas.width = canvas.width; tempCanvas.height = canvas.height;
+  const tempCtx = tempCanvas.getContext('2d');
+  const chartInstance = Chart.getChart(canvas.id);
+  let img = '';
+  if(chartInstance){
+    const originalColors = chartInstance.data.datasets.map(d=>d.borderColor);
+    const originalPoint = chartInstance.data.datasets.map(d=>d.pointBorderColor);
+    const origTitle = (chartInstance.options.plugins && chartInstance.options.plugins.title) ? chartInstance.options.plugins.title.color : '#333';
+    chartInstance.data.datasets.forEach(d => {
+      d.borderColor = lineColor; d.pointBorderColor = lineColor; d.pointBackgroundColor = lineColor; d.pointRadius = 3; d.spanGaps = true;
     });
-
-    document.querySelectorAll('#lineColorOptions .color-option').forEach(el => {
-        el.classList.remove('selected');
-        if (el.dataset.color === lineColor) el.classList.add('selected');
-    });
-
-    document.querySelectorAll('#titleColorOptions .color-option').forEach(el => {
-        el.classList.remove('selected');
-        if (el.dataset.color === titleColor) el.classList.add('selected');
-    });
+    if(chartInstance.options.plugins && chartInstance.options.plugins.title) chartInstance.options.plugins.title.color = titleColor;
+    chartInstance.update('none');
+    tempCtx.drawImage(canvas, 0, 0);
+    img = tempCanvas.toDataURL('image/png');
+    // restore
+    chartInstance.data.datasets.forEach((d,i) => { d.borderColor = originalColors[i]; d.pointBorderColor = originalPoint[i]; });
+    if(chartInstance.options.plugins && chartInstance.options.plugins.title) chartInstance.options.plugins.title.color = origTitle;
+    chartInstance.update('none');
+  }
+  const imgel = document.createElement('img'); imgel.src = img; imgel.style.maxWidth='100%'; imgel.style.maxHeight='100%'; imgel.style.objectFit='contain';
+  box.appendChild(imgel);
+  return box;
 }
 
-function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
-    if (newCount) graphsPerSlide = parseInt(newCount);
-    if (newLineColor) chartExportColor = newLineColor;
-    if (newTitleColor) chartExportTitleColor = newTitleColor;
-
-    highlightSettingButtons(graphsPerSlide, chartExportColor, chartExportTitleColor);
-    
-    const count = graphsPerSlide;
-    const body = document.getElementById("previewBody");
-    const canvases = document.querySelectorAll("canvas");
-    
-    document.getElementById("previewTitle").textContent = `PPT Export Preview (${count} Graphs per Slide)`;
-    body.innerHTML = "";
-
-    // Get layout config to ensure HTML CSS matches PPT Logic
-    const layout = getLayoutConfig(count);
-
-    // Generate CSS Grid Template based on calculated columns
-    const gridTemplateCols = `repeat(${layout.cols}, 1fr)`;
-
-    for(let i=0; i<canvases.length; i+=count){
-        const slideDiv = document.createElement("div");
-        slideDiv.className = "preview-slide";
-        
-        const slideTitle = document.createElement("div");
-        slideTitle.className = "preview-slide-title";
-        slideTitle.textContent = `Slide ${Math.floor(i/count) + 1}`;
-        slideDiv.appendChild(slideTitle);
-
-        const grid = document.createElement("div");
-        grid.className = "preview-grid";
-        grid.style.display = "grid";
-        grid.style.gridTemplateColumns = gridTemplateCols;
-        grid.style.gap = "10px";
-        grid.style.height = "100%";
-        grid.style.paddingTop = "30px"; // Visual padding for preview
-        grid.style.alignContent = "start"; // Prevent vertical stretching weirdness
-
-        for(let j=0; j<count; j++){
-            if(i+j < canvases.length){
-                const c = canvases[i+j];
-                const box = createPreviewBox(c, chartExportColor, chartExportTitleColor);	
-                
-                // --- PREVIEW FIX LOGIC ---
-                // Override layout.rows for preview to make 3/4 charts look bigger.
-                const chartsOnSlide = Math.min(count, canvases.length - i);
-                let previewRows = layout.rows;
-                
-                // If using a 2-row layout (3 or 4 charts) but we're rendering the preview,
-                // force it to act like a 1-row height to maximize chart size in the modal.
-                if (layout.rows === 2 && chartsOnSlide <= 4) {
-                    previewRows = 1; 
-                }
-                
-                // If only 3 charts, definitely force to 1 row height to maximize visibility
-                if (chartsOnSlide === 3) {
-                    previewRows = 1;
-                }
-                // --- END PREVIEW FIX LOGIC ---
-
-                // Adjust height for preview based on calculated rows
-                box.style.height = `calc((100% / ${previewRows}) - 15px)`;	
-                
-                grid.appendChild(box);
-            }
-        }
-        slideDiv.appendChild(grid);
-        body.appendChild(slideDiv);
-    }
+function openPreview(){
+  const canvases = document.querySelectorAll('canvas');
+  if(!canvases.length){ alert('No charts to export'); return; }
+  if(!graphsPerSlide) graphsPerSlide = 2;
+  updatePreviewSettings(graphsPerSlide, chartExportColor, chartExportTitleColor);
+  document.getElementById('previewModal').style.display = 'flex';
 }
 
-function createPreviewBox(canvas, lineColor, titleColor) {
-    const box = document.createElement("div");
-    box.className = "preview-img-box";
-    
-    // Create a temp canvas to redraw with export colors
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = canvas.width;
-    tempCanvas.height = canvas.height;
-    const tempCtx = tempCanvas.getContext('2d');
-    
-    const chartInstance = Chart.getChart(canvas.id);
-    let imgData = '';
-    
-    if (chartInstance) {
-        const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
-        const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
-        const originalTitleColor = chartInstance.options.plugins.title.color;
-        
-        // Apply Export Styles
-        chartInstance.data.datasets.forEach(d => {	
-            d.borderColor = lineColor;	
-            d.pointBorderColor = lineColor;	
-            d.pointBackgroundColor = lineColor;	
-            d.pointRadius = 3;	
-            d.pointStyle = 'circle';	
-            d.spanGaps = true;	
-        });
+function closePreview(){ document.getElementById('previewModal').style.display = 'none'; }
 
-        chartInstance.options.plugins.title.color = titleColor;	
-        
-        chartInstance.update('none');	
-        
-        tempCtx.drawImage(canvas, 0, 0);
-        imgData = tempCanvas.toDataURL("image/png");
-        
-        // Revert Styles
-        chartInstance.data.datasets.forEach((d, index) => {	
-            d.borderColor = originalColors[index];	
-            d.pointBorderColor = originalPointColors[index];
-        });
-        chartInstance.options.plugins.title.color = originalTitleColor;
-        chartInstance.update('none');
-    }
-
-    const img = document.createElement("img");
-    img.src = imgData;
-    img.style.maxHeight = "100%";
-    img.style.maxWidth = "100%";
-    img.style.objectFit = "contain";
-    
-    box.appendChild(img);
-    return box;
+/* Basic PPT download (uses same layout calc as preview) */
+function getLayoutConfig(count){
+  const slideW = 10.0, slideH = 5.625, marginX = 0.2, marginTop = 0.9, marginBottom = 0.2, gap = 0.15;
+  let rows=2, cols=2;
+  switch(parseInt(count)){
+    case 1: rows=1; cols=1; break;
+    case 2: rows=1; cols=2; break;
+    case 3: rows=2; cols=2; break;
+    case 4: rows=2; cols=2; break;
+    case 6: rows=2; cols=3; break;
+    case 9: rows=3; cols=3; break;
+    default: rows=2; cols=2;
+  }
+  const usableW = slideW - marginX*2;
+  const usableH = slideH - marginTop - marginBottom;
+  const chartW = (usableW - (cols-1)*gap)/cols;
+  const chartH = (usableH - (rows-1)*gap)/rows;
+  return { rows, cols, chartW, chartH, gap, marginX, marginTop, slideW, slideH };
 }
-
-function closePreview(){ document.getElementById("previewModal").style.display = "none"; }
 
 async function downloadPPT(){
-    const pptx = new PptxGenJS();
-    pptx.layout = 'LAYOUT_16x9'; // 10 x 5.625 inches
-    
-    // Title Slide
-    let slide = pptx.addSlide();
-    slide.addText("LTE KPI Report", { x:0.5, y:2, fontSize:32, bold:true, color:'2F80ED' });
-    slide.addText(`Generated: ${new Date().toLocaleDateString()}`, { x:0.5, y:3, fontSize:14 });
+  const pptx = new PptxGenJS();
+  pptx.layout = 'LAYOUT_16x9';
+  let slide = pptx.addSlide();
+  slide.addText('NR & NSA KPI Report', {x:0.5,y:1.6,fontSize:28,bold:true,color:'2F80ED'});
+  slide.addText(`Generated: ${new Date().toLocaleDateString()}`, {x:0.5,y:2.3,fontSize:12});
 
-    const canvases = document.querySelectorAll("canvas");
-    const count = graphsPerSlide;
-    const lineColor = chartExportColor;	
-    const titleColor = chartExportTitleColor;
-    
-    // Get EXACT calculated layout
-    const layout = getLayoutConfig(count);
-    
-    // New effective margin since the slide title is removed
-    const effectiveMarginTop = 0.2; 
+  const canvases = document.querySelectorAll('canvas');
+  const count = graphsPerSlide;
+  const layout = getLayoutConfig(count);
+  const effectiveTop = 0.2;
 
-    for(let i=0; i<canvases.length; i+=count){
-        let slide = pptx.addSlide();
-        
-        // REMOVED: Slide Header / Title for each new slide, as requested
-        /*
-        slide.addText("LTE KPI Dashboard Overview", {	
-            x: 0.2, y: 0.2, fontSize: 18, color: 'D24726', bold: true	
-        });
-        */
-
-        // Add Charts
-        for(let j=0; j<count; j++){
-            if(i+j < canvases.length){
-                const c = canvases[i+j];
-                
-                // Calculate Position based on Grid Logic
-                const colIndex = j % layout.cols;
-                const rowIndex = Math.floor(j / layout.cols);
-
-                const xPos = layout.marginX + (colIndex * (layout.chartW + layout.gap));
-                // Chart Y position starts from the new, smaller margin (0.2 in), 
-                // shifting charts up to fill the space of the removed title.
-                const yPos = effectiveMarginTop + (rowIndex * (layout.chartH + layout.gap));
-                
-                // --- PPT CHART EXPORT LOGIC ---
-                const chartInstance = Chart.getChart(c.id);
-                const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
-                const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
-                const originalTitleColor = chartInstance.options.plugins.title.color;
-                
-                // Override style for PPT export
-                chartInstance.data.datasets.forEach(d => {	
-                    d.borderColor = lineColor;	
-                    d.pointBorderColor = lineColor;	
-                    d.pointBackgroundColor = lineColor;	
-                    d.pointRadius = 3;
-                    d.spanGaps = true;	
-                });
-                chartInstance.options.plugins.title.color = titleColor;	
-                chartInstance.update('none');	
-                
-                const imgData = c.toDataURL("image/png");
-                
-                // Restore original styles
-                chartInstance.data.datasets.forEach((d, index) => {	
-                    d.borderColor = originalColors[index];	
-                    d.pointBorderColor = originalPointColors[index];
-                    d.spanGaps = true;	
-                });
-                chartInstance.options.plugins.title.color = originalTitleColor;
-                chartInstance.update('none');
-                // --- END PPT CHART EXPORT LOGIC ---
-                
-                // Add Image to Slide with calculated coordinates
-                slide.addImage({	
-                    data: imgData,	
-                    x: xPos,	
-                    y: yPos,	
-                    w: layout.chartW,	
-                    h: layout.chartH	
-                });
-            }
+  for(let i=0;i<canvases.length;i+=count){
+    const s = pptx.addSlide();
+    for(let j=0;j<count;j++){
+      if(i+j < canvases.length){
+        const c = canvases[i+j];
+        const col = j % layout.cols;
+        const row = Math.floor(j / layout.cols);
+        const x = layout.marginX + col * (layout.chartW + layout.gap);
+        const y = effectiveTop + row * (layout.chartH + layout.gap);
+        // style override for export
+        const chartInstance = Chart.getChart(c.id);
+        let originalColors, originalPointColors, originalTitleColor;
+        if(chartInstance){
+          originalColors = chartInstance.data.datasets.map(d=>d.borderColor);
+          originalPointColors = chartInstance.data.datasets.map(d=>d.pointBorderColor);
+          originalTitleColor = (chartInstance.options.plugins && chartInstance.options.plugins.title) ? chartInstance.options.plugins.title.color : '#333';
+          chartInstance.data.datasets.forEach(d => { d.borderColor = chartExportColor; d.pointBorderColor = chartExportColor; d.pointBackgroundColor = chartExportColor; d.pointRadius = 3; d.spanGaps = true; });
+          if(chartInstance.options.plugins && chartInstance.options.plugins.title) chartInstance.options.plugins.title.color = chartExportTitleColor;
+          chartInstance.update('none');
         }
+        const imgData = c.toDataURL('image/png');
+        if(chartInstance){
+          chartInstance.data.datasets.forEach((d,i)=> { d.borderColor = originalColors[i]; d.pointBorderColor = originalPointColors[i]; d.spanGaps = true; });
+          if(chartInstance.options.plugins && chartInstance.options.plugins.title) chartInstance.options.plugins.title.color = originalTitleColor;
+          chartInstance.update('none');
+        }
+        s.addImage({ data: imgData, x, y, w: layout.chartW, h: layout.chartH });
+      }
     }
-
-    pptx.writeFile({ fileName: `KPI_Report_${new Date().getTime()}.pptx` });
-    closePreview();
+  }
+  await pptx.writeFile({ fileName: `KPI_Report_${Date.now()}.pptx` });
+  closePreview();
 }
 
-// Init
+/* =========================
+   UTIL
+   ========================= */
+function getRandomColor(){
+  const colors = ['#2F80ED','#27AE60','#D24726','#8E44AD','#F39C12','#2980B9'];
+  return colors[Math.floor(Math.random()*colors.length)];
+}
+
+/* =========================
+   INIT
+   ========================= */
 fetchData();
+
 </script>
 </body>
 </html>
