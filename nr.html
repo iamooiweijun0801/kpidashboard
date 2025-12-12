@@ -1,58 +1,280 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<title>NR & NSA KPI Dashboard (fixed - eNodeB only)</title>
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<meta charset="UTF-8">
+<title>NR & NSA KPI Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.6.2/fuse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+
 <style>
-/* Minimal CSS kept from your previous file (cleaned) */
-body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin:0; padding:0; background:#f4f7f6; }
+/* --- BASE STYLES --- */
+body { font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin:0; padding:0; background:#f4f7f6; overflow-x:hidden; }
 header { text-align:center; padding:15px 0; font-size:28px; font-weight:700; color:#333; background:white; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-bottom:15px; }
+
+/* --- NAVIGATION --- */
 .navbar { display:flex; justify-content:center; gap:12px; margin-bottom:15px; }
-.nav-btn { padding:8px 24px; cursor:pointer; border-radius:20px; border:1px solid #ccc; background:white; color:#555; text-decoration:none; font-weight:600; }
+.nav-btn { padding:8px 24px; cursor:pointer; border:1px solid #ccc; background:white; color:#555; border-radius:20px; font-weight:600; text-decoration:none; transition:0.2s; display:inline-block; }
+.nav-btn:hover { background:#f0f0f0; color:#333; }
 .nav-btn.active { background:#2F80ED; color:white; border-color:#2F80ED; }
-.tabs { display:flex; justify-content:center; gap:8px; margin-bottom:20px; }
-.tab { padding:8px 20px; cursor:pointer; border-radius:6px; background:#e0e0e0; color:#555; font-weight:bold; border:none; }
+
+/* --- TABS --- */
+.tabs { display:flex; justify-content:center; margin-bottom:20px; gap:8px; }
+.tab { padding:8px 20px; cursor:pointer; border-radius:6px; background:#e0e0e0; color:#555; font-weight:bold; border:none; transition:0.2s; }
+.tab:hover { background:#d0d0d0; }
 .tab.active { background:#2F80ED; color:white; }
+
+/* --- CONTROLS --- */
 .controls { display:flex; justify-content:center; gap:10px; margin-bottom:20px; flex-wrap:wrap; align-items:center; }
 .control-group { position:relative; }
-button.action-btn { padding:8px 16px; cursor:pointer; border:none; background:#2F80ED; color:white; border-radius:6px; font-weight:600; }
-button.ppt-btn { background:#D24726; color:white; }
-.chart-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:20px; padding:0 20px 40px 20px; max-width:1800px; margin:0 auto; }
-@media (max-width:1400px){ .chart-grid{ grid-template-columns: repeat(2,1fr);} }
-@media (max-width:768px){ .chart-grid{ grid-template-columns: 1fr; } }
-.chart-card { background:white; border-radius:8px; padding:12px; box-shadow:0 2px 8px rgba(0,0,0,0.08); display:flex; flex-direction:column; }
-.chart-container { position:relative; height:280px; width:100%; }
-#dropdown,#siteDropdownList,#onAirDateDropdownList { position:absolute; background:white; border:1px solid #ccc; max-height:240px; overflow-y:auto; display:none; z-index:200; width:100%; top:105%; border-radius:6px; box-shadow:0 4px 10px rgba(0,0,0,0.08); }
-#dropdown div,#siteDropdownList div,#onAirDateDropdownList div { padding:6px 10px; cursor:pointer; border-bottom:1px solid #eee; }
-.kpiDrawerToggle { position:fixed; top:100px; right:0; width:36px; height:36px; background:#2F80ED; color:white; border-radius:6px 0 0 6px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:900; }
-.kpiDrawer { position:fixed; top:0; right:0; width:320px; height:100%; background:white; box-shadow:-2px 0 10px rgba(0,0,0,0.1); transform:translateX(100%); transition:0.3s; padding:20px; display:flex; flex-direction:column; z-index:1000; }
-.kpiDrawer.open { transform:translateX(0); }
-.kpi-options-body { flex:1; overflow:auto; padding-right:6px; }
-.modal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.6); z-index:2000; }
-.modal-content { width:95%; max-width:1200px; height:85vh; background:#fff; border-radius:12px; display:flex; flex-direction:column; overflow:hidden; }
-.modal-body { display:flex; flex:1; overflow:hidden; }
-#previewBody { flex:1; overflow:auto; padding:20px; background:#f5f5f5; }
-#previewSettingsPanel { width:260px; background:#fff; border-left:1px solid #eee; padding:18px; }
-.preview-slide { background:#fff; border:1px solid #ddd; margin-bottom:18px; padding:14px; box-shadow:0 2px 5px rgba(0,0,0,0.05); aspect-ratio:16/9; position:relative; }
-.preview-grid { display:grid; gap:10px; height:100%; align-items:center; }
-.preview-img-box { display:flex; align-items:center; justify-content:center; background:#fff; padding:8px; border-radius:6px; }
-.color-option { width:25px; height:25px; border-radius:50%; display:inline-block; margin-right:6px; cursor:pointer; border:2px solid transparent; }
-.color-option.selected{ border-color:#333; }
-.modal-footer { padding:12px; border-top:1px solid #eee; text-align:right; }
+input, select { padding:8px; border-radius:6px; border:1px solid #ccc; font-size:14px; outline:none; }
+button.action-btn { padding:8px 16px; cursor:pointer; border:none; background:#2F80ED; color:white; border-radius:6px; font-weight:600; transition:0.2s; }
+button.action-btn:hover { background:#1f5ab5; }
+button.ppt-btn { background:#D24726; } /* PowerPoint Orange */
+button.ppt-btn:hover { background:#a8381e; }
+
+/* --- DRAWER TOGGLE BUTTONS --- */
+.drawer-toggle-buttons {
+    position: fixed;
+    top: 140px;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 900;
+}
+
+.chartStyleDrawerToggle, .kpiDrawerToggle {
+    width: 36px;
+    height: 36px;
+    background: #8E44AD;
+    color: white;
+    border-radius: 6px 0 0 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    transition: 0.2s;
+}
+
+.kpiDrawerToggle {
+    background: #2F80ED;
+    margin-top: 8px;
+}
+
+.chartStyleDrawerToggle:hover, .kpiDrawerToggle:hover {
+    opacity: 0.9;
+}
+
+/* --- GRID LAYOUT (3 Graphs per row) --- */
+.chart-grid { 
+  display:grid; 
+  grid-template-columns: repeat(3, 1fr); 
+  gap:20px; 
+  padding:0 20px 40px 20px; 
+  max-width: 1800px; 
+  margin: 0 auto; 
+}
+@media (max-width: 1400px) { .chart-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 768px) { .chart-grid { grid-template-columns: 1fr; } }
+
+/* --- CARDS & CHARTS --- */
+.chart-card { background:white; border-radius:8px; padding:15px; box-shadow:0 2px 8px rgba(0,0,0,0.08); display:flex; flex-direction:column; }
+.chart-title { display:none; } 
+.chart-container { position: relative; height: 280px; width: 100%; }
+
+.toggle-switch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.toggle-switch .toggle-label {
+  user-select: none;
+}
+
+.toggle-switch .switch {
+  width: 50px;
+  height: 24px;
+  background: #ccc;
+  border-radius: 12px;
+  position: relative;
+  transition: background 0.3s;
+}
+
+.toggle-switch .switch .circle {
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: left 0.3s;
+}
+
+.toggle-switch.active .switch {
+  background: #2F80ED;
+}
+
+.toggle-switch.active .switch .circle {
+  left: 28px;
+}
+
+/* --- DROPDOWNS --- */
+#dropdown, #siteDropdownList, #onAirDateDropdownList { 
+  position:absolute; 
+  background:white; 
+  border:1px solid #ccc; 
+  max-height:200px; 
+  overflow-y:auto; 
+  display:none; 
+  z-index:100; 
+  width:100%; 
+  top:105%; 
+  border-radius:6px; 
+  box-shadow:0 4px 10px rgba(0,0,0,0.1); 
+}
+#dropdown div, #siteDropdownList div, #onAirDateDropdownList div { padding:6px 10px; cursor:pointer; font-size:13px; border-bottom:1px solid #eee; }
+#dropdown div:hover, #siteDropdownList div:hover, #onAirDateDropdownList div:hover { background:#f0f7ff; color:#2F80ED; }
+
+/* --- DRAWERS --- */
+.chartStyleDrawer, .kpiDrawer {
+    position: fixed; 
+    top: 0; 
+    right: 0;
+    width: 320px;
+    height: 100%; 
+    background: white;
+    box-shadow: -2px 0 10px rgba(0,0,0,0.1); 
+    z-index: 1000;
+    transform: translateX(100%); 
+    transition: 0.3s; 
+    padding: 20px;
+    display: flex; 
+    flex-direction: column;
+}
+
+.chartStyleDrawer.open, .kpiDrawer.open { 
+    transform: translateX(0); 
+}
+
+.drawer-header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 15px; 
+    padding-bottom: 10px; 
+    border-bottom: 1px solid #eee; 
+}
+
+.drawer-header h3 { margin: 0; }
+
+.drawer-controls { 
+    display: flex; 
+    gap: 5px;
+    align-items: center; 
+}
+
+.drawer-controls .action-btn { 
+    padding: 6px 10px;
+    font-size: 13px;
+}
+
+.kpi-options-body, .style-options-body { 
+    flex-grow: 1; 
+    overflow-y: auto; 
+    padding-right: 5px; 
+    padding-bottom: 40px; 
+}
+
+.style-button { 
+    padding: 10px 12px; 
+    margin: 6px 0; 
+    background: #f5f5f5; 
+    border-radius: 6px; 
+    cursor: pointer; 
+    font-weight: 500;
+    border: 1px solid #ddd;
+    transition: 0.2s;
+}
+
+.style-button:hover { 
+    background: #e9e9e9; 
+}
+
+.style-button.active {
+    background: #8E44AD;
+    color: white;
+    border-color: #8E44AD;
+}
+  
+/* --- PREVIEW MODAL --- */
+.modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:2000; display:none; align-items:center; justify-content:center; backdrop-filter:blur(3px); }
+.modal-content { 
+    background:white; 
+    width:95%; 
+    max-width: 1400px; 
+    height:90vh; 
+    border-radius:12px; 
+    display:flex; 
+    flex-direction:column; 
+    box-shadow:0 10px 25px rgba(0,0,0,0.3); 
+}
+.modal-header { padding:15px 20px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; font-weight:bold; font-size:18px; }
+.modal-body { flex:1; display: flex; padding:0; overflow: hidden; } 
+
+/* Preview Side */
+#previewBody { 
+    flex: 1; 
+    overflow-y:auto; 
+    padding:20px; 
+    background:#f5f5f5; 
+}
+.preview-slide { background:white; border:1px solid #ddd; margin-bottom:20px; padding:20px; box-shadow:0 2px 5px rgba(0,0,0,0.05); aspect-ratio: 16/9; position:relative; }
+.preview-slide-title { position:absolute; top:10px; left:20px; font-size:16px; font-weight:bold; color:#D24726; }
+.preview-grid { display:grid; height:100%; align-items:center; padding-top:30px; }
+.preview-img-box { text-align:center; padding:5px; height:100%; display:flex; flex-direction:column; justify-content:center; }
+.preview-img-box img { max-width:100%; max-height:calc(100% - 20px); object-fit:contain; border:1px solid #eee; }
+.preview-label { display: none; } 
+
+/* Settings Side (Fixed, not scrollable) */
+#previewSettingsPanel {
+    width: 250px;
+    background: #fff;
+    border-left: 1px solid #eee;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0; 
+}
+.settings-group { margin-bottom: 20px; }
+.settings-group h4 { margin-top: 0; margin-bottom: 10px; font-size: 14px; color: #555; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+.graph-options button { margin: 5px; width: 100px; padding: 6px; font-size: 13px; }
+
+/* Color Selector */
+.color-option { margin: 5px; display: inline-block; cursor: pointer; border: 2px solid transparent; border-radius: 50%; width: 25px; height: 25px; transition: border 0.1s; }
+.color-option.selected { border-color: #333; }
+
+.modal-footer { 
+    padding:15px 20px; 
+    border-top:1px solid #eee; 
+    text-align:right;
+    flex-shrink: 0; 
+}
 </style>
 </head>
 <body>
+
 <header>NR & NSA KPI Dashboard</header>
 
 <div class="navbar">
-  <a class="nav-btn" href="gsm.html">GSM</a>
-  <a class="nav-btn" href="index.html">LTE</a>
-  <a class="nav-btn active" href="nr.html">NR</a>
+  <a href="gsm.html" class="nav-btn">GSM</a>
+  <a href="index.html" class="nav-btn">LTE</a>
+  <a href="nr.html" class="nav-btn active">NR</a>
 </div>
 
 <div class="tabs">
@@ -62,109 +284,174 @@ button.ppt-btn { background:#D24726; color:white; }
 </div>
 
 <div class="controls">
-  <div class="control-group" style="width:220px;">
-    <button id="onAirDateDropdownBtn" class="action-btn" style="background:white;color:#333;border:1px solid #ccc;width:100%;text-align:left;display:flex;justify-content:space-between;">
-      <span id="onAirDateBtnLabel">All On-Air Dates</span><span>▼</span>
+  <div class="control-group" style="width:200px;">
+    <button id="onAirDateDropdownBtn" class="action-btn" style="background:white; color:#333; border:1px solid #ccc; width:100%; text-align:left; display:flex; justify-content:space-between;">
+      <span id="onAirDateBtnLabel">All On-Air Dates</span> <span>▼</span>
     </button>
     <div id="onAirDateDropdownList"></div>
   </div>
 
-  <div class="control-group" style="width:220px;">
-    <button id="siteDropdownBtn" class="action-btn" style="background:white;color:#333;border:1px solid #ccc;width:100%;text-align:left;display:flex;justify-content:space-between;">
-      <span id="siteBtnLabel">All Sites</span><span>▼</span>
+  <div class="control-group" style="width:200px;">
+    <button id="siteDropdownBtn" class="action-btn" style="background:white; color:#333; border:1px solid #ccc; width:100%; text-align:left; display:flex; justify-content:space-between;">
+      <span id="siteBtnLabel">All Sites</span> <span>▼</span>
     </button>
     <div id="siteDropdownList"></div>
   </div>
 
-  <button class="action-btn" onclick="fetchData()">Refresh</button>
-  <button class="action-btn ppt-btn" onclick="openPreview()">Export PPT</button>
+  <div class="toggle-switch" id="sheetToggle">
+  <span class="toggle-label">Group Level</span>
+  <div class="switch" onclick="switchSheetToggle()">
+    <div class="circle"></div>
+  </div>
+  <span class="toggle-label">Site Level</span>
+</div>
+
+  <button onclick="fetchData()" class="action-btn">Refresh</button>
+  <button onclick="openPreview()" class="action-btn ppt-btn">Export PPT</button>
 </div>
 
 <div class="chart-grid" id="mainChartContainer"></div>
 
-<div class="kpiDrawerToggle" onclick="toggleDrawer()">⚙</div>
-<div id="kpiDrawer" class="kpiDrawer">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-    <h3 style="margin:0;">KPI Settings</h3>
-    <div>
-      <button class="action-btn" onclick="selectVisibleKpis()" style="background:#5cb85c;margin-right:6px;">Select All</button>
-      <button class="action-btn" onclick="clearVisibleKpis()" style="background:#f0ad4e;">Clear All</button>
-    </div>
-  </div>
-  <div class="kpi-options-body" id="kpiOptionsList"></div>
-  <div style="padding-top:8px;">
-    <button class="action-btn" onclick="applyKpis()">Apply</button>
-    <button class="action-btn" style="background:#888;margin-left:8px;" onclick="toggleDrawer()">Close</button>
-  </div>
+<!-- DRAWER TOGGLE BUTTONS -->
+<div class="drawer-toggle-buttons">
+    <div class="chartStyleDrawerToggle" onclick="toggleChartStyleDrawer()">🎨</div>
+    <div class="kpiDrawerToggle" onclick="toggleDrawer()">⚙</div>
 </div>
 
+<!-- CHART STYLE DRAWER -->
+<div id="chartStyleDrawer" class="chartStyleDrawer">
+    <div class="drawer-header">
+        <h3>Chart Styles</h3>
+        <button onclick="toggleChartStyleDrawer()" style="border:none; background:none; font-size:22px; cursor:pointer;">✕</button>
+    </div>
+    
+    <div class="style-options-body">
+        <div class="style-button" onclick="applyChartStyle(0)">Style 1 – Clean Lines</div>
+        <div class="style-button" onclick="applyChartStyle(1)">Style 2 – Bold</div>
+        <div class="style-button" onclick="applyChartStyle(2)">Style 3 – Dotted</div>
+        <div class="style-button" onclick="applyChartStyle(3)">Style 4 – Thick + Soft</div>
+        <div class="style-button" onclick="applyChartStyle(4)">Style 5 – Minimalist</div>
+        <div class="style-button" onclick="applyChartStyle(5)">Style 6 – Dashed</div>
+        <div class="style-button" onclick="applyChartStyle(6)">Style 7 – Neon</div>
+        <div class="style-button" onclick="applyChartStyle(7)">Style 8 – Shadow Line</div>
+        <div class="style-button" onclick="applyChartStyle(8)">Style 9 – Rounded Dots</div>
+        <div class="style-button" onclick="applyChartStyle(9)">Style 10 – Random Colors</div>
+        
+        <hr style="margin:15px 0;">
+        
+        <label><b>Custom Color:</b></label>
+        <input type="color" id="customChartColor" onchange="applyCustomColor()" style="width:100%; height:40px; margin-top:6px;">
+    </div>
+</div>
+
+<!-- KPI SETTINGS DRAWER -->
+<div id="kpiDrawer" class="kpiDrawer">
+  <div class="drawer-header">
+    <h3 id="drawerHeaderTitle">KPI Settings</h3>
+    <button onclick="toggleDrawer()" style="border:none; background:none; font-size:24px; cursor:pointer; color:#777;">✕</button>
+  </div>
+  
+  <div class="drawer-controls">
+    <button class="action-btn" onclick="selectVisibleKpis()" style="background:#5cb85c;">Select All</button>
+    <button class="action-btn" onclick="clearVisibleKpis()" style="background:#f0ad4e;">Clear All</button>
+    <button class="action-btn" onclick="applyKpis()">Apply</button>
+  </div>
+  
+  <div class="kpi-options-body" id="kpiOptionsList"></div>
+</div>
+
+<!-- PREVIEW MODAL -->
 <div id="previewModal" class="modal">
   <div class="modal-content">
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid #eee;">
-      <strong id="previewTitle">PPT Export Preview</strong>
-      <button onclick="closePreview()" style="border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+    <div class="modal-header">
+      <span id="previewTitle">PPT Export Preview</span>
+      <button onclick="closePreview()" style="border:none; background:none; font-size:20px; cursor:pointer;">✕</button>
     </div>
-
     <div class="modal-body">
-      <div id="previewBody"></div>
-      <div id="previewSettingsPanel">
-        <h4 style="margin-top:0;">Export Settings</h4>
-        <div style="margin-bottom:12px;">
-          <label><strong>Graphs per Slide</strong></label>
-          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">
-            <button class="action-btn" data-count="1" onclick="updatePreviewSettings(1, chartExportColor, chartExportTitleColor)">1</button>
-            <button class="action-btn" data-count="2" onclick="updatePreviewSettings(2, chartExportColor, chartExportTitleColor)">2</button>
-            <button class="action-btn" data-count="3" onclick="updatePreviewSettings(3, chartExportColor, chartExportTitleColor)">3</button>
-            <button class="action-btn" data-count="4" onclick="updatePreviewSettings(4, chartExportColor, chartExportTitleColor)">4</button>
-            <button class="action-btn" data-count="6" onclick="updatePreviewSettings(6, chartExportColor, chartExportTitleColor)">6</button>
-            <button class="action-btn" data-count="9" onclick="updatePreviewSettings(9, chartExportColor, chartExportTitleColor)">9</button>
-          </div>
-        </div>
+        <div id="previewBody"></div>
+        <div id="previewSettingsPanel">
+            <h3>Export Settings</h3>
 
-        <div style="margin-bottom:12px;">
-          <label><strong>Line Color</strong></label>
-          <div style="display:flex;gap:6px;margin-top:8px;">
-            <span class="color-option" style="background:#2F80ED" data-color="#2F80ED" onclick="updatePreviewSettings(graphsPerSlide, '#2F80ED', chartExportTitleColor)"></span>
-            <span class="color-option" style="background:#27AE60" data-color="#27AE60" onclick="updatePreviewSettings(graphsPerSlide, '#27AE60', chartExportTitleColor)"></span>
-            <span class="color-option" style="background:#D24726" data-color="#D24726" onclick="updatePreviewSettings(graphsPerSlide, '#D24726', chartExportTitleColor)"></span>
-            <span class="color-option" style="background:#8E44AD" data-color="#8E44AD" onclick="updatePreviewSettings(graphsPerSlide, '#8E44AD', chartExportTitleColor)"></span>
-          </div>
-        </div>
+            <div class="settings-group">
+                <h4>Graphs per Slide (Rows)</h4>
+                <div class="graph-options">
+                    <button class="action-btn" data-count="1" onclick="updatePreviewSettings(1, chartExportColor, chartExportTitleColor)">1 Graph</button>
+                    <button class="action-btn" data-count="2" onclick="updatePreviewSettings(2, chartExportColor, chartExportTitleColor)">2 Graphs</button>
+                    <button class="action-btn" data-count="3" onclick="updatePreviewSettings(3, chartExportColor, chartExportTitleColor)">3 Graphs</button>
+                    <button class="action-btn" data-count="4" onclick="updatePreviewSettings(4, chartExportColor, chartExportTitleColor)">4 Graphs</button>
+                    <button class="action-btn" data-count="6" onclick="updatePreviewSettings(6, chartExportColor, chartExportTitleColor)">6 Graphs</button>
+                    <button class="action-btn" data-count="9" onclick="updatePreviewSettings(9, chartExportColor, chartExportTitleColor)">9 Graphs</button>
+                </div>
+            </div>
 
-        <div>
-          <label><strong>Title Color</strong></label>
-          <div style="display:flex;gap:6px;margin-top:8px;">
-            <span class="color-option" style="background:#333333" data-color="#333333" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#333333')"></span>
-            <span class="color-option" style="background:#D24726" data-color="#D24726" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#D24726')"></span>
-            <span class="color-option" style="background:#2F80ED" data-color="#2F80ED" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#2F80ED')"></span>
-          </div>
-        </div>
+            <div class="settings-group">
+                <h4>Line & Dot Color for PPT</h4>
+                <div id="lineColorOptions">
+                    <span class="color-option" style="background-color:#2F80ED;" data-color="#2F80ED" onclick="updatePreviewSettings(graphsPerSlide, '#2F80ED', chartExportTitleColor)"></span>
+                    <span class="color-option" style="background-color:#27AE60;" data-color="#27AE60" onclick="updatePreviewSettings(graphsPerSlide, '#27AE60', chartExportTitleColor)"></span>
+                    <span class="color-option" style="background-color:#D24726;" data-color="#D24726" onclick="updatePreviewSettings(graphsPerSlide, '#D24726', chartExportTitleColor)"></span>
+                    <span class="color-option" style="background-color:#8E44AD;" data-color="#8E44AD" onclick="updatePreviewSettings(graphsPerSlide, '#8E44AD', chartExportTitleColor)"></span>
+                    <span class="color-option" style="background-color:#F39C12;" data-color="#F39C12" onclick="updatePreviewSettings(graphsPerSlide, '#F39C12', chartExportTitleColor)"></span>
+                </div>
+            </div>
 
-      </div>
+            <div class="settings-group">
+                <h4>Chart Title Color for PPT</h4>
+                <div id="titleColorOptions">
+                    <span class="color-option" style="background-color:#333333;" data-color="#333333" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#333333')"></span>
+                    <span class="color-option" style="background-color:#000000;" data-color="#000000" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#000000')"></span>
+                    <span class="color-option" style="background-color:#2F80ED;" data-color="#2F80ED" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#2F80ED')"></span>
+                    <span class="color-option" style="background-color:#8E44AD;" data-color="#8E44AD" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#8E44AD')"></span>
+                    <span class="color-option" style="background-color:#D24726;" data-color="#D24726" onclick="updatePreviewSettings(graphsPerSlide, chartExportColor, '#D24726')"></span>
+                </div>
+            </div>
+
+            <div style="margin-top: auto; padding-top: 15px; border-top: 1px solid #eee;">
+                <p style="font-size: 12px; color: #777;">Preview updates instantly.</p>
+            </div>
+        </div>
     </div>
-
     <div class="modal-footer">
-      <button class="action-btn" style="background:#888" onclick="closePreview()">Cancel</button>
+      <button class="action-btn" style="background:#888;" onclick="closePreview()">Cancel</button>
       <button class="action-btn ppt-btn" onclick="downloadPPT()">Download .PPTX</button>
     </div>
   </div>
 </div>
 
 <script>
-/* =========================
-   CONFIG / STATE
-   ========================= */
+// --- CONFIG & STATE ---
 let nrData = [];
 let nsaData = [];
 let allSites = [];
-let siteCutoverMap = {};      // eNodeB Name -> On-Air Date
+let siteCutoverMap = {}; // Maps eNodeB/Group Name -> On-Air Date
 let allOnAirDates = [];
 let selectedOnAirDates = [];
 let selectedSites = [];
-let currentTab = 'both';
-let graphsPerSlide = 2;
+let currentTab = "both";
+let graphsPerSlide = 2; 
+
 let chartExportColor = '#2F80ED';
 let chartExportTitleColor = '#333333';
+
+let currentSheet = 'site'; // Default: Site Level
+const sheetToggle = document.getElementById("sheetToggle");
+
+// Chart Styling
+let activeChartStyle = null;
+let activeCustomColor = null;
+
+const chartStyles = [
+    { borderWidth: 2, pointRadius: 3, borderDash: [], tension: 0.2, borderColor: null },
+    { borderWidth: 4, pointRadius: 5, borderDash: [], tension: 0.25, borderColor: null },
+    { borderWidth: 2, pointRadius: 0, borderDash: [6,3], tension: 0.1, borderColor: null },
+    { borderWidth: 3, pointRadius: 4, borderDash: [], tension: 0.4, borderColor: null },
+    { borderWidth: 1, pointRadius: 0, borderDash: [], tension: 0, borderColor: null },
+    { borderWidth: 2, pointRadius: 2, borderDash: [4,4], tension: 0.3, borderColor: null },
+    { borderWidth: 3, pointRadius: 6, borderDash: [], tension: 0.15, borderColor: null },
+    { borderWidth: 3, pointRadius: 3, borderDash: [], tension: 0.2, borderColor: null },
+    { borderWidth: 2, pointRadius: 8, borderDash: [], tension: 0.25, borderColor: null },
+    { borderWidth: 3, pointRadius: 5, borderDash: [], tension: 0.25, randomColor: true }
+];
 
 const nrKpis = [
   "NSA Average User Number","SgNB Addition Success Rate (CU)(%)","SgNB TriSgNB Abnormal Release Rate(%)","SCG PSCell Change Success Rate(%)",
@@ -179,321 +466,472 @@ const nsaKpis = [
   "User Uplink Split Average Throughput (NSA DC)"
 ];
 
-let selectedKpis = { nr: [...nrKpis], nsa: [...nsaKpis] };
+let selectedKpis = {
+  nr: [...nrKpis],
+  nsa: [...nsaKpis]
+};
 
-/* =========================
-   HELPERS
-   ========================= */
-function switchTab(tab){
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  const btn = document.querySelector(`.tab[onclick="switchTab('${tab}')"]`);
-  if(btn) btn.classList.add('active');
-  currentTab = tab;
-  renderCharts();
-}
-
-async function fetchAndParse(url){
-  const res = await fetch(url);
-  const txt = await res.text();
-  // fallback: parse CSV simple where fields may contain commas - but assume simple CSV
-  const rows = txt.trim().split('\n').map(r => r.split(','));
-  const headers = rows.shift().map(h => h.trim());
-  return rows.map(r => {
-    const obj = {};
-    headers.forEach((h,i)=> {
-      const val = r[i] ? r[i].trim() : '';
-      obj[h] = val === '' ? null : (isNaN(val) ? val : parseFloat(val));
+// --- GLOBAL UTILITY FUNCTIONS ---
+function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(btn => {
+        btn.classList.remove('active');
     });
-    return obj;
-  });
+    document.querySelector(`.tab[onclick="switchTab('${tab}')"]`).classList.add('active');
+    currentTab = tab;
+    renderCharts(); 
 }
 
-function parseCSVwithPapa(text){
-  // use PapaParse if available (safer), otherwise fallback (not likely needed)
-  if(window.Papa) {
-    return Papa.parse(text, { header:true, skipEmptyLines:true }).data;
-  }
-  const rows = text.trim().split('\n').map(r => r.split(','));
-  const headers = rows.shift().map(h=>h.trim());
-  return rows.map(r=>{
-    const o={};
-    headers.forEach((h,i)=> o[h] = r[i]? r[i].trim():null);
-    return o;
-  });
+function switchSheetToggle() {
+    if(currentSheet === 'site') {
+        currentSheet = 'group';
+        sheetToggle.classList.add('active');
+    } else {
+        currentSheet = 'site';
+        sheetToggle.classList.remove('active');
+    }
+    fetchData();
 }
 
-/* =========================
-   DATA FETCH
-   ========================= */
-/* Replace these published CSV URLs with your actual ones if different */
-const NR_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=1617739873&single=true&output=csv";
-const NSA_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=670588387&single=true&output=csv";
-const CUTOVER_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=19616562&single=true&output=csv";
-
+// --- DATA FETCHING & MAPPING ---
 async function fetchData(){
   try {
+    // URLs for NR and NSA data - with group/site level sheets
+    const sheetUrls = {
+        site: {
+            nr: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=1372365834&single=true&output=csv",
+            nsa: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=1503870746&single=true&output=csv"
+        },
+        group: {
+            nr: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=1617739873&single=true&output=csv",
+            nsa: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=670588387&single=true&output=csv"
+        }
+    };
+    
+    const CUTOVER_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIeWBt5CB8zpdFja0b3h2kodVsUrjD_PSHOkF93MkecZF04gWDoMXVq-q0REU-RvFQbjVggJVDLpUi/pub?gid=19616562&single=true&output=csv";
+    
     const t = Date.now();
-    const [cutoverRes, nrRes, nsaRes] = await Promise.all([
-      fetch(CUTOVER_CSV_URL + "&_t=" + t),
-      fetch(NR_CSV_URL + "&_t=" + t),
-      fetch(NSA_CSV_URL + "&_t=" + t)
-    ]);
-    const [cutoverTxt, nrTxt, nsaTxt] = await Promise.all([cutoverRes.text(), nrRes.text(), nsaRes.text()]);
-
-    const cutoverRows = parseCSVwithPapa(cutoverTxt);
-    const nrRows = parseCSVwithPapa(nrTxt);
-    const nsaRows = parseCSVwithPapa(nsaTxt);
-
-    // Normalize: both NR and NSA use eNodeB field name (you said eNodeB only)
-    // We expect a header called "eNodeB Name" in both NR & NSA sheets.
-    nrData = nrRows.map(r => r);
-    nsaData = nsaRows.map(r => r);
-
-    // Build siteCutoverMap using eNodeB Name column
+    
+    // 1. Fetch Cutover Data (same for both site and group)
+    const cutoverRes = await fetch(CUTOVER_CSV_URL + "&t=" + t);
+    const cutoverText = await cutoverRes.text();
+    
+    const cutoverRows = cutoverText.trim().split('\n').map(r=>r.split(','));
+    const cutoverHeaders = cutoverRows.shift().map(h=>h.trim());
+    
     siteCutoverMap = {};
     cutoverRows.forEach(r => {
-      const enb = (r["eNodeB Name"] || r["eNodeB"] || r["Site Name"] || r["Site"]) && String(r["eNodeB Name"] || r["eNodeB"] || r["Site Name"] || r["Site"]).trim();
-      const onAir = (r["On-Air Date"] || r["On Air Date"] || r["OnAirDate"]) && String(r["On-Air Date"] || r["On Air Date"] || r["OnAirDate"]).trim();
-      if(enb && onAir) siteCutoverMap[enb] = onAir;
+        const siteName = r[cutoverHeaders.indexOf("eNodeB Name")]?.trim();
+        const onAirDate = r[cutoverHeaders.indexOf("On-Air Date")]?.trim();
+        if (siteName && onAirDate) {
+            siteCutoverMap[siteName] = onAirDate;
+        }
     });
 
-    // Determine all sites that exist in either NR or NSA datasets
-    const nrSites = nrData.map(d => d["eNodeB Name"] || d["eNodeB"] || d["Site Name"]).filter(s => s).map(String);
-    const nsaSites = nsaData.map(d => d["eNodeB Name"] || d["eNodeB"] || d["Site Name"]).filter(s => s).map(String);
-    allSites = Array.from(new Set([...nrSites, ...nsaSites])).sort();
+    // 2. Fetch NR Data (site or group level based on currentSheet)
+    const nrUrl = sheetUrls[currentSheet].nr + "&t=" + t;
+    const nrRes = await fetch(nrUrl);
+    const nrText = await nrRes.text();
+    const nrRows = nrText.trim().split('\n').map(r=>r.split(','));
+    const nrHeaders = nrRows.shift().map(h=>h.trim());
+    nrData = nrRows.map(r=>{ 
+      const obj={}; 
+      nrHeaders.forEach((h,i)=>{ 
+        const val=r[i]?r[i].trim():""; 
+        obj[h] = val==="" ? null : (isNaN(val) ? val : parseFloat(val)); 
+      }); 
+      return obj; 
+    });
 
-    // Build allOnAirDates from siteCutoverMap (only dates for known sites)
-    allOnAirDates = Array.from(new Set(Object.keys(siteCutoverMap).filter(s => allSites.includes(s)).map(s => siteCutoverMap[s]))).filter(d => d).sort();
-    selectedOnAirDates = [...allOnAirDates];
-    selectedSites = []; // reset
+    // 3. Fetch NSA Data (site or group level based on currentSheet)
+    const nsaUrl = sheetUrls[currentSheet].nsa + "&t=" + t;
+    const nsaRes = await fetch(nsaUrl);
+    const nsaText = await nsaRes.text();
+    const nsaRows = nsaText.trim().split('\n').map(r=>r.split(','));
+    const nsaHeaders = nsaRows.shift().map(h=>h.trim());
+    nsaData = nsaRows.map(r=>{ 
+      const obj={}; 
+      nsaHeaders.forEach((h,i)=>{ 
+        const val=r[i]?r[i].trim():""; 
+        obj[h] = val==="" ? null : (isNaN(val) ? val : parseFloat(val)); 
+      }); 
+      return obj; 
+    });
 
+    // 4. Determine all sites/groups present in both NR and NSA data
+    // Both use "eNodeB Name" column for identification
+    const identifierField = 'eNodeB Name';
+    
+    const nrSites = [...new Set(nrData.map(d=>d[identifierField]))].filter(s=>s).sort();
+    const nsaSites = [...new Set(nsaData.map(d=>d[identifierField]))].filter(s=>s).sort();
+    allSites = [...new Set([...nrSites, ...nsaSites])].sort();
+
+    // 5. Initialize Date Filter Options and State
+    allOnAirDates = [...new Set(Object.values(siteCutoverMap))].filter(d => d).sort();
+    selectedOnAirDates = [...allOnAirDates]; // Default: Select All Dates
+    selectedSites = []; // Reset site selection
+
+    // 6. Update UI
     setupOnAirDateDropdown();
     setupSiteDropdown();
     renderCharts();
-  } catch(e){
-    console.error('fetchData error', e);
-    alert('Failed to fetch data. Check CSV URLs and network console.');
+
+  } catch(e) { 
+    console.error(e); 
+    alert("Failed to load data."); 
   }
 }
 
-/* =========================
-   FILTER UI: On-Air Dates
-   ========================= */
+// --- FILTER UI LOGIC (ON-AIR DATE) ---
 function setupOnAirDateDropdown(){
-  const list = document.getElementById('onAirDateDropdownList');
-  const btn = document.getElementById('onAirDateDropdownBtn');
-  list.innerHTML = '';
-  list.innerHTML += `<div style="font-weight:600;padding:8px 10px;">Actions</div>`;
-  list.innerHTML += `<div onclick="dateSetAll()" style="padding:8px 10px;cursor:pointer;"><b>Select All</b></div>`;
-  list.innerHTML += `<div onclick="dateClearAll()" style="padding:8px 10px;cursor:pointer;"><b>Clear All</b></div>`;
+  const list = document.getElementById("onAirDateDropdownList");
+  const btn = document.getElementById("onAirDateDropdownBtn");
+  list.innerHTML = "";
+  
+  const setAll = () => { 
+    selectedOnAirDates = [...allOnAirDates]; 
+    // For group level, we should include all groups regardless of date
+    if (currentSheet === 'group') {
+      selectedSites = [...allSites];
+    } else {
+      const allActiveSites = allSites.filter(site => siteCutoverMap[site] && allOnAirDates.includes(siteCutoverMap[site]));
+      selectedSites = [...allActiveSites]; 
+    }
+    updateDateFilterUI({close: false}); 
+    setupSiteDropdown();
+  };
 
-  allOnAirDates.forEach(d => {
-    const row = document.createElement('div');
-    row.innerHTML = `<input class="date-chk" type="checkbox" value="${d}" ${selectedOnAirDates.includes(d) ? 'checked' : ''}> ${d}`;
-    row.onclick = (e) => {
-      if(e.target.tagName !== 'INPUT'){
-        const chk = row.querySelector('input');
-        chk.checked = !chk.checked;
-      }
-      updateSelectedDates();
+  const clearAll = () => { 
+    selectedOnAirDates = []; 
+    selectedSites = []; 
+    updateDateFilterUI({close: false}); 
+    setupSiteDropdown(); 
+  };
+  
+  // Actions
+  list.innerHTML += `<div onclick="window.dateSetAll()"><b>Select All</b></div>`;
+  list.innerHTML += `<div onclick="window.dateClearAll()"><b>Clear All</b></div>`;
+
+  // Options
+  allOnAirDates.forEach(date => {
+    const d = document.createElement("div");
+    const checked = selectedOnAirDates.includes(date) ? "checked" : "";
+    d.innerHTML = `<input type='checkbox' value='${date}' class='date-chk' ${checked}> ${date}`;
+    d.onclick = (e) => {
+       if(e.target.tagName !== "INPUT") {
+          const chk = d.querySelector("input");
+          chk.checked = !chk.checked;
+       }
+       updateSelectedDates();
     };
-    list.appendChild(row);
+    list.appendChild(d);
   });
-
-  btn.onclick = () => list.style.display = list.style.display === 'block' ? 'none' : 'block';
-  window.dateSetAll = () => { selectedOnAirDates = [...allOnAirDates]; updateDateFilterUI({close:false}); setupSiteDropdown(); };
-  window.dateClearAll = () => { selectedOnAirDates = []; updateDateFilterUI({close:false}); selectedSites = []; setupSiteDropdown(); };
-  updateDateFilterUI({close:true});
+  
+  btn.onclick = () => list.style.display = list.style.display==="block" ? "none" : "block";
+  
+  window.dateSetAll = setAll;
+  window.dateClearAll = clearAll;
+  updateDateFilterUI({close: true});
 }
 
-function updateSelectedDates(){
-  const list = document.getElementById('onAirDateDropdownList');
-  selectedOnAirDates = Array.from(list.querySelectorAll('.date-chk:checked')).map(c => c.value);
-  // when dates selected, auto-select sites under those dates
-  const activeSites = allSites.filter(site => selectedOnAirDates.includes(siteCutoverMap[site]));
-  selectedSites = [...activeSites];
-  updateDateFilterUI({close:false});
-  setupSiteDropdown();
+function updateSelectedDates() {
+    const list = document.getElementById("onAirDateDropdownList");
+    selectedOnAirDates = Array.from(list.querySelectorAll(".date-chk:checked")).map(c => c.value);
+    
+    // For group level, don't filter by date (groups don't have dates)
+    if (currentSheet === 'group') {
+      selectedSites = [...allSites];
+    } else {
+      let activeSites = allSites.filter(site => {
+          const date = siteCutoverMap[site];
+          return date && selectedOnAirDates.includes(date);
+      });
+      selectedSites = [...activeSites]; 
+    }
+    
+    updateDateFilterUI({close: false}); 
+    setupSiteDropdown(); 
 }
 
-function updateDateFilterUI(options = {close:true}){
-  const span = document.getElementById('onAirDateBtnLabel');
-  if(selectedOnAirDates.length === 0) span.textContent = 'No Dates Selected';
-  else if(selectedOnAirDates.length === allOnAirDates.length) span.textContent = 'All On-Air Dates';
-  else span.textContent = `Selected (${selectedOnAirDates.length})`;
-  const list = document.getElementById('onAirDateDropdownList');
-  list.querySelectorAll('.date-chk').forEach(c => c.checked = selectedOnAirDates.includes(c.value));
-  if(options.close) list.style.display = 'none'; else list.style.display = 'block';
+function updateDateFilterUI(options = {close: true}) {
+    const btn = document.getElementById("onAirDateDropdownBtn");
+    const span = document.getElementById("onAirDateBtnLabel");
+    const list = document.getElementById("onAirDateDropdownList");
+    
+    // For group level, show different label
+    if (currentSheet === 'group') {
+      span.textContent = "Groups (No Date Filter)";
+    } else {
+      span.textContent = selectedOnAirDates.length === 0 ? "No Dates Selected" : (selectedOnAirDates.length === allOnAirDates.length ? "All On-Air Dates" : `Selected (${selectedOnAirDates.length})`);
+    }
+    
+    list.querySelectorAll(".date-chk").forEach(c => c.checked = selectedOnAirDates.includes(c.value));
+    
+    if (options.close) {
+        list.style.display = "none";
+    } else {
+        list.style.display = "block";
+    }
 }
 
-/* =========================
-   FILTER UI: Sites
-   ========================= */
+// --- FILTER UI LOGIC (eNodeB Name / Group Name) ---
 function setupSiteDropdown(){
-  const list = document.getElementById('siteDropdownList');
-  const btn = document.getElementById('siteDropdownBtn');
-  list.innerHTML = '';
+  const list = document.getElementById("siteDropdownList");
+  const btn = document.getElementById("siteDropdownBtn");
+  list.innerHTML = "";
 
-  // Sites active under selectedOnAirDates
-  const activeSites = allSites.filter(s => !selectedOnAirDates.length || selectedOnAirDates.includes(siteCutoverMap[s]));
-  // keep selectedSites that are active
+  // For group level, all groups are active (no date filtering)
+  let activeSites;
+  if (currentSheet === 'group') {
+    activeSites = [...allSites];
+  } else {
+    activeSites = allSites.filter(s => !selectedOnAirDates.length || selectedOnAirDates.includes(siteCutoverMap[s]));
+  }
+  
   selectedSites = selectedSites.filter(s => activeSites.includes(s));
+  
+  const setAll = () => { 
+    selectedSites = [...activeSites]; 
+    updateSiteFilterUI({close: false}); 
+    renderCharts();
+  }; 
 
-  list.innerHTML += `<div style="font-weight:600;padding:8px 10px;">Actions</div>`;
-  list.innerHTML += `<div onclick="siteSetAll()" style="padding:8px 10px;cursor:pointer;"><b>Select All (${activeSites.length})</b></div>`;
-  list.innerHTML += `<div onclick="siteClearAll()" style="padding:8px 10px;cursor:pointer;"><b>Clear All</b></div>`;
+  const clearAll = () => { 
+    selectedSites = []; 
+    updateSiteFilterUI({close: false}); 
+    renderCharts(); 
+  };
+  
+  const label = currentSheet === 'site' ? 'Sites' : 'Groups';
+  list.innerHTML += `<div onclick="window.siteSetAll()"><b>Select All (${activeSites.length})</b></div>`;
+  list.innerHTML += `<div onclick="window.siteClearAll()"><b>Clear All</b></div>`;
 
   activeSites.forEach(site => {
-    const row = document.createElement('div');
-    const checked = selectedSites.includes(site) ? 'checked' : '';
-    row.innerHTML = `<input class="site-chk" type="checkbox" value="${site}" ${checked}> ${site}`;
-    row.onclick = (e) => {
-      if(e.target.tagName !== 'INPUT'){
-        const chk = row.querySelector('input');
-        chk.checked = !chk.checked;
-      }
-      updateSelectedSites();
+    const d = document.createElement("div");
+    const checked = selectedSites.includes(site) ? "checked" : ""; 
+    d.innerHTML = `<input type='checkbox' value='${site}' class='site-chk' ${checked}> ${site}`;
+    d.onclick = (e) => {
+       if(e.target.tagName !== "INPUT") {
+          const chk = d.querySelector("input");
+          chk.checked = !chk.checked;
+       }
+       updateSelectedSites();
     };
-    list.appendChild(row);
+    list.appendChild(d);
   });
+  
+  btn.onclick = () => list.style.display = list.style.display==="block" ? "none" : "block";
 
-  btn.onclick = () => list.style.display = list.style.display === 'block' ? 'none' : 'block';
-  window.siteSetAll = () => { selectedSites = [...activeSites]; updateSiteFilterUI({close:false}); renderCharts(); };
-  window.siteClearAll = () => { selectedSites = []; updateSiteFilterUI({close:false}); renderCharts(); };
-
-  updateSiteFilterUI({close:true});
+  window.siteSetAll = setAll;
+  window.siteClearAll = clearAll;
+  
+  updateSiteFilterUI({close: true});
   renderCharts();
 }
 
-function updateSelectedSites(){
-  const list = document.getElementById('siteDropdownList');
-  selectedSites = Array.from(list.querySelectorAll('.site-chk:checked')).map(c => c.value);
-  updateSiteFilterUI({close:false});
-  renderCharts();
+function updateSelectedSites() {
+    const list = document.getElementById("siteDropdownList");
+    selectedSites = Array.from(list.querySelectorAll(".site-chk:checked")).map(c => c.value);
+    updateSiteFilterUI({close: false});
+    renderCharts();
 }
 
-function updateSiteFilterUI(options = {close:true}){
-  const span = document.getElementById('siteBtnLabel');
-  const activeSites = allSites.filter(s => !selectedOnAirDates.length || selectedOnAirDates.includes(siteCutoverMap[s]));
-  if(selectedSites.length === 0) span.textContent = `All Active Sites`;
-  else if(selectedSites.length === activeSites.length) span.textContent = `All Active Sites (${selectedSites.length})`;
-  else if(selectedSites.length === 1) span.textContent = selectedSites[0];
-  else span.textContent = `Selected (${selectedSites.length})`;
+function updateSiteFilterUI(options = {close: true}) {
+    const btn = document.getElementById("siteDropdownBtn");
+    const span = document.getElementById("siteBtnLabel");
+    const list = document.getElementById("siteDropdownList");
+    
+    const label = currentSheet === 'site' ? 'Sites' : 'Groups';
+    const activeSites = currentSheet === 'group' ? allSites : allSites.filter(s => !selectedOnAirDates.length || selectedOnAirDates.includes(siteCutoverMap[s]));
+    
+    if(selectedSites.length === 0) span.textContent = `All ${label}`;
+    else if(selectedSites.length === activeSites.length) span.textContent = `All ${label} (${selectedSites.length})`;
+    else if(selectedSites.length === 1) span.textContent = selectedSites[0];
+    else span.textContent = `Selected (${selectedSites.length})`;
 
-  const list = document.getElementById('siteDropdownList');
-  list.querySelectorAll('.site-chk').forEach(c => c.checked = selectedSites.includes(c.value));
-  if(options.close) list.style.display = 'none'; else list.style.display = 'block';
+    list.querySelectorAll(".site-chk").forEach(c => c.checked = selectedSites.includes(c.value));
+    
+    if (options.close) {
+        list.style.display = "none";
+    } else {
+        list.style.display = "block";
+    }
 }
 
-/* =========================
-   CHART RENDERING
-   ========================= */
+// --- CHART RENDERING ---
 function renderCharts(){
-  const container = document.getElementById('mainChartContainer');
-  container.innerHTML = '';
-
-  // KPIs list based on tab
+  const container = document.getElementById("mainChartContainer");
+  container.innerHTML = "";
+  
+  // Determine which KPIs to show based on current tab
   let kpisToShow = [];
-  if(currentTab === 'nr') kpisToShow = selectedKpis.nr.map(k => ({kpi:k, type:'nr'}));
-  else if(currentTab === 'nsa') kpisToShow = selectedKpis.nsa.map(k => ({kpi:k, type:'nsa'}));
-  else kpisToShow = [...selectedKpis.nr.map(k => ({kpi:k,type:'nr'})), ...selectedKpis.nsa.map(k => ({kpi:k,type:'nsa'}))];
-
-  // 1) determine final site list (eNodeB names)
-  const sitesFromDate = allSites.filter(site => !selectedOnAirDates.length || selectedOnAirDates.includes(siteCutoverMap[site]));
-  const finalSiteList = selectedSites.length ? selectedSites : sitesFromDate;
-
-  // 2) prefilter datasets by eNodeB Name
-  // Both nrData and nsaData use "eNodeB Name" (or nearby header aliases).
-  function siteMatches(row){
-    const candidates = [row["eNodeB Name"], row["eNodeB"], row["Site Name"], row["Site"]].filter(Boolean).map(String);
-    return candidates.some(c => finalSiteList.includes(c));
+  if(currentTab === "nr") {
+    kpisToShow = selectedKpis.nr.map(k => ({kpi: k, type: 'nr'}));
+  } else if(currentTab === "nsa") {
+    kpisToShow = selectedKpis.nsa.map(k => ({kpi: k, type: 'nsa'}));
+  } else if(currentTab === "both") {
+    kpisToShow = [
+      ...selectedKpis.nr.map(k => ({kpi: k, type: 'nr'})),
+      ...selectedKpis.nsa.map(k => ({kpi: k, type: 'nsa'}))
+    ];
   }
-  const filteredNR = nrData.filter(siteMatches);
-  const filteredNSA = nsaData.filter(siteMatches);
-  const combined = [...filteredNR, ...filteredNSA];
 
-  // timeline derived from combined filtered data
-  const timelineRaw = Array.from(new Set(combined.map(d => d["Date"]).filter(Boolean)));
-  // parse dd/mm/yyyy -> sort by date
-  const timeline = timelineRaw.sort((a,b) => {
-    const toDate = s => { const p = String(s).split('/').map(Number); if(p.length<3) return new Date(s); return new Date(p[2], (p[1]||1)-1, p[0]||1); };
-    return toDate(a) - toDate(b);
+  // For group level, all groups are available
+  // For site level, filter by date
+  let finalSiteList;
+  if (currentSheet === 'group') {
+    finalSiteList = selectedSites.length > 0 ? selectedSites : [...allSites];
+  } else {
+    let sitesFromDate = allSites.filter(site => {
+        const date = siteCutoverMap[site];
+        return selectedOnAirDates.includes(date);
+    });
+    finalSiteList = selectedSites.length > 0 ? selectedSites : sitesFromDate;
+  }
+  
+  // Filter data based on selected sites/groups
+  // Both use "eNodeB Name" column
+  const identifierField = 'eNodeB Name';
+  
+  let filteredNRData = nrData.filter(d => finalSiteList.includes(d[identifierField]));
+  let filteredNSAData = nsaData.filter(d => finalSiteList.includes(d[identifierField]));
+
+  // Get timeline from both datasets
+  const nrTimeline = [...new Set(filteredNRData.map(d=>d["Date"]))].filter(Boolean);
+  const nsaTimeline = [...new Set(filteredNSAData.map(d=>d["Date"]))].filter(Boolean);
+  const allTimeline = [...new Set([...nrTimeline, ...nsaTimeline])].sort((a,b)=>{
+    const [da,ma,ya]=a.split('/').map(Number);
+    const [db,mb,yb]=b.split('/').map(Number);
+    return new Date(ya,ma-1,da)-new Date(yb,mb-1,db);
   });
 
-  const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const timelineLabels = timeline.map(d => {
-    const p = String(d).split('/').map(Number);
-    const day = p[0] || 1; const month = p[1] || 1;
-    return `${day} ${monthNames[month-1]}`;
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const timelineLabels = allTimeline.map(d => {
+      const [day, month] = d.split('/').map(Number);
+      return `${day} ${monthNames[month - 1]}`;
   });
 
-  // Create one chart per KPI
-  kpisToShow.forEach((ki, idx) => {
-    const kpi = ki.kpi;
-    const type = ki.type;
+  kpisToShow.forEach((kpiObj, idx) => {
+    const kpi = kpiObj.kpi;
+    const type = kpiObj.type;
+    const card = document.createElement("div");
+    card.className = "chart-card";
+    
+    const wrapper = document.createElement("div");
+    wrapper.className = "chart-container";
+    
+    const canvas = document.createElement("canvas");
+    canvas.id = `chart_${idx}`;
+    
+    wrapper.appendChild(canvas);
+    card.appendChild(wrapper);
+    container.appendChild(card);
 
-    const card = document.createElement('div'); card.className='chart-card';
-    const wrapper = document.createElement('div'); wrapper.className='chart-container';
-    const canvas = document.createElement('canvas'); canvas.id = `chart_${idx}`;
-    wrapper.appendChild(canvas); card.appendChild(wrapper); container.appendChild(card);
+    // Use the appropriate dataset based on KPI type
+    const dataSource = type === 'nr' ? filteredNRData : filteredNSAData;
+    
+    const dataPoints = allTimeline.map(date => {
+      const values = dataSource
+        .filter(d => d["Date"] === date)
+        .map(d => d[kpi])
+        .filter(v => v !== null && v !== "")
+        .map(Number)
+        .filter(v => !isNaN(v));
 
-    // choose source: nr -> filteredNR, nsa -> filteredNSA (aggregation done per-kpi)
-    const source = (type === 'nr') ? filteredNR : filteredNSA;
+      if (values.length === 0) return null;
 
-    const dataPoints = timeline.map(date => {
-      const values = source.filter(r => r["Date"] === date).map(r => {
-        const raw = r[kpi] !== undefined ? r[kpi] : (r[kpi] === 0 ? 0 : r[kpi]);
-        const n = Number(raw);
-        return Number.isFinite(n) ? n : NaN;
-      }).filter(v => !Number.isNaN(v));
-      if(values.length === 0) return null;
-      const avg = values.reduce((a,b) => a + b, 0) / values.length;
-      return avg;
+      const kpiLower = kpi.toLowerCase();
+      if (
+        kpiLower.includes('%') ||
+        kpiLower.includes('rate') ||
+        kpiLower.includes('avg') ||
+        kpiLower.includes('average') ||
+        kpiLower.includes('max')
+      ) {
+        return values.reduce((a, b) => a + b, 0) / values.length;
+      } else {
+        return values.reduce((a, b) => a + b, 0);
+      }
     });
 
-    const valid = dataPoints.filter(v => v !== null);
-    let minVal = valid.length ? Math.min(...valid) : 0;
-    let maxVal = valid.length ? Math.max(...valid) : 100;
+    // Only valid values
+    let validValues = dataPoints.filter(v => v !== null);
+    let minVal = validValues.length ? Math.min(...validValues) : 0;
+    let maxVal = validValues.length ? Math.max(...validValues) : 100;
 
-    // Special percentage handling: if KPI name looks like percent/success and numbers in high range
-    const looksLikePercent = /%|Success Rate|Rate/i.test(kpi);
-    if(looksLikePercent && valid.length){
-      if(minVal >= 95 && maxVal <= 100){
-        minVal = 95; maxVal = 100;
+    // Smart Y-axis scaling
+    function niceNumber(value, round) {
+      const exponent = Math.floor(Math.log10(value));
+      const fraction = value / Math.pow(10, exponent);
+
+      let niceFraction;
+      if (round) {
+        if (fraction < 1.5) niceFraction = 1;
+        else if (fraction < 3) niceFraction = 2;
+        else if (fraction < 7) niceFraction = 5;
+        else niceFraction = 10;
       } else {
-        minVal = Math.floor(minVal / 5) * 5;
-        maxVal = Math.ceil(maxVal / 5) * 5;
+        if (fraction <= 1) niceFraction = 1;
+        else if (fraction <= 2) niceFraction = 2;
+        else if (fraction <= 5) niceFraction = 5;
+        else niceFraction = 10;
       }
-    } else if(valid.length){
-      // add small buffer
-      const buffer = (maxVal - minVal) * 0.05 || Math.max(1, Math.abs(minVal) * 0.05);
-      minVal = Math.floor(minVal - buffer);
-      maxVal = Math.ceil(maxVal + buffer);
+
+      return niceFraction * Math.pow(10, exponent);
+    }
+
+    function computeYAxis(minVal, maxVal) {
+      // ⭐ Special rule: if min >= 98 and max <= 100
+      if (minVal >= 97 && maxVal <= 100) {
+        return { niceMin: 96, niceMax: 100, tickSpacing: 1 };
+      }
+
+      // ±5% buffer
+      let minV = minVal * 0.95;
+      let maxV = maxVal * 1.05;
+
+      // Small KPI rule
+      if (maxVal < 10) minV = 0;
+
+      // Cap 90–100 → ymax = 100
+      if (maxVal > 90 && maxVal <= 100) maxV = 100;
+
+      let range = maxV - minV;
+      if (range === 0) range = Math.abs(maxV) * 0.1 || 1;
+
+      // Choose nice tick spacing, aim for 5–6 ticks
+      const tickSpacing = niceNumber(range / 5, true);
+
+      // Align min/max to nice numbers
+      const niceMin = Math.floor(minV / tickSpacing) * tickSpacing;
+      const niceMax = Math.ceil(maxV / tickSpacing) * tickSpacing;
+
+      return { niceMin, niceMax, tickSpacing };
+    }
+
+    const { niceMin, niceMax, tickSpacing } = computeYAxis(minVal, maxVal);
+
+    // Chart Color
+    let chartColor;
+    if (activeCustomColor) {
+      chartColor = activeCustomColor;
+    } else if (activeChartStyle && activeChartStyle.randomColor) {
+      chartColor = getRandomColor();
+    } else if (activeChartStyle && activeChartStyle.borderColor) {
+      chartColor = activeChartStyle.borderColor;
     } else {
-      minVal = 0; maxVal = 100;
+      chartColor = getRandomColor();
     }
 
-    // guard against equal min/max
-    if(minVal === maxVal){
-      minVal = Math.max(0, minVal - 1);
-      maxVal = Math.min(100, maxVal + 1);
-    }
-
-    // Build chart options including special 95..100 ticks
-    const yTicks = {};
-    if(looksLikePercent && minVal >= 95 && maxVal <= 100){
-      yTicks.stepSize = 1;
-      yTicks.callback = function(value){ if(value >= 95 && value <= 100) return value; return null; };
-    }
-
-    new Chart(canvas.getContext('2d'), {
+    // Chart Config
+    const chartConfig = {
       type: 'line',
       data: {
         labels: timelineLabels,
         datasets: [{
-          label: (finalSiteList.length > 0 && dataPoints.some(p => p !== null)) ? `${type.toUpperCase()} Aggregate` : 'No Data',
+          label: (finalSiteList.length > 0 && dataPoints.some(p => p !== null)) ? 
+                 `${currentSheet === 'site' ? 'Site' : 'Group'} Aggregate` : "No Data",
           data: dataPoints,
-          borderColor: getRandomColor(),
+          borderColor: chartColor,
           backgroundColor: 'transparent',
           borderWidth: 2,
           pointRadius: 3,
@@ -504,238 +942,427 @@ function renderCharts(){
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: {
+          x: {
+            type: 'number',
+            easing: 'linear',
+            duration: 500,
+            from: NaN,
+            delay: (ctx) => ctx.index * 30
+          },
+          y: { duration: 0 }
+        },
         plugins: {
           legend: { display: false },
-          title: { display: true, text: kpi, color: '#333', font: { size: 14, weight: 'bold' } }
-        },
-        scales: {
-          x: { ticks: { font: { size: 10 } }, grid: { display: false } },
-          y: {
-            grid: { color: '#eee' },
-            beginAtZero: false,
-            min: (finalSiteList.length === 0 || dataPoints.every(p => p === null)) ? 0 : minVal,
-            max: (finalSiteList.length === 0 || dataPoints.every(p => p === null)) ? 100 : maxVal,
-            ticks: yTicks
+          title: {
+            display: true,
+            text: kpi,
+            font: { size: 14, weight: 'bold' },
+            color: '#333'
           }
         },
-        animation: {
-          x: { duration: 500, easing: 'linear', from: NaN, delay: ctx => (ctx.index || 0) * 15 },
-          y: { duration: 0 }
+        scales: {
+          x: {
+            ticks: { font: { size: 8 } },
+            grid: { display: false }
+          },
+          y: {
+            grid: { color: '#eee' },
+            min: niceMin,
+            max: niceMax,
+            ticks: { stepSize: tickSpacing },
+            beginAtZero: maxVal < 10
+          }
         }
       }
-    });
+    };
+
+    // Apply active chart style if set
+    if (activeChartStyle) {
+        const style = activeChartStyle;
+        chartConfig.data.datasets[0].borderWidth = style.borderWidth;
+        chartConfig.data.datasets[0].pointRadius = style.pointRadius;
+        chartConfig.data.datasets[0].borderDash = style.borderDash;
+        chartConfig.data.datasets[0].tension = style.tension;
+        
+        if (!activeCustomColor && !style.randomColor && style.borderColor) {
+            chartConfig.data.datasets[0].borderColor = style.borderColor;
+        }
+    }
+
+    // Create chart
+    const chart = new Chart(canvas.getContext("2d"), chartConfig);
   });
 }
 
-/* =========================
-   KPI Drawer
-   ========================= */
-function toggleDrawer(){
-  const d = document.getElementById('kpiDrawer');
-  d.classList.toggle('open');
-  if(d.classList.contains('open')) populateKpiOptions();
+function getRandomColor() {
+  const colors = ['#2F80ED', '#27AE60', '#D24726', '#8E44AD', '#F39C12', '#2980B9'];
+  return colors[Math.floor(Math.random() * colors.length)];
 }
 
+// --- DRAWER FUNCTIONS ---
+function toggleDrawer(){
+  const d = document.getElementById("kpiDrawer");
+  d.classList.toggle("open");
+  if(d.classList.contains("open")) populateKpiOptions();
+}
+
+function toggleChartStyleDrawer(){
+  const d = document.getElementById("chartStyleDrawer");
+  d.classList.toggle("open");
+}
+
+// --- CHART STYLING FUNCTIONS ---
+function applyChartStyle(styleIndex){
+    activeChartStyle = chartStyles[styleIndex];
+    
+    // Update UI to show active style
+    document.querySelectorAll('.style-button').forEach((btn, idx) => {
+        if (idx === styleIndex) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    
+    renderCharts();
+}
+
+function applyCustomColor(){
+    activeCustomColor = document.getElementById("customChartColor").value;
+    renderCharts();
+}
+
+// --- KPI DRAWER FUNCTIONS ---
 function populateKpiOptions(){
-  const list = document.getElementById('kpiOptionsList'); list.innerHTML = '';
+  const list = document.getElementById("kpiOptionsList");
+  list.innerHTML = "";
+  
+  document.getElementById('drawerHeaderTitle').textContent = 'KPI Settings';
+
   const nrSection = currentTab === 'nr' || currentTab === 'both';
   const nsaSection = currentTab === 'nsa' || currentTab === 'both';
-
-  function makeGroup(title, key, arr){
-    const h = document.createElement('h4'); h.textContent = title; h.style.marginTop='8px'; list.appendChild(h);
-    arr.forEach(k => {
-      const div = document.createElement('div');
-      const checked = selectedKpis[key].includes(k) ? 'checked' : '';
-      div.innerHTML = `<input type="checkbox" class="kpi-chk" data-group="${key}" value="${k}" ${checked}> <span style="font-size:13px">${k}</span>`;
-      div.onclick = (e) => { if(e.target.tagName !== 'INPUT'){ const chk = div.querySelector('input'); chk.checked = !chk.checked; } };
+  
+  const createGroup = (title, key, sourceArr) => {
+    const h4 = document.createElement("h4");
+    h4.textContent = title;
+    h4.style.marginTop = "15px";
+    list.appendChild(h4);
+    
+    sourceArr.forEach(kpi => {
+      const div = document.createElement("div");
+      const checked = selectedKpis[key].includes(kpi) ? "checked" : "";
+      div.innerHTML = `<input type='checkbox' class='kpi-chk' data-group='${key}' value='${kpi}' ${checked}> <span style='font-size:13px'>${kpi}</span>`;
+      div.onclick = (e) => {
+        if(e.target.tagName !== "INPUT") {
+            const chk = div.querySelector("input");
+            chk.checked = !chk.checked;
+        }
+      };
       list.appendChild(div);
     });
-  }
-  if(nrSection) makeGroup('NR KPIs','nr', nrKpis);
-  if(nsaSection) makeGroup('NSA KPIs','nsa', nsaKpis);
+  };
+
+  if (nrSection) createGroup("NR KPIs", "nr", nrKpis);
+  if (nsaSection) createGroup("NSA KPIs", "nsa", nsaKpis);
 }
 
-function selectVisibleKpis(){
-  document.querySelectorAll('.kpi-chk').forEach(c => c.checked = true);
-  if(currentTab === 'nr' || currentTab === 'both') selectedKpis.nr = [...nrKpis];
-  if(currentTab === 'nsa' || currentTab === 'both') selectedKpis.nsa = [...nsaKpis];
+function selectVisibleKpis() {
+    const chks = document.querySelectorAll(".kpi-chk");
+    
+    chks.forEach(c => {
+        c.checked = true;
+    });
+
+    if (currentTab === 'nr' || currentTab === 'both') {
+        selectedKpis.nr = [...nrKpis];
+    }
+    if (currentTab === 'nsa' || currentTab === 'both') {
+        selectedKpis.nsa = [...nsaKpis];
+    }
 }
-function clearVisibleKpis(){
-  document.querySelectorAll('.kpi-chk').forEach(c => c.checked = false);
-  if(currentTab === 'nr' || currentTab === 'both') selectedKpis.nr = [];
-  if(currentTab === 'nsa' || currentTab === 'both') selectedKpis.nsa = [];
+
+function clearVisibleKpis() {
+    const chks = document.querySelectorAll(".kpi-chk");
+    
+    chks.forEach(c => {
+        c.checked = false;
+    });
+
+    if (currentTab === 'nr' || currentTab === 'both') {
+        selectedKpis.nr = [];
+    }
+    if (currentTab === 'nsa' || currentTab === 'both') {
+        selectedKpis.nsa = [];
+    }
 }
+
 function applyKpis(){
-  const chks = document.querySelectorAll('.kpi-chk');
-  const tempnr = (currentTab === 'nr' || currentTab === 'both') ? [] : [...selectedKpis.nr];
-  const tempnsa = (currentTab === 'nsa' || currentTab === 'both') ? [] : [...selectedKpis.nsa];
-  chks.forEach(c => { if(c.checked){ if(c.dataset.group === 'nr') tempnr.push(c.value); if(c.dataset.group === 'nsa') tempnsa.push(c.value); }});
-  selectedKpis.nr = tempnr; selectedKpis.nsa = tempnsa;
+  const chks = document.querySelectorAll(".kpi-chk");
+  
+  const tempNR = currentTab === 'nr' || currentTab === 'both' ? [] : [...selectedKpis.nr];
+  const tempNSA = currentTab === 'nsa' || currentTab === 'both' ? [] : [...selectedKpis.nsa];
+
+  chks.forEach(c => {
+    if(c.checked) {
+        if(c.dataset.group === 'nr') tempNR.push(c.value);
+        if(c.dataset.group === 'nsa') tempNSA.push(c.value);
+    }
+  });
+
+  selectedKpis.nr = tempNR;
+  selectedKpis.nsa = tempNSA;
+  
   toggleDrawer();
   renderCharts();
 }
 
-/* =========================
-   Preview & PPT Export (kept simple & consistent)
-   ========================= */
-function updatePreviewSettings(newCount, newLineColor, newTitleColor){
-  if(newCount) graphsPerSlide = parseInt(newCount);
-  if(newLineColor) chartExportColor = newLineColor;
-  if(newTitleColor) chartExportTitleColor = newTitleColor;
-  highlightSettingButtons(graphsPerSlide, chartExportColor, chartExportTitleColor);
+// --- PPT EXPORT CUSTOMIZATION & PREVIEW ---
+function getLayoutConfig(count) {
+    const slideWidth = 10.0;
+    const slideHeight = 5.625;
+    
+    const marginX = 0.2;	
+    const marginTop = 0.9;
+    const marginBottom = 0.2;
+    const gap = 0.15;
 
-  const canvases = document.querySelectorAll('canvas');
-  const body = document.getElementById('previewBody');
-  body.innerHTML = '';
-  const layout = getLayoutConfig(graphsPerSlide);
-  const gridCols = `repeat(${layout.cols}, 1fr)`;
+    let rows, cols;
 
-  for(let i=0;i<canvases.length;i+=graphsPerSlide){
-    const slideDiv = document.createElement('div'); slideDiv.className = 'preview-slide';
-    const slideTitle = document.createElement('div'); slideTitle.className = 'preview-slide-title';
-    slideTitle.textContent = `Slide ${Math.floor(i/graphsPerSlide)+1}`; slideDiv.appendChild(slideTitle);
-    const grid = document.createElement('div'); grid.className = 'preview-grid';
-    grid.style.gridTemplateColumns = gridCols;
-    grid.style.height = '100%';
-    for(let j=0;j<graphsPerSlide;j++){
-      if(i+j < canvases.length){
-        const c = canvases[i+j];
-        const box = createPreviewBox(c, chartExportColor, chartExportTitleColor);
-        box.style.height = 'auto';
-        grid.appendChild(box);
-      }
+    switch(parseInt(count)) {
+        case 1: rows = 1; cols = 1; break;
+        case 2: rows = 1; cols = 2; break;
+        case 3: rows = 2; cols = 2; break;
+        case 4: rows = 2; cols = 2; break;
+        case 6: rows = 2; cols = 3; break;
+        case 9: rows = 3; cols = 3; break;
+        default: rows = 2; cols = 2;
     }
-    slideDiv.appendChild(grid); body.appendChild(slideDiv);
-  }
+
+    const usableW = slideWidth - (marginX * 2);
+    const usableH = slideHeight - marginTop - marginBottom;
+
+    const chartW = (usableW - ((cols - 1) * gap)) / cols;
+    const chartH = (usableH - ((rows - 1) * gap)) / rows;
+
+    return { rows, cols, chartW, chartH, gap, marginX, marginTop, slideWidth, slideHeight };
 }
 
-function highlightSettingButtons(count, lineColor, titleColor){
-  document.querySelectorAll('.graph-options button').forEach(btn => {
-    btn.classList.remove('active'); btn.style.backgroundColor = '#2F80ED'; btn.style.color = 'white';
-    if(parseInt(btn.dataset.count) === count){ btn.classList.add('active'); btn.style.backgroundColor = '#27AE60'; }
-  });
-  document.querySelectorAll('#previewSettingsPanel .color-option').forEach(el => {
-    el.classList.remove('selected');
-    if(el.dataset.color === lineColor || el.dataset.color === titleColor) el.classList.add('selected');
-  });
+function openPreview() {
+    const canvases = document.querySelectorAll("canvas");
+    if(canvases.length === 0) { alert("No charts to export."); return; }
+    
+    if(!graphsPerSlide) graphsPerSlide = 2;	
+    
+    updatePreviewSettings(graphsPerSlide, chartExportColor, chartExportTitleColor);
+    document.getElementById("previewModal").style.display = "flex";
 }
 
-function createPreviewBox(canvas, lineColor, titleColor){
-  const box = document.createElement('div'); box.className='preview-img-box';
-  const tempCanvas = document.createElement('canvas'); tempCanvas.width = canvas.width; tempCanvas.height = canvas.height;
-  const tempCtx = tempCanvas.getContext('2d');
-  const chartInstance = Chart.getChart(canvas.id);
-  let img = '';
-  if(chartInstance){
-    const originalColors = chartInstance.data.datasets.map(d=>d.borderColor);
-    const originalPoint = chartInstance.data.datasets.map(d=>d.pointBorderColor);
-    const origTitle = (chartInstance.options.plugins && chartInstance.options.plugins.title) ? chartInstance.options.plugins.title.color : '#333';
-    chartInstance.data.datasets.forEach(d => {
-      d.borderColor = lineColor; d.pointBorderColor = lineColor; d.pointBackgroundColor = lineColor; d.pointRadius = 3; d.spanGaps = true;
+function highlightSettingButtons(count, lineColor, titleColor) {
+    document.querySelectorAll('.graph-options button').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.backgroundColor = '#2F80ED';
+        btn.style.color = 'white';
+        if (parseInt(btn.dataset.count) === count) {
+            btn.classList.add('active');
+            btn.style.backgroundColor = '#27AE60';
+        }
     });
-    if(chartInstance.options.plugins && chartInstance.options.plugins.title) chartInstance.options.plugins.title.color = titleColor;
-    chartInstance.update('none');
-    tempCtx.drawImage(canvas, 0, 0);
-    img = tempCanvas.toDataURL('image/png');
-    // restore
-    chartInstance.data.datasets.forEach((d,i) => { d.borderColor = originalColors[i]; d.pointBorderColor = originalPoint[i]; });
-    if(chartInstance.options.plugins && chartInstance.options.plugins.title) chartInstance.options.plugins.title.color = origTitle;
-    chartInstance.update('none');
-  }
-  const imgel = document.createElement('img'); imgel.src = img; imgel.style.maxWidth='100%'; imgel.style.maxHeight='100%'; imgel.style.objectFit='contain';
-  box.appendChild(imgel);
-  return box;
+
+    document.querySelectorAll('#lineColorOptions .color-option').forEach(el => {
+        el.classList.remove('selected');
+        if (el.dataset.color === lineColor) el.classList.add('selected');
+    });
+
+    document.querySelectorAll('#titleColorOptions .color-option').forEach(el => {
+        el.classList.remove('selected');
+        if (el.dataset.color === titleColor) el.classList.add('selected');
+    });
 }
 
-function openPreview(){
-  const canvases = document.querySelectorAll('canvas');
-  if(!canvases.length){ alert('No charts to export'); return; }
-  if(!graphsPerSlide) graphsPerSlide = 2;
-  updatePreviewSettings(graphsPerSlide, chartExportColor, chartExportTitleColor);
-  document.getElementById('previewModal').style.display = 'flex';
+function updatePreviewSettings(newCount, newLineColor, newTitleColor) {
+    if (newCount) graphsPerSlide = parseInt(newCount);
+    if (newLineColor) chartExportColor = newLineColor;
+    if (newTitleColor) chartExportTitleColor = newTitleColor;
+
+    highlightSettingButtons(graphsPerSlide, chartExportColor, chartExportTitleColor);
+    
+    const count = graphsPerSlide;
+    const body = document.getElementById("previewBody");
+    const canvases = document.querySelectorAll("canvas");
+    
+    document.getElementById("previewTitle").textContent = `PPT Export Preview (${count} Graphs per Slide)`;
+    body.innerHTML = "";
+
+    const layout = getLayoutConfig(count);
+    const gridTemplateCols = `repeat(${layout.cols}, 1fr)`;
+
+    for(let i=0; i<canvases.length; i+=count){
+        const slideDiv = document.createElement("div");
+        slideDiv.className = "preview-slide";
+        
+        const slideTitle = document.createElement("div");
+        slideTitle.className = "preview-slide-title";
+        slideTitle.textContent = `Slide ${Math.floor(i/count) + 1}`;
+        slideDiv.appendChild(slideTitle);
+
+        const grid = document.createElement("div");
+        grid.className = "preview-grid";
+        grid.style.display = "grid";
+        grid.style.gridTemplateColumns = gridTemplateCols;
+        grid.style.gap = "10px";
+        grid.style.height = "100%";
+        grid.style.paddingTop = "30px";
+        grid.style.alignContent = "start";
+
+        for(let j=0; j<count; j++){
+            if(i+j < canvases.length){
+                const c = canvases[i+j];
+                const box = createPreviewBox(c, chartExportColor, chartExportTitleColor);	
+                
+                const chartsOnSlide = Math.min(count, canvases.length - i);
+                let previewRows = layout.rows;
+                
+                if (layout.rows === 2 && chartsOnSlide <= 4) {
+                    previewRows = 1; 
+                }
+                
+                if (chartsOnSlide === 3) {
+                    previewRows = 1;
+                }
+                
+                grid.appendChild(box);
+            }
+        }
+        slideDiv.appendChild(grid);
+        body.appendChild(slideDiv);
+    }
 }
 
-function closePreview(){ document.getElementById('previewModal').style.display = 'none'; }
+function createPreviewBox(canvas, lineColor, titleColor) {
+    const box = document.createElement("div");
+    box.className = "preview-img-box";
+    
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+    const tempCtx = tempCanvas.getContext('2d');
+    
+    const chartInstance = Chart.getChart(canvas.id);
+    let imgData = '';
+    
+    if (chartInstance) {
+        const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
+        const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
+        const originalTitleColor = chartInstance.options.plugins.title.color;
+        
+        chartInstance.data.datasets.forEach(d => {	
+            d.borderColor = lineColor;	
+            d.pointBorderColor = lineColor;	
+            d.pointBackgroundColor = lineColor;	
+            d.pointRadius = 3;	
+            d.pointStyle = 'circle';	
+            d.spanGaps = true;	
+        });
 
-/* Basic PPT download (uses same layout calc as preview) */
-function getLayoutConfig(count){
-  const slideW = 10.0, slideH = 5.625, marginX = 0.2, marginTop = 0.9, marginBottom = 0.2, gap = 0.15;
-  let rows=2, cols=2;
-  switch(parseInt(count)){
-    case 1: rows=1; cols=1; break;
-    case 2: rows=1; cols=2; break;
-    case 3: rows=2; cols=2; break;
-    case 4: rows=2; cols=2; break;
-    case 6: rows=2; cols=3; break;
-    case 9: rows=3; cols=3; break;
-    default: rows=2; cols=2;
-  }
-  const usableW = slideW - marginX*2;
-  const usableH = slideH - marginTop - marginBottom;
-  const chartW = (usableW - (cols-1)*gap)/cols;
-  const chartH = (usableH - (rows-1)*gap)/rows;
-  return { rows, cols, chartW, chartH, gap, marginX, marginTop, slideW, slideH };
+        chartInstance.options.plugins.title.color = titleColor;	
+        
+        chartInstance.update('none');	
+        
+        tempCtx.drawImage(canvas, 0, 0);
+        imgData = tempCanvas.toDataURL("image/png");
+        
+        chartInstance.data.datasets.forEach((d, index) => {	
+            d.borderColor = originalColors[index];	
+            d.pointBorderColor = originalPointColors[index];
+        });
+        chartInstance.options.plugins.title.color = originalTitleColor;
+        chartInstance.update('none');
+    }
+
+    const img = document.createElement("img");
+    img.src = imgData;
+    img.style.maxHeight = "100%";
+    img.style.maxWidth = "100%";
+    img.style.objectFit = "contain";
+    
+    box.appendChild(img);
+    return box;
 }
+
+function closePreview(){ document.getElementById("previewModal").style.display = "none"; }
 
 async function downloadPPT(){
-  const pptx = new PptxGenJS();
-  pptx.layout = 'LAYOUT_16x9';
-  let slide = pptx.addSlide();
-  slide.addText('NR & NSA KPI Report', {x:0.5,y:1.6,fontSize:28,bold:true,color:'2F80ED'});
-  slide.addText(`Generated: ${new Date().toLocaleDateString()}`, {x:0.5,y:2.3,fontSize:12});
+    const pptx = new PptxGenJS();
+    pptx.layout = 'LAYOUT_16x9';
+    
+    let slide = pptx.addSlide();
+    slide.addText("NR & NSA KPI Report", { x:0.5, y:2, fontSize:32, bold:true, color:'2F80ED' });
+    slide.addText(`Generated: ${new Date().toLocaleDateString()}`, { x:0.5, y:3, fontSize:14 });
 
-  const canvases = document.querySelectorAll('canvas');
-  const count = graphsPerSlide;
-  const layout = getLayoutConfig(count);
-  const effectiveTop = 0.2;
+    const canvases = document.querySelectorAll("canvas");
+    const count = graphsPerSlide;
+    const lineColor = chartExportColor;	
+    const titleColor = chartExportTitleColor;
+    
+    const layout = getLayoutConfig(count);
+    const effectiveMarginTop = 0.2;
 
-  for(let i=0;i<canvases.length;i+=count){
-    const s = pptx.addSlide();
-    for(let j=0;j<count;j++){
-      if(i+j < canvases.length){
-        const c = canvases[i+j];
-        const col = j % layout.cols;
-        const row = Math.floor(j / layout.cols);
-        const x = layout.marginX + col * (layout.chartW + layout.gap);
-        const y = effectiveTop + row * (layout.chartH + layout.gap);
-        // style override for export
-        const chartInstance = Chart.getChart(c.id);
-        let originalColors, originalPointColors, originalTitleColor;
-        if(chartInstance){
-          originalColors = chartInstance.data.datasets.map(d=>d.borderColor);
-          originalPointColors = chartInstance.data.datasets.map(d=>d.pointBorderColor);
-          originalTitleColor = (chartInstance.options.plugins && chartInstance.options.plugins.title) ? chartInstance.options.plugins.title.color : '#333';
-          chartInstance.data.datasets.forEach(d => { d.borderColor = chartExportColor; d.pointBorderColor = chartExportColor; d.pointBackgroundColor = chartExportColor; d.pointRadius = 3; d.spanGaps = true; });
-          if(chartInstance.options.plugins && chartInstance.options.plugins.title) chartInstance.options.plugins.title.color = chartExportTitleColor;
-          chartInstance.update('none');
+    for(let i=0; i<canvases.length; i+=count){
+        let slide = pptx.addSlide();
+
+        for(let j=0; j<count; j++){
+            if(i+j < canvases.length){
+                const c = canvases[i+j];
+                
+                const colIndex = j % layout.cols;
+                const rowIndex = Math.floor(j / layout.cols);
+
+                const xPos = layout.marginX + (colIndex * (layout.chartW + layout.gap));
+                const yPos = effectiveMarginTop + (rowIndex * (layout.chartH + layout.gap));
+                
+                const chartInstance = Chart.getChart(c.id);
+                const originalColors = chartInstance.data.datasets.map(d => d.borderColor);
+                const originalPointColors = chartInstance.data.datasets.map(d => d.pointBorderColor);
+                const originalTitleColor = chartInstance.options.plugins.title.color;
+                
+                chartInstance.data.datasets.forEach(d => {	
+                    d.borderColor = lineColor;	
+                    d.pointBorderColor = lineColor;	
+                    d.pointBackgroundColor = lineColor;	
+                    d.pointRadius = 3;
+                    d.spanGaps = true;	
+                });
+                chartInstance.options.plugins.title.color = titleColor;	
+                chartInstance.update('none');	
+                
+                const imgData = c.toDataURL("image/png");
+                
+                chartInstance.data.datasets.forEach((d, index) => {	
+                    d.borderColor = originalColors[index];	
+                    d.pointBorderColor = originalPointColors[index];
+                    d.spanGaps = true;	
+                });
+                chartInstance.options.plugins.title.color = originalTitleColor;
+                chartInstance.update('none');
+                
+                slide.addImage({	
+                    data: imgData,	
+                    x: xPos,	
+                    y: yPos,	
+                    w: layout.chartW,	
+                    h: layout.chartH	
+                });
+            }
         }
-        const imgData = c.toDataURL('image/png');
-        if(chartInstance){
-          chartInstance.data.datasets.forEach((d,i)=> { d.borderColor = originalColors[i]; d.pointBorderColor = originalPointColors[i]; d.spanGaps = true; });
-          if(chartInstance.options.plugins && chartInstance.options.plugins.title) chartInstance.options.plugins.title.color = originalTitleColor;
-          chartInstance.update('none');
-        }
-        s.addImage({ data: imgData, x, y, w: layout.chartW, h: layout.chartH });
-      }
     }
-  }
-  await pptx.writeFile({ fileName: `KPI_Report_${Date.now()}.pptx` });
-  closePreview();
+
+    pptx.writeFile({ fileName: `NR_NSA_KPI_Report_${new Date().getTime()}.pptx` });
+    closePreview();
 }
 
-/* =========================
-   UTIL
-   ========================= */
-function getRandomColor(){
-  const colors = ['#2F80ED','#27AE60','#D24726','#8E44AD','#F39C12','#2980B9'];
-  return colors[Math.floor(Math.random()*colors.length)];
-}
-
-/* =========================
-   INIT
-   ========================= */
+// Initialize
 fetchData();
-
 </script>
 </body>
 </html>
