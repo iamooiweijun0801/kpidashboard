@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>NR & NSA KPI Dashboard</title>
+<title>NR KPI Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.6.2/fuse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
@@ -1357,7 +1357,7 @@ async function downloadPPT(){
         }
     }
 
-    pptx.writeFile({ fileName: `NR_NSA_KPI_Report_${new Date().getTime()}.pptx` });
+    pptx.writeFile({ fileName: `NR_KPI_Report_${new Date().getTime()}.pptx` });
     closePreview();
 }
 
